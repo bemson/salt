@@ -17,14 +17,17 @@ var sys = {
 	}
 };
 
-function Node(def, parent) {
+function Node(def, name, parent) {
 	var node = this,
 		i,meta;
-	if (parent) {
-		node.parent = parent;
-		node.position = parent.nodes.length;
-		node.id = parent.id += '/' + node.position;
-	}
+
+	node.nodes = [];
+	node.fncs = {};
+	//node.parent = parent;
+	node.name = name;
+	node.position = parent ? parent.nodes.length : 0;
+	node.path = parent ? parent.path + '.' + node.position : '0';
+
 	if (sys.isFnc(def)) {
 		node.fncs.main = def;
 	} else {
@@ -40,18 +43,10 @@ function Node(def, parent) {
 						// throw error - illegal prefix / unknown meta
 					}
 				} else {
-					def[i][sys.meta.prefix + 'name'] = i;
-//					node.nodes.push(def[i]);
-					node.nodes.push(new Node(def[i]));
+					//def[i][sys.meta.prefix + 'name'] = i;
+					node.nodes.push(new Node(def[i],i,node));
 				}
 			}
 		}
 	}
-}
-
-Node.prototype = {
-	id: '0',
-	position: 0,
-	nodes: [],
-	fncs: {}
 }
