@@ -1,44 +1,119 @@
-if (!window.Flow) {
-	function Flow() {
-		var di = {
-				oldFlow: this,
-				args: [].slice.call(arguments),
-				bs: Flow.bootstrap
+(function () {
+	var sys = {
+			// signature object
+			fkey: {},
+			rxp: {
+				flow: /(\d+)@(\d+)/
 			},
-			sys = {
-				rxp: {
-					flow: /(\d+)@(\d+)/
+			emptyFnc: function () {},
+			isFnc: function (v) {
+				return typeof v === 'function'
+			},
+			flow: 0, // the active flow
+			flows: [],
+			objects: {},
+			meta: {
+				fncs: {
+					main: 'main',
+					in: 'in',
+					out: 'out',
+					over: 'over'
 				},
-				emptyFnc: function () {},
-				isFnc: function (v) {
-					return typeof v === 'function'
+				keys: {
+					req: 'req',
+					end: 'env'
 				},
-				flow: 0, // the active flow
-				flows: [],
-				objects: {},
-				meta: {
-					fncs: {
-						main: 'main',
-						in: 'in',
-						out: 'out',
-						over: 'over'
-					},
-					keys: {
-						req: 'req',
-						end: 'env'
-					},
-					prefix: '_'
-				},
-				FlowSugar: function (args,obj,inst) {
-					return Flow[(inst || obj instanceof args.callee) ? 'define' : 'next'].apply(Flow, args);
-				},
-				resolveFlow: function (fid) {
+				prefix: '_'
+			},
+			FlowSugar: function (args,obj,inst) {
+				return Flow[(inst || obj instanceof args.callee) ? 'define' : 'next'].apply(Flow, args);
+			},
+			resolveFlow: function (fid) {
+				// init vars
+				var fparts = fid.toString ? fid.toString().match(sys.rxp.flow) : 0; // get parts of flow reference
+				// return flow instance or 0, based on whether the flow index exists
+				return (fparts && sys.flows.length < fparts[1]) ? sys.flows[fparts[1]] : 0;
+			}
+		};
+		window.sys = sys;
+		// define proxy template
+		sys.proxyFlow = new Proxy(
+			0,
+			{
+				arguments: function (idx, val) {
 					// init vars
-					var fparts = fid.toString ? fid.toString().match(sys.rxp.flow) : 0; // get parts of flow reference
-					// return flow instance or 0, based on whether the flow index exists
-					return (fparts && sys.flows.length < fparts[1]) ? sys.flows[fparts[1]] : 0;
+					var flow = this, // alias flow
+						args = arguments, // alias argumenst
+						fargs = flow.arguments; // alias flow arguments
+					// if no arguments, return clone of arguments array
+					if (!args.length) return fargs.concat([]);
+					// if idx is an integer...
+					if (Math.ceil(idx) === idx) {
+						// if val is not null, set 
+						if (args.length > 1) {
+							// set index to this value
+							fargs[idx] = val;
+							// flag that the value was set
+							return !0;
+						}
+						// return value of targeted idx
+						return fargs[idx];
+					}
+				},
+				// flag when this flow is paused
+				paused: [
+					function () {
+						// flag when paused
+						return !!this.delay;
+					}
+				],
+				// stop this flow (indefinitely)
+				pause: function () {
+					return this.wait();
+				},
+				// pause flow for a given period of time with a given callback - scoped (again) to this flow
+				wait: function (time, fnc) {
+					var flow = this;
+					return (!arguments.length || (Math.ceil(time) === time && (!fnc || sys.isFnc(fnc)))) ? flow.wait.apply(flow,arguments) : !1;
+				},
+				// resume this flow towards it's current target
+				resume: function () {
+					return this.next();
+				},
+				// target next sibling
+				next: function () {
+					var flow = this,
+						node = flow.nodes[flow.currentIdx].nextIdx;
+					return !!node && flow.next(node);
+				},
+				// target previous sibling
+				previous: function () {
+					var flow = this,
+						node = flow.nodes[flow.currentIdx].previousIdx;
+					return !!node && flow.next(node);
+				},
+				// target child node
+				down: function () {
+					var flow = this,
+						node = flow.nodes[flow.currentIdx].childIdx;
+					return !!node && flow.next(node);
+				},
+				// target parent node
+				up: function () {
+					var flow = this,
+						node = flow.nodes[flow.currentIdx].parentIdx;
+					return !!node && flow.next(node);
+				},
+				// get phase string
+				phase: [
+					'phase'
+				],
+				// exit this flow
+				exit: function () {
+					return flow.next(flow.nodes[0]);
 				}
-			};
+			}
+		);
 
 		sys.objects.Flow = function (nodes) {
 			var flow = this;
@@ -54,39 +129,6 @@ if (!window.Flow) {
 			flow.nodes = [{fncs:{}, childIdx:1, idx:0, children:[], name: 'super'}]; // start with faux node pointing to first child of real tree
 			flow.pointer;
 			new sys.objects.Node(flow, flow.nodes[0], nodes); // create nodes
-			// build proxy
-			/*
-				build proxy with Proxy so it can cloned/sanitized between executions?
-			*/
-			flow.proxy = {
-				arguments: function (idx, val) {
-					// init vars
-					var args = arguments, // alias argumenst
-						fargs = flow.arguments; // alias flow arguments
-					// if no arguments, return clone of arguments array
-					if (args.length) return fargs.concat([]);
-					// if idx is a number...
-					if (!isNaN(idx)) {
-						// if val is not null, set 
-						if (args.length > 1) {
-							// set index to this value
-							fargs[idx] = val;
-							// flag that the value was set
-							return !0;
-						}
-						// return value of targeted idx
-						return fargs[idx];
-					}
-				},
-				wait: function (time, fnc) {
-					// return wait attempt
-					return flow.wait(time, fnc);
-				},
-				next: function () {
-					// return result of calling next within this scope
-					return flow.next();
-				}
-			};
 		};
 		sys.objects.Flow.prototype = {
 			/*
@@ -97,10 +139,11 @@ if (!window.Flow) {
 			*/
 			next: function (tgtNode, args) {
 				var flow = this, // alias self
-					node = flow.nodes[flow.currentIdx], // node to test and/or execute
-					phase; // the function to execute
+					node = flow.nodes[flow.currentIdx]; // node to test and/or execute
 				// if a node is given, set new target index
 				if (tgtNode) flow.targetIdx = tgtNode.idx;
+				// clear phase
+				flow.phase = '';
 				// clear delay
 				flow.clearWait();
 				// if not actively executing, and we've either set a new target or have yet to reach the current target's main function...
@@ -118,7 +161,7 @@ if (!window.Flow) {
 								// set next currentIdx
 								flow.currentIdx = node.nextIdx;
 								// set phase to "over" or "out" based on context
-								phase = sys.meta.fncs[node.inContext ? 'out' : 'over'];
+								flow.phase = sys.meta.fncs[node.inContext ? 'out' : 'over'];
 								// flag that we're out of context (or will be)
 								node.inContext = 0;
 							} else { // otherwise, when next doesn't exist or is greater than the target...
@@ -127,7 +170,7 @@ if (!window.Flow) {
 								// if not in context...
 								if (!node.inContext) {
 									// set phase to in
-									phase = sys.meta.fncs.in;
+									flow.phase = sys.meta.fncs.in;
 								}
 								// flag that we're in context of this node
 								node.inContext = 1;
@@ -138,35 +181,39 @@ if (!window.Flow) {
 							// if in context...
 							if (node.inContext) {
 								// set phase to "out"
-								phase = sys.meta.fncs.out;
+								flow.phase = sys.meta.fncs.out;
 							}
 							// flag that we're out of context (or will be)
 							node.inContext = 0;
 						}
 					} else { // otherwise, when we're on the target node...
 						// set phase to "in" or "main", based on whether we're in context
-						phase = sys.meta.fncs[node.inContext ? 'main' : 'in'];
+						flow.phase = sys.meta.fncs[node.inContext ? 'main' : 'in'];
 						// set targetMet if we're already in context
 						flow.targetMet = node.inContext;
 						// flag that we're now in context of this node
 						node.inContext = 1;
 					}
-					// flag that we're not active
-					flow.active = 1;
-					if (phase) {
-						console.log('executing "',phase,'" function in  "',node.name,'"');
+					if (flow.phase) {
+						console.log('executing "',flow.phase,'" function in  "',node.name,'"');
 					} else {
 						console.log('passing thru the "',node.name,'" node');
 					}
-					// if there is a phase...
-					if (phase) {
-						// execute the function with new or given arguments
-						flow.execute(node.fncs[phase], tgtNode ? args : flow.arguments);
+					// if a new target was given...
+					if (tgtNode) {
+						// capture or reset arguments
+						flow.arguments = (args) ? [].slice.call(typeof args !== 'object' ? [args] : args) : [];
 					}
+					// flag that we're not active
+					flow.active = 1;
+					// if there is a phase, execute the function with arguments
+					if (flow.phase) flow.execute(node.fncs[flow.phase], flow.phase !== sys.meta.fncs.main ? [] : flow.arguments);
+					// if done or paused, clear arguments
+//					if (flow.targetMet || flow.delay) flow.arguments = [];
 					// flag that we're not active
 					flow.active = 0;
 				}
-				// if not active, delayed, and target not met and not paused, return result of recursive call
+				// if not active or delayed, and target not met and not paused, return result of recursive call
 				if (!flow.active && !flow.delay && !flow.targetMet) return flow.next();
 				// return whether we've reached the target or not
 				return !!flow.targetMet;
@@ -177,9 +224,9 @@ if (!window.Flow) {
 				// if fnc given...
 				if (fnc) {
 					// if arguments given, set as new arguments
-					if (args) flow.arguments = [].slice.call(typeof args !== 'object' ? [args] : args);
+					//if (args) flow.arguments = [].slice.call(typeof args !== 'object' ? [args] : args);
 					// execute function - use some sort of scope
-					fnc.apply(flow.proxy, flow.arguments);
+					fnc.apply(new Proxy(flow, sys.proxyFlow, sys.fkey), args || []);
 				}
 			},
 			wait: function (time, fnc) {
@@ -190,7 +237,10 @@ if (!window.Flow) {
 				// resolve time as an integer
 				time = parseInt(time);
 				// set delay to any truthy value or a timeout, based on time
-				flow.delay = time ? window.setTimeout(fnc ? function () {flow.execute(fnc)} : function () {flow.next()}, time) : 1;
+				flow.delay = time ? window.setTimeout(fnc ? function () {flow.execute(fnc)} : function () {
+					console.log('auto-resuming after delay!!');
+					flow.next()
+				}, time) : 1;
 				// flag that the flow has been delayed
 				return !0;
 			},
@@ -268,12 +318,12 @@ if (!window.Flow) {
 			}
 
 			if (sys.isFnc(def)) {
-				node.fncs[sys.meta.target] = def;
+				node.fncs[sys.meta.fncs.main] = def;
 			} else {
 				for (i in def) {
 					if (def.hasOwnProperty(i)) {
 						if (i.charAt(0) === sys.meta.prefix) {
-							meta = i.substring(1);
+							meta = i.substring(1);1
 							if (sys.meta.fncs[meta] === meta && sys.isFnc(def[i])) {
 								node.fncs[meta] = def[i];
 							} else {
@@ -290,7 +340,7 @@ if (!window.Flow) {
 			}
 		};
 
-		Flow = function () {
+		window.Flow = function () {
 			return sys.FlowSugar(arguments,this);
 		};
 		Flow.define = function (tree) {
@@ -315,31 +365,4 @@ if (!window.Flow) {
 			// return result of exiting the target flow
 			return flow ? flow.exit() : !1;
 		};
-
-		Flow.bootstrap = di.bs || {};
-		if (Flow.bootstrap.exposeSys) {
-			Flow._private = sys;
-		}
-		Flow.initialized = !0;
-
-		di.inst = di.oldFlow instanceof arguments.callee;
-		if (!di.inst && Flow.hasOwnProperty(di.args[1]) && sys.isFnc(di.args[0].callee)) {
-			di.method = di.args[1];
-		}
-		if (di.method) {
-			return Flow[di.method].apply(Flow, di.args[0]);
-		} else {
-			return sys.FlowSugar(arguments, di.oldFlow, di.inst);
-		}
-	}
-	// bootstrap options for Flow
-	Flow.bootstrap = {
-		exposeSys: !1 // expose the sys variable
-	};
-	['define','next','wait','getPointer'].forEach(
-		function (method) {
-			Flow[method] = function () {return Flow(arguments,method)};
-		}
-	);
-	Flow.initialized = !1;
-}
+})(window);
