@@ -90,6 +90,24 @@
 						return fargs[idx];
 					}
 				},
+				env: function (key, val) {
+					// init vars
+					var flow = this, // alias flow
+						env = flow.env, // alias env
+						isSet = args.length > 1,
+						args = arguments; // alias arguments
+					// if no arguments, return current environment
+					if (!args.length) return flow.env;
+					if (isSet) {
+						if (typeof key === 'string') {
+							env[key] = val;
+							return !0;
+						}
+					} else if (env.hasOwnProperty(key)) {
+						return env[key];
+					}
+					return !1;
+				},
 				// flag when this flow is paused
 				paused: [
 					function () {
@@ -160,6 +178,8 @@
 			// holds pointer for timeouts
 			flow.delay;
 			flow.arguments = [];
+			// environmental variables
+			flow.env = {};
 			flow.id = (sys.date++).toString(20);
 			sys.flows[flow.id] = flow;
 			flow.nodes = [{fncs:{}, childIdx:1, idx:0, children:[], name: 'super'}]; // start with faux node pointing to first child of real tree
@@ -360,16 +380,12 @@
 			}
 		};
 
-		window.Flow = function () {
-			var that = this,
-				args = arguments;
-			if (that.hasOwnProperty && !(that instanceof args.callee)) {
+		window.Flow = function (map) {
+			var that = this;
+			if (that.hasOwnProperty && !(that instanceof arguments.callee)) {
 				// throw error - must call with new operator
 			}
-			return Flow.define.apply(Flow, args);
-		};
-		Flow.define = function (map) {
-			if (typeof tree !== 'object') {
+			if (typeof map !== 'object') {
 				// throw error - map is invalid
 			}
 			return (new sys.objects.Flow(map)).getMap();
