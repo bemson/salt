@@ -6,7 +6,13 @@
 			date: new Date() * 1,
 			rxp: {
 				flow: /^(\w+)@(\d+)$/,
-				node: /^\w+@(\d+)$/
+				node: /^\w+@(\d+)$/,
+				env: /\S/,
+			},
+			// allows getting type as array
+			typeOf: function (obj) {
+				var type = typeof obj;
+				return type === 'object' && Object.prototype.toString.call(obj) === '[object Array]' ? 'array' : type;
 			},
 			emptyFnc: function () {},
 			isFnc: function (v) {
@@ -23,8 +29,7 @@
 					over: 'over'
 				},
 				keys: {
-					req: 'req',
-					end: 'env'
+					env: 'env'
 				},
 				prefix: '_'
 			},
@@ -90,24 +95,6 @@
 						return fargs[idx];
 					}
 				},
-				env: function (key, val) {
-					// init vars
-					var flow = this, // alias flow
-						env = flow.env, // alias env
-						isSet = args.length > 1,
-						args = arguments; // alias arguments
-					// if no arguments, return current environment
-					if (!args.length) return flow.env;
-					if (isSet) {
-						if (typeof key === 'string') {
-							env[key] = val;
-							return !0;
-						}
-					} else if (env.hasOwnProperty(key)) {
-						return env[key];
-					}
-					return !1;
-				},
 				// flag when this flow is paused
 				paused: [
 					function () {
@@ -170,7 +157,10 @@
 
 		sys.objects.Flow = function (nodes) {
 			var flow = this;
+
 			flow.currentIdx = flow.targetIdx = 0;
+			flow.envIdx = {}; // index of environmental properties for all nodes
+
 			// flags when the target's _main function has been called
 			flow.targetMet;
 			// flags when this flow is actively executing functions
@@ -184,8 +174,31 @@
 			sys.flows[flow.id] = flow;
 			flow.nodes = [{fncs:{}, childIdx:1, idx:0, children:[], name: 'super'}]; // start with faux node pointing to first child of real tree
 			new sys.objects.Node(flow, flow.nodes[0], nodes); // create node tree
+			// make env proxy - template used with proxy maps
+			flow.envProxy = new Proxy(0, flow.getEnvProxyScheme());
 		};
 		sys.objects.Flow.prototype = {
+			getEnvProxyScheme: function () {
+				// init vars
+				var flow = this, // alias self
+					scheme = {}, // proxy scheme
+					gvsFn = function (v,k,p) { // gvs function
+						if (p === 'g') {
+							return flow.env(k);
+						} else {
+							return flow.env(k,v);
+						}
+					},
+					map = [gvsFn,0,gvsFn], // map for scheme
+					i; // loop vars
+				// with each env...
+				for (i in flow.envIdx) {
+					// add map for this environmental variable
+					scheme[i] = map;
+				}
+				// return the scheme
+				return scheme;
+			},
 			/*
 			called outside of Flow to start one
 			called inside of Flow to continue one?
@@ -278,9 +291,18 @@
 				if (fnc) {
 					// if arguments given, set as new arguments
 					//if (args) flow.arguments = [].slice.call(typeof args !== 'object' ? [args] : args);
+					// get environment proxy
 					// execute function - use some sort of scope
-					fnc.apply(new Proxy(flow, sys.proxies.Flow, sys.fkey), args || []);
+					fnc.apply(flow.getProxy(), args || []);
 				}
+			},
+			getProxy: function () {
+				// init vars
+				var flow = this, // alias self
+					FlowPxy = new Proxy(flow, sys.proxies.Flow, sys.fkey); // clone proxy for flow
+				FlowPxy.env = new Proxy(0,flow.envProxy); // add environment proxy to the flow proxy
+				// return the proxy
+				return FlowPxy;
 			},
 			wait: function (time, fnc) {
 				// init vars
@@ -341,8 +363,9 @@
 
 		sys.objects.Node = function (flow, parent, def, name) {
 			var node = this,
-				i,meta;
+				i,meta, metas = sys.meta;
 
+			node.flow = flow;
 			node.idx = flow.nodes.push(node) - 1;
 			node.parentIdx = parent.idx;
 			node.localChildIdx = parent.children.push(node) - 1;
@@ -354,6 +377,7 @@
 
 			node.children = [];
 			node.fncs = {};
+			node.env = {};
 			node.name = name || 'root';
 			node.id = flow.id + '@' + node.idx;
 
@@ -364,10 +388,19 @@
 					if (def.hasOwnProperty(i)) {
 						if (i.charAt(0) === sys.meta.prefix) {
 							meta = i.substring(1);1
+							// if this is a meta function...
 							if (sys.meta.fncs[meta] === meta && sys.isFnc(def[i])) {
+								// add to node functions
 								node.fncs[meta] = def[i];
+							} else if (sys.meta.keys[meta] === meta && !sys.isFnc(def[i])) { // otherwise, when this is a meta key (not a function)...
+								// based on the key
+								switch (meta) {
+									case metas.keys.env : // environment keys
+										node.sanitizeAddEnv(def[i]);
+									break;
+								}
 							} else {
-								// throw error - illegal prefix / unknown meta?
+								// throw error - unknown meta
 							}
 						} else {
 							// create child nodes
@@ -377,6 +410,66 @@
 						}
 					}
 				}
+			}
+		};
+		sys.objects.Node.prototype = {
+			// add single environment variable - supports cfg can be a string or object
+			addEnv: function (cfg) {
+				var node = this,
+					cnt = 0, // number of env created
+					i; // loop vars
+				// if cfg is an object...
+				if (typeof cfg === 'object') {
+					for (i in cfg) {
+						if (cfg.hasOwnProperty(i)) {
+							// add to flow env index
+							node.flow.envIdx[i] = 1;
+							node.env[i] = {name: i, value: cfg[i], useValue: 1};
+							cnt++;
+						}
+					}
+				} else if (sys.rxp.env.test(cfg)) { // or, when a valid environment name - any string with a non-space character...
+						// add to flow env index
+						node.flow.envIdx[cfg] = 1;
+						node.env[cfg]= {name: cfg, useValue: 0};
+						cnt++;
+				}
+				// return number of vars created
+				return cnt;
+			},
+			// set environment variables
+			/*
+			any number of args can exist in the following following formats:
+			1) a string as an environment variable name ''
+			2) an array of strings as environment variable names ['','']
+			3) an object with pairs, representing the variable name and value {key:'',key:''}
+			4) an array of objects with pairs for variable name and value [{key:'', key:''},{key:'',key:''}]
+			*/
+			sanitizeAddEnv: function () {
+				var node = this, // alias self
+					args = [].slice.call(arguments), // get arguments as an array
+					i = 0, j = args.length, // loop vars
+					cnt = 0; // variable names added
+				for (; i < j; i++) {
+					switch (sys.typeOf(args[i])) {
+						case 'array' :
+							cnt += node.sanitizeAddEnv.apply(node,args[i]);
+						break;
+
+						case 'string' :
+						case 'object' :
+							cnt += node.addEnv(args[i]);
+						break;
+
+						default:
+							// throw error? - invalid
+					}
+				}
+				// return number of vars added
+				return cnt;
+			},
+			// remove environment variables
+			unsetEnv: function() {
 			}
 		};
 
