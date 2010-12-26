@@ -95,6 +95,30 @@
 						return fargs[idx];
 					}
 				},
+				env: function () {
+					var flow = this,
+						args = arguments,
+						key = args[0],
+						envObj;
+					// if key is valid...
+					if (typeof key === 'string' && sys.rxp.env.test(key)) {
+						// resolve env instance - get existing or create new one
+						envObj = flow.resolveEnv(key);
+						// if setting...
+						if (args.length > 1) {
+							// set last scoped value
+							envObj.values[0] = args[1];
+							return !0;
+						} else { // otherwise, when getting...
+							// return value
+							return envObj.values[0];
+						}
+					} else {
+						// throw error - invalid environment key
+					}
+					// needed for valid-syntax?
+					return !1;
+				},
 				// flag when this flow is paused
 				paused: [
 					function () {
@@ -157,10 +181,9 @@
 
 		sys.objects.Flow = function (nodes) {
 			var flow = this;
-
+			// environment variables and globals, managed by flow
+			flow.envs = {};
 			flow.currentIdx = flow.targetIdx = 0;
-			flow.envIdx = {}; // index of environmental properties for all nodes
-
 			// flags when the target's _main function has been called
 			flow.targetMet;
 			// flags when this flow is actively executing functions
@@ -174,31 +197,8 @@
 			sys.flows[flow.id] = flow;
 			flow.nodes = [{fncs:{}, childIdx:1, idx:0, children:[], name: 'super'}]; // start with faux node pointing to first child of real tree
 			new sys.objects.Node(flow, flow.nodes[0], nodes); // create node tree
-			// make env proxy - template used with proxy maps
-			flow.envProxy = new Proxy(0, flow.getEnvProxyScheme());
 		};
 		sys.objects.Flow.prototype = {
-			getEnvProxyScheme: function () {
-				// init vars
-				var flow = this, // alias self
-					scheme = {}, // proxy scheme
-					gvsFn = function (v,k,p) { // gvs function
-						if (p === 'g') {
-							return flow.env(k);
-						} else {
-							return flow.env(k,v);
-						}
-					},
-					map = [gvsFn,0,gvsFn], // map for scheme
-					i; // loop vars
-				// with each env...
-				for (i in flow.envIdx) {
-					// add map for this environmental variable
-					scheme[i] = map;
-				}
-				// return the scheme
-				return scheme;
-			},
 			/*
 			called outside of Flow to start one
 			called inside of Flow to continue one?
@@ -207,7 +207,8 @@
 			*/
 			next: function (tgtNode, args) {
 				var flow = this, // alias self
-					node = flow.nodes[flow.currentIdx]; // node to test and/or execute
+					node = flow.nodes[flow.currentIdx], // node to test and/or execute
+					i; // loop vars
 				// if a node is given...
 				if (tgtNode) {
 					// set new target index
@@ -229,8 +230,16 @@
 					if (flow.direction) {
 						// if moving forward...
 						if (flow.direction > 0) {
-							// if next is lte the target...
-							if (node.nextIdx <= flow.targetIdx) {
+							// if the parent's next index is less than the target
+							if (node.idx && flow.nodes[node.parentIdx].nextIdx <= flow.targetIdx) {
+								// go to "leftIdx" when a meta exists for "backwards-over"
+								// set parent's next as currentIdx
+								flow.currentIdx = flow.nodes[node.parentIdx].nextIdx;
+								// set phase to out
+								flow.phase = sys.meta.fncs.out;
+								// flag that we're out of context (or will be)
+								node.inContext = 0;
+							} else if (node.nextIdx <= flow.targetIdx) { // or, when the next node is lte the target...
 								// set next currentIdx
 								flow.currentIdx = node.nextIdx;
 								// set phase to "over" or "out" based on context
@@ -274,8 +283,25 @@
 					}
 					// flag that we're not active
 					flow.active = 1;
-					// if there is a function for the phase, execute - use arguments for main phase only
-					if (flow.phase && node.fncs.hasOwnProperty(flow.phase)) flow.execute(node.fncs[flow.phase], flow.phase !== sys.meta.fncs.main ? [] : flow.arguments);
+					// if not the root node and there is a phase...
+					if (node.idx && flow.phase) {
+						// if phase is in, increase scope of node envs
+						if (flow.phase === sys.meta.fncs.in) node.scope();
+						// if there is a nodeOut node and it's greater than the current node, descope envs for that node
+						if (flow.outNode && flow.outNode.idx > node.idx) flow.outNode.descope();
+						// reset out node
+						flow.outNode = 0;
+						// if there is a phase function...
+						if (node.fncs.hasOwnProperty(flow.phase)) {
+							// if the out phase, set the flow's outNode property
+							if (flow.phase === sys.meta.fncs.out) flow.outNode = node;
+							// execute phase function
+							flow.execute(node.fncs[flow.phase], flow.phase !== sys.meta.fncs.main ? [] : flow.arguments);
+						} else if (flow.phase === sys.meta.fncs.out) { // or, when phase was out...
+							// descope envs for this node (now)
+							node.descope();
+						}
+					}
 					// flag that we're no longer active
 					flow.active = 0;
 				}
@@ -291,18 +317,14 @@
 				if (fnc) {
 					// if arguments given, set as new arguments
 					//if (args) flow.arguments = [].slice.call(typeof args !== 'object' ? [args] : args);
-					// get environment proxy
 					// execute function - use some sort of scope
-					fnc.apply(flow.getProxy(), args || []);
+					fnc.apply(new Proxy(flow, sys.proxies.Flow, sys.fkey), args || []);
 				}
 			},
-			getProxy: function () {
-				// init vars
-				var flow = this, // alias self
-					FlowPxy = new Proxy(flow, sys.proxies.Flow, sys.fkey); // clone proxy for flow
-				FlowPxy.env = new Proxy(0,flow.envProxy); // add environment proxy to the flow proxy
-				// return the proxy
-				return FlowPxy;
+			// retrieve or create Env instance with this key
+			resolveEnv: function (key, noscope) {
+				var flow = this;
+				return flow.envs.hasOwnProperty(key) ? flow.envs.key : new sys.object.Env(flow, key, noscope);
 			},
 			wait: function (time, fnc) {
 				// init vars
@@ -361,6 +383,35 @@
 			}
 		}
 
+		sys.objects.Env = function (flow, key, noscope) {
+			var env = this;
+			env.flow = flow;
+			env.key = key;
+			env.values = [];
+			// add self to flow's env
+			flow.envs[key] = env;
+		};
+		sys.objects.Env.prototype = {
+			descope: function () {
+				var env = this;
+				// remove scope from values
+				env.values.shift();
+				// if no more scope levels exist, remove self-reference from flow
+				if (!env.values.length) delete env.flow.envs[env.key];
+				// flag that this instance was descoped
+				return 1;
+			},
+			scope: function () {
+				var env = this;
+				// if there is no length, set first value to undefined
+				if (!env.values.length) env.values[0] = undefined;
+				// copy current value to new scope's value
+				env.values.unshift(env.values[0]);
+				// flag that this instance was scoped
+				return 1;
+			}
+		};
+
 		sys.objects.Node = function (flow, parent, def, name) {
 			var node = this,
 				i,meta, metas = sys.meta;
@@ -377,7 +428,7 @@
 
 			node.children = [];
 			node.fncs = {};
-			node.env = {};
+			node.envs = {};
 			node.name = name || 'root';
 			node.id = flow.id + '@' + node.idx;
 
@@ -396,7 +447,7 @@
 								// based on the key
 								switch (meta) {
 									case metas.keys.env : // environment keys
-										node.sanitizeAddEnv(def[i]);
+										node.sanitizeAddEnvDef(def[i]);
 									break;
 								}
 							} else {
@@ -414,7 +465,7 @@
 		};
 		sys.objects.Node.prototype = {
 			// add single environment variable - supports cfg can be a string or object
-			addEnv: function (cfg) {
+			addEnvDef: function (cfg) {
 				var node = this,
 					cnt = 0, // number of env created
 					i; // loop vars
@@ -422,16 +473,12 @@
 				if (typeof cfg === 'object') {
 					for (i in cfg) {
 						if (cfg.hasOwnProperty(i)) {
-							// add to flow env index
-							node.flow.envIdx[i] = 1;
-							node.env[i] = {name: i, value: cfg[i], useValue: 1};
+							node.envs[i] = {name: i, value: cfg[i], useValue: 1};
 							cnt++;
 						}
 					}
 				} else if (sys.rxp.env.test(cfg)) { // or, when a valid environment name - any string with a non-space character...
-						// add to flow env index
-						node.flow.envIdx[cfg] = 1;
-						node.env[cfg]= {name: cfg, useValue: 0};
+						node.envs[cfg]= {name: cfg, useValue: 0};
 						cnt++;
 				}
 				// return number of vars created
@@ -445,7 +492,7 @@
 			3) an object with pairs, representing the variable name and value {key:'',key:''}
 			4) an array of objects with pairs for variable name and value [{key:'', key:''},{key:'',key:''}]
 			*/
-			sanitizeAddEnv: function () {
+			sanitizeAddEnvDef: function () {
 				var node = this, // alias self
 					args = [].slice.call(arguments), // get arguments as an array
 					i = 0, j = args.length, // loop vars
@@ -453,12 +500,12 @@
 				for (; i < j; i++) {
 					switch (sys.typeOf(args[i])) {
 						case 'array' :
-							cnt += node.sanitizeAddEnv.apply(node,args[i]);
+							cnt += node.sanitizeAddEnvDef.apply(node,args[i]);
 						break;
 
 						case 'string' :
 						case 'object' :
-							cnt += node.addEnv(args[i]);
+							cnt += node.addEnvDef(args[i]);
 						break;
 
 						default:
@@ -468,8 +515,11 @@
 				// return number of vars added
 				return cnt;
 			},
-			// remove environment variables
-			unsetEnv: function() {
+			scope: function () {
+				console.log('scoping ', this.name);
+			},
+			descope: function () {
+				console.log('descoping ', this.name);
 			}
 		};
 
