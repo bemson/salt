@@ -41,7 +41,7 @@
 				if (fref.hasOwnProperty) {
 					// if an Flow instance,  return as is
 					if (fref instanceof cnst) return fref;
-					// if a Proxy instance, return corresponding Flow instance
+					// if a Proxy, return corresponding Flow instance
 					if (fref instanceof Proxy && fref._gset().type === 1 && fref.type() === 'Flow' && (flow = fref._gset(sys.fkey)) instanceof cnst) return flow;
 				}
 				// (otherwise) get parts of fref string
@@ -95,19 +95,27 @@
 						return fargs[idx];
 					}
 				},
-				env: function () {
+				env: function (key, value) {
 					var flow = this,
 						args = arguments,
-						key = args[0],
-						envObj;
-					// if key is valid...
-					if (typeof key === 'string' && sys.rxp.env.test(key)) {
+						envObj,i,vars = [];
+					// if no args are given...
+					if (!args.length) {
+						/*DEBUG*/ vars = {};
+						// with each env in this flow...
+						for (i in flow.envs) {
+//							if (flow.envs.hasOwnProperty(i)) vars.push(i);
+							/*DEBUG*/ vars[i] = flow.envs[i].values[0];
+						}
+						// return list of var names
+						return vars;
+					} else if (typeof key === 'string' && sys.rxp.env.test(key)) { // if key is valid...
 						// resolve env instance - get existing or create new one
 						envObj = flow.resolveEnv(key);
 						// if setting...
 						if (args.length > 1) {
 							// set last scoped value
-							envObj.values[0] = args[1];
+							envObj.values[0] = value;
 							return !0;
 						} else { // otherwise, when getting...
 							// return value
@@ -115,9 +123,9 @@
 						}
 					} else {
 						// throw error - invalid environment key
+						// needed for valid-syntax?
+						return !1;
 					}
-					// needed for valid-syntax?
-					return !1;
 				},
 				// flag when this flow is paused
 				paused: [
@@ -139,13 +147,14 @@
 				resume: function () {
 					return this.next();
 				},
-				// target next sibling
+				/*// target next sibling
 				next: function () {
 					var flow = this,
 						node = flow.nodes[flow.currentIdx].nextIdx;
+					// target/goto next sibling, or return false when none exists
 					return !!node && flow.next(node);
 				},
-				// target previous sibling
+				/* // target previous sibling
 				previous: function () {
 					var flow = this,
 						node = flow.nodes[flow.currentIdx].previousIdx;
@@ -162,15 +171,17 @@
 					var flow = this,
 						node = flow.nodes[flow.currentIdx].parentIdx;
 					return !!node && flow.next(node);
-				},
+				},*/
 				// get phase string
 				phase: [
 					'phase'
 				],
 				// return function list
-				getMap: function () {
-					return this.getMap();
-				},
+				map: [
+					function () {
+						return this.getMap();
+					}
+				],
 				// exit this flow
 				exit: function () {
 					var flow = this;
@@ -181,8 +192,6 @@
 
 		sys.objects.Flow = function (nodes) {
 			var flow = this;
-			// environment variables and globals, managed by flow
-			flow.envs = {};
 			flow.currentIdx = flow.targetIdx = 0;
 			// flags when the target's _main function has been called
 			flow.targetMet;
@@ -191,8 +200,8 @@
 			// holds pointer for timeouts
 			flow.delay;
 			flow.arguments = [];
-			// environmental variables
-			flow.env = {};
+			// environment variables and globals, managed by flow
+			flow.envs = {};
 			flow.id = (sys.date++).toString(20);
 			sys.flows[flow.id] = flow;
 			flow.nodes = [{fncs:{}, childIdx:1, idx:0, children:[], name: 'super'}]; // start with faux node pointing to first child of real tree
@@ -286,9 +295,9 @@
 					// if not the root node and there is a phase...
 					if (node.idx && flow.phase) {
 						// if phase is in, increase scope of node envs
-						if (flow.phase === sys.meta.fncs.in) node.scope();
+						if (flow.phase === sys.meta.fncs.in) node.scopeEnvs();
 						// if there is a nodeOut node and it's greater than the current node, descope envs for that node
-						if (flow.outNode && flow.outNode.idx > node.idx) flow.outNode.descope();
+						if (flow.outNode && flow.outNode.idx > node.idx) flow.outNode.descopeEnvs();
 						// reset out node
 						flow.outNode = 0;
 						// if there is a phase function...
@@ -299,7 +308,7 @@
 							flow.execute(node.fncs[flow.phase], flow.phase !== sys.meta.fncs.main ? [] : flow.arguments);
 						} else if (flow.phase === sys.meta.fncs.out) { // or, when phase was out...
 							// descope envs for this node (now)
-							node.descope();
+							node.descopeEnvs();
 						}
 					}
 					// flag that we're no longer active
@@ -313,18 +322,15 @@
 			execute: function (fnc, args) {
 				// init vars
 				var flow = this; // alias self
-				// if fnc given...
-				if (fnc) {
-					// if arguments given, set as new arguments
-					//if (args) flow.arguments = [].slice.call(typeof args !== 'object' ? [args] : args);
-					// execute function - use some sort of scope
-					fnc.apply(new Proxy(flow, sys.proxies.Flow, sys.fkey), args || []);
-				}
+				// clear wait
+				flow.clearWait();
+				// if fnc given, execute function with given or null args
+				if (fnc) fnc.apply(new Proxy(flow, sys.proxies.Flow, sys.fkey), args || []);
 			},
 			// retrieve or create Env instance with this key
-			resolveEnv: function (key, noscope) {
+			resolveEnv: function (key) {
 				var flow = this;
-				return flow.envs.hasOwnProperty(key) ? flow.envs.key : new sys.object.Env(flow, key, noscope);
+				return flow.envs.hasOwnProperty(key) ? flow.envs[key] : new sys.objects.Env(flow, key);
 			},
 			wait: function (time, fnc) {
 				// init vars
@@ -333,9 +339,11 @@
 				flow.clearWait();
 				// resolve time as an integer
 				time = parseInt(time);
-				// set delay to any truthy value or a timeout, based on time
-				flow.delay = time ? window.setTimeout(fnc ? function () {flow.execute(fnc)} : function () {
-					console.log('auto-resuming after delay!!');
+				// set delay to any truthy value or a timeout-pointer, based on time argument
+				flow.delay = time ? window.setTimeout(fnc ? function () {
+					flow.execute(fnc);
+					if (!flow.delay) flow.next()
+				} : function () {
 					flow.next()
 				}, time) : 1;
 				// flag that the flow has been delayed
@@ -387,7 +395,7 @@
 			var env = this;
 			env.flow = flow;
 			env.key = key;
-			env.values = [];
+			env.values = [undefined]; // initial value is undefined
 			// add self to flow's env
 			flow.envs[key] = env;
 		};
@@ -403,9 +411,7 @@
 			},
 			scope: function () {
 				var env = this;
-				// if there is no length, set first value to undefined
-				if (!env.values.length) env.values[0] = undefined;
-				// copy current value to new scope's value
+				// copy current value as the new value (first value)
 				env.values.unshift(env.values[0]);
 				// flag that this instance was scoped
 				return 1;
@@ -509,17 +515,42 @@
 						break;
 
 						default:
-							// throw error? - invalid
+							// throw error? - invalid env definition
 					}
 				}
 				// return number of vars added
 				return cnt;
 			},
-			scope: function () {
-				console.log('scoping ', this.name);
+			scopeEnvs: function () {
+				var node = this,
+					flow = node.flow,
+					i;
+				for (i in node.envs) {
+					if (node.envs.hasOwnProperty(i)) {
+						console.log('scoping var ',i);
+						// if the node exists in the flow...
+						if (flow.envs.hasOwnProperty(i)) {
+							flow.envs[i].scope();
+						} else { // otherwise, when the node does not exist...
+							// resolve node
+							flow.resolveEnv(i);
+						}
+						// if there is a default value, set env value
+						if (node.envs[i].useValue) flow.envs[i].values[0] = node.envs[i].value;
+					}
+				}
 			},
-			descope: function () {
-				console.log('descoping ', this.name);
+			descopeEnvs: function () {
+				var node = this,
+					flow = node.flow,
+					i;
+				for (i in node.envs) {
+					// if not inherited and the node exists in the flow, descope environ
+					if (node.envs.hasOwnProperty(i) && flow.envs.hasOwnProperty(i)) {
+						console.log('descoping var ',i);
+						flow.envs[i].descope();
+					}
+				}
 			}
 		};
 
