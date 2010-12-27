@@ -101,11 +101,9 @@
 						envObj,i,vars = [];
 					// if no args are given...
 					if (!args.length) {
-						/*DEBUG*/ vars = {};
 						// with each env in this flow...
 						for (i in flow.envs) {
-//							if (flow.envs.hasOwnProperty(i)) vars.push(i);
-							/*DEBUG*/ vars[i] = flow.envs[i].values[0];
+							if (flow.envs.hasOwnProperty(i)) vars.push(i);
 						}
 						// return list of var names
 						return vars;
@@ -147,31 +145,6 @@
 				resume: function () {
 					return this.next();
 				},
-				/*// target next sibling
-				next: function () {
-					var flow = this,
-						node = flow.nodes[flow.currentIdx].nextIdx;
-					// target/goto next sibling, or return false when none exists
-					return !!node && flow.next(node);
-				},
-				/* // target previous sibling
-				previous: function () {
-					var flow = this,
-						node = flow.nodes[flow.currentIdx].previousIdx;
-					return !!node && flow.next(node);
-				},
-				// target child node
-				down: function () {
-					var flow = this,
-						node = flow.nodes[flow.currentIdx].childIdx;
-					return !!node && flow.next(node);
-				},
-				// target parent node
-				up: function () {
-					var flow = this,
-						node = flow.nodes[flow.currentIdx].parentIdx;
-					return !!node && flow.next(node);
-				},*/
 				// get phase string
 				phase: [
 					'phase'
@@ -284,11 +257,6 @@
 						flow.targetMet = node.inContext;
 						// flag that we're now in context of this node
 						node.inContext = 1;
-					}
-					if (flow.phase) {
-						console.log('executing "',flow.phase,'" function of  "',node.name,'"');
-					} else {
-						console.log('processing the "',node.name,'" node');
 					}
 					// flag that we're not active
 					flow.active = 1;
@@ -527,7 +495,6 @@
 					i;
 				for (i in node.envs) {
 					if (node.envs.hasOwnProperty(i)) {
-						console.log('scoping var ',i);
 						// if the node exists in the flow...
 						if (flow.envs.hasOwnProperty(i)) {
 							flow.envs[i].scope();
@@ -546,10 +513,7 @@
 					i;
 				for (i in node.envs) {
 					// if not inherited and the node exists in the flow, descope environ
-					if (node.envs.hasOwnProperty(i) && flow.envs.hasOwnProperty(i)) {
-						console.log('descoping var ',i);
-						flow.envs[i].descope();
-					}
+					if (node.envs.hasOwnProperty(i) && flow.envs.hasOwnProperty(i)) flow.envs[i].descope();
 				}
 			}
 		};
