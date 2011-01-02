@@ -7,7 +7,7 @@
 			rxp: {
 				flow: /^(\w+)@(\d+)$/,
 				node: /^\w+@(\d+)$/,
-				env: /\S/,
+				env: /\S/
 			},
 			// allows getting type as array
 			typeOf: function (obj) {
@@ -57,16 +57,7 @@
 				return (flow && fparts[2] < flow.nodes.length) ? flow.nodes[fparts[2]] : 0;
 			}
 		};
-		window.sys = sys;
-		// define template for public flow instance
-		sys.proxies.FlowPublic = new Proxy(
-			0,
-			{
-				define: function () {
-					return Flow.define.apply(Flow,arguments);
-				}
-			}
-		);
+
 		// define template for flow execution environment
 		sys.proxies.Flow = new Proxy(
 			0,
@@ -231,22 +222,16 @@
 							} else { // otherwise, when next doesn't exist or is greater than the target...
 								// set next currentIdx
 								flow.currentIdx = node.childIdx;
-								// if not in context...
-								if (!node.inContext) {
-									// set phase to in
-									flow.phase = sys.meta.fncs.in;
-								}
+								// if not in context, set phase to in
+								if (!node.inContext) flow.phase = sys.meta.fncs.in;
 								// flag that we're in context of this node
 								node.inContext = 1;
 							}
 						} else { // or, when moving backwards...
 							// set next currentIdx, based on parent
 							flow.currentIdx = node.parentIdx >= flow.targetIdx ? node.parentIdx : node.previousIdx;
-							// if in context...
-							if (node.inContext) {
-								// set phase to "out"
-								flow.phase = sys.meta.fncs.out;
-							}
+							// if in context, set phase to "out"
+							if (node.inContext) flow.phase = sys.meta.fncs.out;
 							// flag that we're out of context (or will be)
 							node.inContext = 0;
 						}
@@ -340,7 +325,7 @@
 								return flow.next(node,arguments)
 							};
 						fnc.toString = function () {
-							return node.id;
+							return node.id
 						};
 						if (ptr) {
 							ptr[node.name] = fnc
@@ -352,7 +337,7 @@
 						// if there are children, get pointer for the first
 						if (node.children.length) _addPtr(flow.nodes[node.children[0].idx], node.name ? fnc : ptr);
 						// return ptr
-						return ptr
+						return ptr;
 					};
 				// return pointer from second (starting) node
 				return _addPtr(flow.nodes[1]);
@@ -531,6 +516,6 @@
 		// return public proxy of a flow instance
 		Flow.getController = function (fref) {
 			var flow = sys.resolveFlow(fref);
-			return !!flow && new Proxy(flow, sys.proxies.Flow, sys.fkey);
+			return !!flow && new Proxy(flow, sys.proxies.Flow, sys.fkey)
 		};
-})();
+})()

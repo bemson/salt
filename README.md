@@ -1,75 +1,53 @@
-Flow - version 0.1
+# Flow
+Tame your code.
 
+1/2/11
+version 0.1.0
 by Bemi Faison (bemson@gmail.com)
 
-# Flow
+## DESCRIPTION
 
-Flow is an evolved controller construct that bridges the gap between programming methodologies and the modes, exceptions, states, and steps (or MESS), prevelant in web-application development. Flow makes code immediately meaningful, accessible and testable.
+Flow is a function manager that bridges the gap between programming methodologies and the modes, exceptions, states, and steps (or MESS) inherent to JavaScript web-application development. Flow defines functions using a construct that captures their context, purpose, and content (i.e., the mess), making each immediately meaningful, accessible and testable. Flow sequences and iterates over these functions, observing their order-dependent and stateful execution.
 
-## Using Flow
+## INSTALLATION
 
-Flow defines and enforces function-trees, compiled from an object-literal that describes their relationships and roles. 
+Use Flow within a web browser. Load the `src/flow.js` file like any other external JavaScript library file.
 
-1. Map the flow
+Flow requires the [Proxy library](http://github.com/bemson/Proxy/).
 
-Similar to prototyping a class
+## USAGE
 
+Create a Flow using the `new` operator and the required _tree_ argument. The tree is an object-literal (which permits further nesting) containing all the functions in a Flow.
 
-Flow returns a linked-list of functions, which mirrors the tree structure.
-
-
-
-Flow introduces a simple pattern to code meaningful routines, which are immediately accessible and testable.
-
-
-Flow makes definable moments of code meaningful, accessible and testable, using a simple, lightweight pattern and syntax.
-
-
-Flow bridges the gap between programming methodologies and the MESS (modes, exceptions, states and steps) of web-application development. Flow manages the MESS through path-oriented-programming (POP), a pattern for making defineable moments of code meaningful, accessible, and testable. POP focuses on _where_ functions exists, and uses meta functions and properties as an execution context.
-
-Flow is an advanced controller, designed to tame your code. every signficant moment of your code id
-
- utilizing aspect-oriented-programming, life-cycle constructs, to identify and target every 
-
-Every defineable moment of code can be identified and targeted for
-
-Flow defines and enforces routine dependencies, enabling control over when functions execute. This dependency tree is compiled from an object-literal that describes the relationships and roles of functions. Flow returns a linked-list of functions, which mirrors the tree structure.
-
-### Creating a flow
-
-    var app = new Flow({
-      _in: function () {
-        // setup stuff
-      },
-      login: {
-        _in: function () {
-          // init widget
-        },
-        _out: function () {
-          // destroy widget
-        },
-        submit: {
-          _main: function () {},
-          _over: function () {}
-        },
-        success: function () {},
-        fail: function () {}
-      }
+    var page = new Flow({
+        _in: function () {},
+        form: {
+            _in: function () {},
+            _main: function () {},
+            submit: {
+                _main: function () {},
+                fail: {
+                    _over: function () {},
+                    _main: function () {}
+                },
+                pass: function () {}
+            },
+            _out: fuction () {}
+        }
     });
 
-Unlike other "expressive" syntax, the map function - returned from creating a new Flow - mirrors the structure given, and each point is executable.
+Flow returns a linked-list of functions called a _map_, which mirrors the tree structure - excluding specially-purposed functions, prefixed with an underscore. Any linked-function in a map may be invoked directly (with or without arguments), and instructs Flow to navigate towards and execute the target routine along with any routines in it's path.
 
-Invoke any point of your flow using the same structure as the dependency tree.
+For example, invoking `page.form.submit(foo)` would cause Flow to (internally) invoke the following routines, sequentially:
 
-    app.login.fail();
+    page._in();
+    page.form._in();
+    page.form.submit._main(foo);
 
+More information about Flow is available in the [Flow wiki](http://github.com/bemson/Flow/wiki/).
 
-// invokes the following in sequence
-app._in()
-app.login._in()
-app.submit._over()
-app.fail()
+## LICENSE
 
-## Dependent Code
+Flow is available under the terms of the [MIT-License](http://en.wikipedia.org/wiki/MIT_License#License_terms).
 
-Flow uses [Proxy.js] - Share and use privileged objects with ease.
+Copyright 2011, Bemi Faison
