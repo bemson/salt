@@ -1,3 +1,10 @@
+/**
+* Flow v0.1.1
+* http://github.com/bemson/Flow/
+*
+* Copyright 2011, Bemi Faison
+* Licensed under the MIT License
+**/
 (function () {
 	var sys = {
 			// signature object
@@ -5,8 +12,8 @@
 			// starting number for ids
 			date: new Date() * 1,
 			rxp: {
-				flow: /^(\w+)@(\d+)$/,
-				node: /^\w+@(\d+)$/,
+				mapid: /^(\w+)@(\d+)$/,
+				flowid: /^[\w]+.*[^@].*/,
 				env: /\S/
 			},
 			// allows getting type as array
@@ -33,28 +40,37 @@
 				},
 				prefix: '_'
 			},
-			resolveFlow: function (fref) {
+			resolveFlow: function (ref) {
 				// init vars
-				var flow, // stub for flow instance or string parts
-					cnst = sys.objects.Flow; // shortcut Flow object constructor
+				var flow, // stub for instance or string parts
+					cnst = sys.objects.Flow; // alias constructor
 				// if a possible instance...
-				if (fref.hasOwnProperty) {
-					// if an Flow instance,  return as is
-					if (fref instanceof cnst) return fref;
-					// if a Proxy, return corresponding Flow instance
-					if (fref instanceof Proxy && fref._gset().type === 1 && fref.type() === 'Flow' && (flow = fref._gset(sys.fkey)) instanceof cnst) return flow;
+				if (sys.isFnc(ref.hasOwnProperty)) {
+					// if an instance,  return as is
+					if (ref instanceof cnst) return ref;
+					// if a Proxy, return corresponding instance
+					if (ref instanceof Proxy && ref._gset().type === 1 && ref.type() === 'Flow' && (flow = ref._gset(sys.fkey)) instanceof cnst) return flow;
 				}
-				// (otherwise) get parts of fref string
-				flow = fref.toString ? fref.toString().match(sys.rxp.flow) : 0;
+				// (otherwise) get parts from string
+				flow = sys.isFnc(ref.toString) ? ref.toString().match(sys.rxp.mapid) : 0;
 				// return flow instance or 0, based on whether the flow index exists
 				return (flow && sys.flows.hasOwnProperty(flow[1])) ? sys.flows[flow[1]] : 0;
 			},
-			resolveNode: function (fid) {
+			resolveNode: function (ref) {
 				// init vars
-				var fparts = fid.toString ? fid.toString().match(sys.rxp.flow) : 0, // get parts of flow reference
-					flow = fparts && sys.flows[fparts[1]]; // target flow (if any)
-				// return flow instance or 0, based on whether the flow index exists
-				return (flow && fparts[2] < flow.nodes.length) ? flow.nodes[fparts[2]] : 0;
+				var node, // stub for instance or string parts
+					cnst = sys.objects.Node; // alias constructor
+				// if a possible instance...
+				if (sys.isFnc(ref.hasOwnProperty)) {
+					// if an instance,  return as is
+					if (ref instanceof cnst) return ref;
+					// if a Proxy, return corresponding instance
+					if (ref instanceof Proxy && ref._gset().type === 1 && ref.type() === 'Node' && (node = ref._gset(sys.fkey)) instanceof cnst) return node;
+				}
+				// (otherwise) get parts from string
+				node = sys.isFnc(ref.toString) ? ref.toString().match(sys.rxp.mapid) : 0;
+				// return instance or 0, based on whether the flow id exists - returns undefined when the given index does not exist
+				return (node && node.length > 2 && sys.flows.hasOwnProperty(node[1])) ? sys.flows[node[1]].nodes[+node[2]] : 0;
 			}
 		};
 
@@ -123,18 +139,22 @@
 						return !!this.delay;
 					}
 				],
-				// stop this flow (indefinitely)
+				// stop this flow (indefinitely) - excludes main functions
 				pause: function () {
-					return this.wait();
+					var flow = this;
+					return flow.phase !== sys.meta.fncs.main && flow.wait();
 				},
 				// pause flow for a given period of time with a given callback - scoped (again) to this flow
+				// can't delay while in main function, without fnc argument
 				wait: function (time, fnc) {
-					var flow = this;
-					return (!arguments.length || (Math.ceil(time) === time && (!fnc || sys.isFnc(fnc)))) ? flow.wait.apply(flow,arguments) : !1;
+					var flow = this,
+						inMain = flow.phase === sys.meta.fncs.main;
+					return (!arguments.length || (Math.ceil(time) === time && ((!fnc && !inMain) || sys.isFnc(fnc)))) ? flow.wait.apply(flow,arguments) : !1;
 				},
-				// resume this flow towards it's current target
+				// resume this flow towards it's current target - exclude main functions
 				resume: function () {
-					return this.next();
+					var flow = this;
+					return flow.phase !== sys.mea.fncs.main && flow.next();
 				},
 				// get phase string
 				phase: [
@@ -146,48 +166,119 @@
 						return this.getMap();
 					}
 				],
+				// return the name of current node in the flow
+				nodeName: [
+					function () {
+						var flow = this;
+						return flow.nodes[flow.currentIdx].name;
+					}
+				],
 				// exit this flow
 				exit: function () {
 					var flow = this;
 					return flow.next(flow.nodes[0]);
+				},
+				// go to the current node
+				targetSelf: function () {
+					var flow = this;
+					return flow.next(flow.nodes[flow.currentIdx], arguments);
+				},
+				// go to root node
+				targetRoot: function () {
+					var flow = this;
+					return flow.next(flow.nodes[1], arguments);
+				},
+				// go to the next sibling
+				targetNext: function () {
+					var flow = this,
+						node = flow.nodes[flow.currentIdx],
+						tgt = flow.nodes[node.nextIdx];
+					// return result of targeting the next node, or false when none exists
+					return tgt ? flow.next(tgt, arguments) : !1;
+				},
+				// go to the previous sibling
+				targetPrevious: function () {
+					var flow = this,
+						node = flow.nodes[flow.currentIdx],
+						tgt = flow.nodes[node.previousIdx];
+					return tgt ? flow.next(tgt, arguments) : !1;
+				},
+				// go to first child
+				targetChild: function () {
+					var flow = this,
+						node = flow.nodes[flow.currentIdx],
+						tgt = flow.nodes[node.childIdx];
+					return tgt ? flow.next(tgt, arguments) : !1;
+				},
+				// go to parent
+				targetParent: function () {
+					var flow = this,
+						node = flow.nodes[flow.currentIdx],
+						tgt = flow.nodes[node.parentIdx && node.parentIdx];
+						return tgt ? flow.next(tgt, arguments) : !1;
+				},
+				// flags when the given node is the current position
+				isCurrent: function (ref) {
+					var flow = this,
+						node = sys.resolveNode(ref);
+						return node && flow.currentIdx === node.idx;
+				},
+				// flags when the given node is the traversal target
+				isTarget: function (ref) {
+					var flow = this,
+						node = sys.resolveNode(ref);
+					// return when the current node is this node
+					return node && flow.targetIdx === node.idx;
+				},
+				// flags when the flow is at the traversal target
+				onTarget: function () {
+					var flow = this;
+					return flow.targetIdx === flow.currentIdx;
+				},
+				// flags when the given node is apart of the traversal path
+				wasTarget: function (ref) {
+					var flow = this,
+						node = sys.resolveNode(ref);
+					// return when the given node has been traversed
+					return node && flow.nodestack.indexOf(node.idx) !== -1;
 				}
 			}
 		);
 
-		sys.objects.Flow = function (nodes) {
+		sys.objects.Flow = function (id, tree) {
 			var flow = this;
+			flow.id = id;
+			flow.tree = tree; // capture original tree - for modification later?
 			flow.currentIdx = flow.targetIdx = 0;
 			// flags when the target's _main function has been called
-			flow.targetMet;
+			flow.targetMet = 0;
 			// flags when this flow is actively executing functions
 			flow.active = 0;
-			// holds pointer for timeouts
-			flow.delay;
+			// pause/delay pointer
+			flow.delay = 0;
 			flow.arguments = [];
+			// nodes in path of target during each traversal (until target is met)
+			flow.nodestack = [];
 			// environment variables and globals, managed by flow
 			flow.envs = {};
-			flow.id = (sys.date++).toString(20);
 			sys.flows[flow.id] = flow;
-			flow.nodes = [{fncs:{}, childIdx:1, idx:0, children:[], name: 'super'}]; // start with faux node pointing to first child of real tree
-			new sys.objects.Node(flow, flow.nodes[0], nodes); // create node tree
+			flow.nodes = [{fncs:{}, childIdx:1, idx:0, children:[], name:'_super'}]; // start with faux node pointing to first child of real tree
+			new sys.objects.Node(flow, flow.nodes[0], tree); // create node tree
 		};
 		sys.objects.Flow.prototype = {
-			/*
-			called outside of Flow to start one
-			called inside of Flow to continue one?
-			called outside of Flow to continue one
-			when called causes the flow to execute a path
-			*/
+			// tree path iterator - args is an arguments object
 			next: function (tgtNode, args) {
 				var flow = this, // alias self
 					node = flow.nodes[flow.currentIdx], // node to test and/or execute
-					i; // loop vars
+					i, // loop vars
+					nxtIdx, // next index
+					hasFnc; // capture when this node has the targeted function
 				// if a node is given...
 				if (tgtNode) {
 					// set new target index
 					flow.targetIdx = tgtNode.idx;
 					// capture or reset arguments
-					flow.arguments = (args) ? [].slice.call(typeof args !== 'object' ? [args] : args) : [];
+					flow.arguments = (args && args.length) ? [].slice.call(args) : [];
 				}
 				// clear phase
 				flow.phase = '';
@@ -207,21 +298,22 @@
 							if (node.idx && flow.nodes[node.parentIdx].nextIdx <= flow.targetIdx) {
 								// go to "leftIdx" when a meta exists for "backwards-over"
 								// set parent's next as currentIdx
-								flow.currentIdx = flow.nodes[node.parentIdx].nextIdx;
-								// set phase to out
+								nxtIdx = flow.nodes[node.parentIdx].nextIdx;
+								nxtIdx = node.parentIdx;
+								// set phase to out ?
 								flow.phase = sys.meta.fncs.out;
 								// flag that we're out of context (or will be)
 								node.inContext = 0;
 							} else if (node.nextIdx <= flow.targetIdx) { // or, when the next node is lte the target...
 								// set next currentIdx
-								flow.currentIdx = node.nextIdx;
+								nxtIdx = node.nextIdx;
 								// set phase to "over" or "out" based on context
 								flow.phase = sys.meta.fncs[node.inContext ? 'out' : 'over'];
 								// flag that we're out of context (or will be)
 								node.inContext = 0;
 							} else { // otherwise, when next doesn't exist or is greater than the target...
 								// set next currentIdx
-								flow.currentIdx = node.childIdx;
+								nxtIdx = node.childIdx;
 								// if not in context, set phase to in
 								if (!node.inContext) flow.phase = sys.meta.fncs.in;
 								// flag that we're in context of this node
@@ -229,7 +321,7 @@
 							}
 						} else { // or, when moving backwards...
 							// set next currentIdx, based on parent
-							flow.currentIdx = node.parentIdx >= flow.targetIdx ? node.parentIdx : node.previousIdx;
+							nxtIdx = node.parentIdx >= flow.targetIdx ? node.parentIdx : node.previousIdx;
 							// if in context, set phase to "out"
 							if (node.inContext) flow.phase = sys.meta.fncs.out;
 							// flag that we're out of context (or will be)
@@ -243,7 +335,7 @@
 						// flag that we're now in context of this node
 						node.inContext = 1;
 					}
-					// flag that we're not active
+					// flag that we're active
 					flow.active = 1;
 					// if not the root node and there is a phase...
 					if (node.idx && flow.phase) {
@@ -254,11 +346,11 @@
 						// reset out node
 						flow.outNode = 0;
 						// if there is a phase function...
-						if (node.fncs.hasOwnProperty(flow.phase)) {
+						if (hasFnc = node.fncs.hasOwnProperty(flow.phase)) {
 							// if the out phase, set the flow's outNode property
 							if (flow.phase === sys.meta.fncs.out) flow.outNode = node;
-							// execute phase function
-							flow.execute(node.fncs[flow.phase], flow.phase !== sys.meta.fncs.main ? [] : flow.arguments);
+							// execute phase function - capture result
+							flow.result = flow.execute(node.fncs[flow.phase], flow.phase !== sys.meta.fncs.main ? [] : flow.arguments);
 						} else if (flow.phase === sys.meta.fncs.out) { // or, when phase was out...
 							// descope envs for this node (now)
 							node.descopeEnvs();
@@ -267,18 +359,24 @@
 					// flag that we're no longer active
 					flow.active = 0;
 				}
+				// add node index to nodestack - just the index for now (maybe arguments and environments later)
+				flow.nodestack.push(node.idx);
+				// if a next index is chosen, set as currentIdx
+				if (nxtIdx != null) flow.currentIdx = nxtIdx;
 				// if not active or delayed, and target not met and not paused, return result of recursive call
 				if (!flow.active && !flow.delay && !flow.targetMet) return flow.next();
-				// return whether we've reached the target or not
-				return !!flow.targetMet;
+				// if the target has been met, reset node history
+				if (flow.targetMet) flow.nodestack = [];
+				// return the result after main function, othewise return whether the target has been met
+				return hasFnc && flow.targetMet ? flow.result : !!flow.targetMet;
 			},
 			execute: function (fnc, args) {
 				// init vars
 				var flow = this; // alias self
 				// clear wait
 				flow.clearWait();
-				// if fnc given, execute function with given or null args
-				if (fnc) fnc.apply(new Proxy(flow, sys.proxies.Flow, sys.fkey), args || []);
+				// retrun result of invoking fnc, with given or empty args
+				return fnc.apply(new Proxy(flow, sys.proxies.Flow, sys.fkey), args || []);
 			},
 			// retrieve or create Env instance with this key
 			resolveEnv: function (key) {
@@ -295,8 +393,10 @@
 				// set delay to any truthy value or a timeout-pointer, based on time argument
 				flow.delay = time ? window.setTimeout(fnc ? function () {
 					flow.execute(fnc);
-					if (!flow.delay) flow.next()
+					// if delay was not reset, resume traversal
+					if (!flow.delay) flow.next();
 				} : function () {
+					// resume traversal (clears delay)
 					flow.next()
 				}, time) : 1;
 				// flag that the flow has been delayed
@@ -322,7 +422,7 @@
 					_addPtr = function (node, ptr) {
 						// init vars
 						var fnc = function () {
-								return flow.next(node,arguments)
+								return flow.next(node, arguments)
 							};
 						fnc.toString = function () {
 							return node.id
@@ -388,7 +488,7 @@
 			node.children = [];
 			node.fncs = {};
 			node.envs = {};
-			node.name = name || 'root';
+			node.name = name || '_root';
 			node.id = flow.id + '@' + node.idx;
 
 			if (sys.isFnc(def)) {
@@ -503,19 +603,22 @@
 			}
 		};
 
-		window.Flow = function (map) {
-			var that = this;
+		window.Flow = function () {
+			var that = this,
+				args = arguments,
+				id = typeof args[0] === 'string' && args[0].length && !sys.flows.hasOwnProperty(args[0]) && sys.rxp.flowid.test(args[0]) ? args[0] : (sys.date++).toString(20),
+				tree = args.length > 1 ? args[1] : args[0];
 			if (that.hasOwnProperty && !(that instanceof arguments.callee)) {
 				// throw error - must call with new operator
 			}
-			if (typeof map !== 'object') {
+			if (typeof tree !== 'object') {
 				// throw error - map is invalid
 			}
-			return (new sys.objects.Flow(map)).getMap();
+			return (new sys.objects.Flow(id, tree)).getMap();
 		};
-		// return public proxy of a flow instance
-		Flow.getController = function (fref) {
+		// return proxy of flow instance
+		Flow.getFlow = function (fref) {
 			var flow = sys.resolveFlow(fref);
 			return !!flow && new Proxy(flow, sys.proxies.Flow, sys.fkey)
 		};
-})()
+})();
