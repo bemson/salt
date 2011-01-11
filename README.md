@@ -1,13 +1,11 @@
 # Flow
-Tame your code.
+by Bemi Faison
 
-1/2/11
-version 0.1.0
-by Bemi Faison (bemson@gmail.com)
+version 0.1.1, January 10th, 2011
 
 ## DESCRIPTION
 
-Flow is a function manager that bridges the gap between programming methodologies and the modes, exceptions, states, and steps (or MESS) inherent to JavaScript web-application development. Flow defines functions using a construct that captures their context, purpose, and content (i.e., the mess), making each immediately meaningful, accessible and testable. Flow sequences and iterates over these functions, observing their order-dependent and stateful execution.
+Flow is a function sequencer and iterator that bridges the gap between programming methodologies and the mess (modes, exceptions, states, and steps) inherent to JavaScript web-application development. Flow introduces an evolved controller paradigm, providing an order-dependent and stateful execution environment.
 
 ## INSTALLATION
 
@@ -17,34 +15,60 @@ Flow requires the [Proxy library](http://github.com/bemson/Proxy/).
 
 ## USAGE
 
-Create a Flow using the `new` operator and the required _tree_ argument. The tree is an object-literal (which permits further nesting) containing all the functions in a Flow.
+Documentation for Flow is available in the [Flow wiki](http://github.com/bemson/Flow/wiki/).
 
-    var page = new Flow({
-        _in: function () {},
-        form: {
-            _in: function () {},
-            _main: function () {},
-            submit: {
-                _main: function () {},
-                fail: {
-                    _over: function () {},
-                    _main: function () {}
-                },
-                pass: function () {}
-            },
-            _out: fuction () {}
-        }
+Create a Flow using the `new` operator and a _tree_ (an object-literal), containing all functions in the Flow.
+
+    var a = new Flow({
+      b: {
+        c: {}
+      },
+      e: {
+        f: {}
+      }
     });
 
-Flow returns a linked-list of functions called a _map_, which mirrors the tree structure - excluding specially-purposed functions, prefixed with an underscore. Any linked-function in a map may be invoked directly (with or without arguments), and instructs Flow to navigate towards and execute the target routine along with any routines in it's path.
+Use the returned _map_ (a linked-list of functions) to navigate the tree.
 
-For example, invoking `page.form.submit(foo)` would cause Flow to (internally) invoke the following routines, sequentially:
+    a();
+    a.b.c();
+    ...
 
-    page._in();
-    page.form._in();
-    page.form.submit._main(foo);
+Flow executes meta-functions as it traverses nodes in a tree. Meta-functions are similar to set-up and tear-down functions.
 
-More information about Flow is available in the [Flow wiki](http://github.com/bemson/Flow/wiki/).
+Invoking "a.e()" executes:
+
+    a._in();
+    a.b._over();
+    a.e._in();
+    a.e._main();
+
+Flow traverses the tree from it's current position. Thus, now invoking "a.b.c()" executes:
+
+    a.e._out();
+    a.b._in();
+    a.b.c._in();
+    a.b.c._main();
+
+## CHANGES
+
+(These changes will be reflected in the documentation.)
+
+* Fixed path-routing issue (bug #1)
+* The `Flow.getController()` method is now `Flow.getFlow()`
+* Flow accepts an optional initial string as a custom id
+* Methods now available to the Flow-instance and meta-functions:
+ * nodeName() -> name of current node                        
+ * targetSelf() -> go to own node's main function
+ * targetRoot() -> go to root of tree
+ * targetNext() -> go to next sibling
+ * targetPrevious() -> go to previous sibling
+ * targetChild() -> go to first child
+ *  targetParent() -> go to parent
+ * isCurrent(map) -> flag when map is the current node/position
+ * isTarget(map) -> flag when map is the traversal target
+ * onTarget() -> flag when on traversal target  
+ * wasTarget(map) -> flag when map was apart of the traversal path
 
 ## LICENSE
 
