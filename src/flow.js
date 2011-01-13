@@ -12,8 +12,8 @@
 			// starting number for ids
 			date: new Date() * 1,
 			rxp: {
-				mapid: /^(\w+)@(\d+)$/,
-				flowid: /^[\w]+.*[^@].*/,
+				flowref: /^([^@]+?)(?:@(\d+))?$/,
+				flowid: /\w/, // at least one alphanumeric character
 				env: /\S/
 			},
 			// allows getting type as array
@@ -40,37 +40,23 @@
 				},
 				prefix: '_'
 			},
-			resolveFlow: function (ref) {
+			// returns node or flow based on ref and node args
+			resolveRef: function (ref, rflow) {
 				// init vars
-				var flow, // stub for instance or string parts
-					cnst = sys.objects.Flow; // alias constructor
+				var obj, // stub for instance to return
+					rp, // regular expression parts
+					cnst = sys.objects[rflow ? 'Flow' : 'Node']; // alias Node constructor
 				// if a possible instance...
 				if (sys.isFnc(ref.hasOwnProperty)) {
-					// if an instance,  return as is
+					// if an instance of the target,  return as is
 					if (ref instanceof cnst) return ref;
 					// if a Proxy, return corresponding instance
-					if (ref instanceof Proxy && ref._gset().type === 1 && ref.type() === 'Flow' && (flow = ref._gset(sys.fkey)) instanceof cnst) return flow;
+					if (ref instanceof Proxy && ref._gset().type === 1 && ref.type() === (rflow ? 'Flow' : 'Node') && (obj = ref._gset(sys.fkey)) instanceof cnst) return obj;
 				}
 				// (otherwise) get parts from string
-				flow = sys.isFnc(ref.toString) ? ref.toString().match(sys.rxp.mapid) : 0;
-				// return flow instance or 0, based on whether the flow index exists
-				return (flow && sys.flows.hasOwnProperty(flow[1])) ? sys.flows[flow[1]] : 0;
-			},
-			resolveNode: function (ref) {
-				// init vars
-				var node, // stub for instance or string parts
-					cnst = sys.objects.Node; // alias constructor
-				// if a possible instance...
-				if (sys.isFnc(ref.hasOwnProperty)) {
-					// if an instance,  return as is
-					if (ref instanceof cnst) return ref;
-					// if a Proxy, return corresponding instance
-					if (ref instanceof Proxy && ref._gset().type === 1 && ref.type() === 'Node' && (node = ref._gset(sys.fkey)) instanceof cnst) return node;
-				}
-				// (otherwise) get parts from string
-				node = sys.isFnc(ref.toString) ? ref.toString().match(sys.rxp.mapid) : 0;
-				// return instance or 0, based on whether the flow id exists - returns undefined when the given index does not exist
-				return (node && node.length > 2 && sys.flows.hasOwnProperty(node[1])) ? sys.flows[node[1]].nodes[+node[2]] : 0;
+				rp = sys.isFnc(ref.toString) ? ref.toString().match(sys.rxp.flowref) : 0;
+				// return flow or node, based on parts returned from regex matching, or 0
+				return (rp && (obj = sys.flows.hasOwnProperty(rp[1])) && (rflow || (obj = sys.flows[obj[1]].nodes[+rp[2]]))) ? obj : 0;
 			}
 		};
 
@@ -163,7 +149,7 @@
 				// return function list
 				map: [
 					function () {
-						return this.getMap();
+					return this.getMap();
 					}
 				],
 				// return the name of current node in the flow
@@ -176,7 +162,7 @@
 				// exit this flow
 				exit: function () {
 					var flow = this;
-					return flow.next(flow.nodes[0]);
+					return flow.next(flow.nodes[0]) && !0;
 				},
 				// go to the current node
 				targetSelf: function () {
@@ -217,18 +203,36 @@
 						tgt = flow.nodes[node.parentIdx && node.parentIdx];
 						return tgt ? flow.next(tgt, arguments) : !1;
 				},
+				// go to first sibling
+				targetYoungest: function () {
+					var flow = this,
+						node = flow.nodes[flow.currentIdx],
+						parent = flow.nodes[node.parentIdx];
+					return flow.next(flow.nodes[parent.childIdx], arguments);
+				},
+				// go to last sibling
+				targetOldest: function () {
+					var flow = this,
+						node = flow.nodes[flow.currentIdx],
+						parent = flow.nodes[node.parentIdx];
+					return flow.next(flow.nodes[parent.children[parent.children.length - 1]]);
+				},
 				// flags when the given node is the current position
 				isCurrent: function (ref) {
 					var flow = this,
-						node = sys.resolveNode(ref);
+						node = sys.resolveRef(ref);
 						return node && flow.currentIdx === node.idx;
 				},
 				// flags when the given node is the traversal target
 				isTarget: function (ref) {
 					var flow = this,
-						node = sys.resolveNode(ref);
+						node = sys.resolveRef(ref);
 					// return when the current node is this node
 					return node && flow.targetIdx === node.idx;
+				},
+				// flags when the flow is traversing the root
+				onRoot: function () {
+						return this.currentIdx === 1;
 				},
 				// flags when the flow is at the traversal target
 				onTarget: function () {
@@ -238,7 +242,7 @@
 				// flags when the given node is apart of the traversal path
 				wasTarget: function (ref) {
 					var flow = this,
-						node = sys.resolveNode(ref);
+						node = sys.resolveRef(ref);
 					// return when the given node has been traversed
 					return node && flow.nodestack.indexOf(node.idx) !== -1;
 				}
@@ -606,7 +610,7 @@
 		window.Flow = function () {
 			var that = this,
 				args = arguments,
-				id = typeof args[0] === 'string' && args[0].length && !sys.flows.hasOwnProperty(args[0]) && sys.rxp.flowid.test(args[0]) ? args[0] : (sys.date++).toString(20),
+				id = typeof args[0] === 'string' && args[0].length && !sys.flows.hasOwnProperty(args[0]) && args[0].indexOf('@') < 0 && sys.rxp.flowid.test(args[0]) ? args[0] : (sys.date++).toString(20),
 				tree = args.length > 1 ? args[1] : args[0];
 			if (that.hasOwnProperty && !(that instanceof arguments.callee)) {
 				// throw error - must call with new operator
@@ -617,8 +621,8 @@
 			return (new sys.objects.Flow(id, tree)).getMap();
 		};
 		// return proxy of flow instance
-		Flow.getFlow = function (fref) {
-			var flow = sys.resolveFlow(fref);
+		Flow.getFlow = function (ref) {
+			var flow = sys.resolveRef(ref,1);
 			return !!flow && new Proxy(flow, sys.proxies.Flow, sys.fkey)
 		};
 })();

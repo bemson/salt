@@ -1,7 +1,7 @@
 # Flow
 by Bemi Faison
 
-version 0.1.1, January 10th, 2011
+version 0.1.2, January 12th, 2011
 
 ## DESCRIPTION
 
@@ -9,13 +9,13 @@ Flow is a function sequencer and iterator that bridges the gap between programmi
 
 ## INSTALLATION
 
-Use Flow within a web browser. Load the `src/flow.js` file like any other external JavaScript library file.
-
 Flow requires the [Proxy library](http://github.com/bemson/Proxy/).
+
+Use Flow within a web browser. Load the `src/flow.js` file like any other external JavaScript library file.
 
 ## USAGE
 
-Documentation for Flow is available in the [Flow wiki](http://github.com/bemson/Flow/wiki/).
+Documentation is available in the [Flow wiki](http://github.com/bemson/Flow/wiki/).
 
 Create a Flow using the `new` operator and a _tree_ (an object-literal), containing all functions in the Flow.
 
@@ -23,9 +23,7 @@ Create a Flow using the `new` operator and a _tree_ (an object-literal), contain
       b: {
         c: {}
       },
-      e: {
-        f: {}
-      }
+      e: {}
     });
 
 Use the returned _map_ (a linked-list of functions) to navigate the tree.
@@ -36,39 +34,19 @@ Use the returned _map_ (a linked-list of functions) to navigate the tree.
 
 Flow executes meta-functions as it traverses nodes in a tree. Meta-functions are similar to set-up and tear-down functions.
 
-Invoking "a.e()" executes:
+Invoking `a.e()` executes:
 
     a._in();
     a.b._over();
     a.e._in();
     a.e._main();
 
-Flow traverses the tree from it's current position. Thus, now invoking "a.b.c()" executes:
+Flow traverses the tree from it's current position. Thus, now invoking `a.b.c()` executes:
 
     a.e._out();
     a.b._in();
     a.b.c._in();
     a.b.c._main();
-
-## CHANGES
-
-(These changes will be reflected in the documentation.)
-
-* Fixed path-routing issue (bug #1)
-* The `Flow.getController()` method is now `Flow.getFlow()`
-* Flow accepts an optional initial string as a custom id
-* Methods now available to the Flow-instance and meta-functions:
- * nodeName() -> name of current node                        
- * targetSelf() -> go to own node's main function
- * targetRoot() -> go to root of tree
- * targetNext() -> go to next sibling
- * targetPrevious() -> go to previous sibling
- * targetChild() -> go to first child
- *  targetParent() -> go to parent
- * isCurrent(map) -> flag when map is the current node/position
- * isTarget(map) -> flag when map is the traversal target
- * onTarget() -> flag when on traversal target  
- * wasTarget(map) -> flag when map was apart of the traversal path
 
 ## LICENSE
 
