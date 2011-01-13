@@ -1,5 +1,5 @@
 /**
-* Flow v0.1.1
+* Flow v0.1.2
 * http://github.com/bemson/Flow/
 *
 * Copyright 2011, Bemi Faison
