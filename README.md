@@ -1,11 +1,12 @@
 # Flow
 by Bemi Faison
 
-version 0.1.2, January 12th, 2011
+2/15/11
+version 0.2.0
 
 ## DESCRIPTION
 
-Flow is a function sequencer and iterator that bridges the gap between programming methodologies and the mess (modes, exceptions, states, and steps) inherent to JavaScript web-application development. Flow introduces an evolved controller paradigm, providing an order-dependent and stateful execution environment.
+Flow is a new way to structure JavaScript code, by stubbing logic before coding functionality. Technically, it is a function sequencer and iterator, an approach that bridges the gap between programming methodologies and the mess (modes, exceptions, states, and steps) inherent to web-application development. The result is an evolved controller paradigm, enabling dependencies and states for JavaScript routines.
 
 ## INSTALLATION
 
@@ -17,36 +18,37 @@ Use Flow within a web browser. Load the `src/flow.js` file like any other extern
 
 Documentation is available in the [Flow wiki](http://github.com/bemson/Flow/wiki/).
 
-Create a Flow using the `new` operator and a _tree_ (an object-literal), containing all functions in the Flow.
+Create a Flow using the `new` operator and a _tree_ (an object-literal), containing all functions for the Flow.
 
     var a = new Flow({
-      b: {
-        c: {}
+      x: {
+        p: {}
       },
-      e: {}
+      h: {}
     });
 
-Use the returned _map_ (a linked-list of functions) to navigate the tree.
+The return value is not an instance, but a _map_ (or linked-list of functions) that mirror the Flow's _tree_. From the above code, any of the following points (or "nodes") are now executable.
 
     a();
-    a.b.c();
-    ...
+		a.x();
+    a.x.p();
+    a.h();
 
-Flow executes meta-functions as it traverses nodes in a tree. Meta-functions are similar to set-up and tear-down functions.
+Invoking any map-function, causes Flow to traverse toward that node. Flow executes meta-functions (like set-up and tear-down functions) along the way.
 
-Invoking `a.e()` executes:
+For example, invoking `a.h()` actually executes:
 
     a._in();
-    a.b._over();
-    a.e._in();
-    a.e._main();
+    a.x._over();
+    a.h._in();
+    a.h._main();
 
-Flow traverses the tree from it's current position. Thus, now invoking `a.b.c()` executes:
+Flow navigates from it's current position. Continuing the first example - now at node "h" - invoking `a.x.p()` actually executes:
 
-    a.e._out();
-    a.b._in();
-    a.b.c._in();
-    a.b.c._main();
+    a.h._out();
+    a.x._in();
+    a.x.p._in();
+    a.x.p._main();
 
 ## LICENSE
 
