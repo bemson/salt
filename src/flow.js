@@ -12,7 +12,8 @@
 			tick: new Date() * 1,
 			rxp: {
 				flowref: /^([^@]+?)(?:@(\d+))?$/,
-				flowid: /\w/, // at least one alpha-numeric character
+				flowIdOk: /\w/, // at least one alpha-numeric character
+				flowIdBad: /^#|\//, // at least one alpha-numeric character
 				mapAsFlow: /^\/\/(.*\/)?$/, // tostring of map function
 				env: /\S/,
 				badNodeName: /^toString$|\/|^[_#]/,
@@ -26,7 +27,7 @@
 				return type === 'object' && Object.prototype.toString.call(obj) === '[object Array]' ? 'array' : type;
 			},
 			isValidFlowId: function (id) {
-					return typeof id === 'string' && sys.rxp.flowid.test(id)
+					return typeof id === 'string' && sys.rxp.flowIdOk.test(id) && !sys.rxp.flowIdBad.test(id)
 			},
 			isFnc: function (v) {
 				return typeof v === 'function'
@@ -145,7 +146,7 @@
 			},
 			node: function (ref) {
 				var flow = this,
-					node = arguments.length && ref !== '' ? flow.findNode(ref) : flow.nodes[flow.currentIdx];
+					node = arguments.length ? flow.findNode(ref) : flow.nodes[flow.currentIdx];
 					return node ? node.id : !1;
 			},
 			name: [
@@ -371,7 +372,7 @@
 		flow.stage = {};
 		sys.flows[flow.id] = flow;
 		flow.nodes = [];
-		flow.nodeIds = {'/':0}; // maps node id with index
+		flow.nodeIds = {}; // maps node id with index
 		// create master node and append given tree
 		new sys.objects.Node(flow, new sys.objects.Node(flow), tree); // create node tree
 	};
@@ -872,12 +873,14 @@
 	window.Flow = function () {
 		var that = this,
 			args = arguments,
-			id = args[0],i, flow,
-			tree = args.length > 1 ? args[1] : id;
+			argLn = args.length,
+			id = args[0],
+			idOk = typeof id === 'string',
+			i, noMap, tree;
 		// if not called with a new operator...
 		if (that.hasOwnProperty && !(that instanceof arguments.callee)) {
 			// if no arguments...
-			if (!args.length) {
+			if (!argLn) {
 				id = [];
 				for (i in sys.flows) {
 					if (sys.flows.hasOwnProperty(i)) id.push(i);
@@ -886,19 +889,36 @@
 				return id;
 			}
 			// (otherwise) return the flow reference or false
-			return (flow = sys.getFlow(id)) ? flow.getProxy() : !1;
+			return (that = sys.getFlow(id)) ? that.getProxy() : !1;
 		}
 		// if no arguments...
-		if (!args.length) {
+		if (!argLn) {
 			throw new Error('Flow: missing tree');
+		}
+		// if 3 args given...
+		if (argLn > 2) {
+			tree = args[1];
+			noMap = args[2];
+		} else if (argLn > 1) { // or, when 2 args given...
+			if (!idOk) {
+				id = 0;
+				noMap = args[1];
+			}
+			tree = args[idOk ? 1 : 0];
+		} else { // otherwise, when one arg given...
+			// clear id
+			id = 0;
+			tree = args[0];
 		}
 		// if tree is not an object
 		if (typeof tree !== 'object') {
 			// throw error - invalid argument
 			throw new Error('Flow: invalid tree');
 		}
-		// (otherwise) return map of flow
-		return (new sys.objects.Flow((!sys.flows.hasOwnProperty(id) && sys.isValidFlowId(id)) ? id : (sys.tick++).toString(20), tree)).getProxy().map();
+		// capture proxy of new Flow instance
+		that = (new sys.objects.Flow((id && !sys.flows.hasOwnProperty(id) && sys.isValidFlowId(id)) ? id : (sys.tick++).toString(20), tree)).getProxy();
+		// return proxy or map (default), based on noMap flag
+		return noMap ? that : that.map();
 	};
 
 })(this);
