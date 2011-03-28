@@ -2,11 +2,11 @@
 by Bemi Faison
 
 version 0.2.0
-(3/20/11)
+(3/27/11)
 
 ## DESCRIPTION
 
-Flow is an evolved programming architecture that addresses the modes, exceptions, states and steps (or mess) inherent to coding JavaScript.
+Flow is a JavaScript library that minimizes execution complexity, redundancy, and concurrency for confident web development.
 
 ## FILES
 
