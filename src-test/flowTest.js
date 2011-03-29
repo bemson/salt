@@ -477,6 +477,7 @@ FlowTest.prototype = {
 		assertTrue('paused at d', flow.status().paused);
 		assertFalse('can not wait with reference to /d from d', flow.wait('/d',100));
 		assertTrue('can exploit loophole and target /d with function', flow.wait(flow.map().d, 0));
+		assertFalse('can not target /d with a map used externally', flow.map().d());
 		cleanUp();
 	},
 	testTokens: function () {
