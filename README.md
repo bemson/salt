@@ -1,7 +1,7 @@
 # Flow
 by Bemi Faison
 
-version 0.2.1
+version 0.2.1.1
 (3/28/11)
 
 ## DESCRIPTION
