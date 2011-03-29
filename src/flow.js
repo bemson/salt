@@ -1,5 +1,5 @@
 /*
- * Flow v0.2.0
+ * Flow v0.2.1
  * http://github.com/bemson/Flow/
  *
  * Copyright 2011, Bemi Faison
@@ -47,7 +47,8 @@
 				keys: {
 					vars: 'vars',
 					root: 'root',
-					pendable: 'pendable'
+					pendable: 'pendable',
+					restrict: 'restrict'
 				},
 				prefix: '_'
 			},
@@ -329,12 +330,13 @@
 			wait: function () {
 				var flow = this,
 					args = arguments,
+					cur = flow.nodes[flow.currentIdx],
 					cache = flow.cache.proxy,
 					argLn = args.length,
 					M = Math, // reduce lookups
 					fnc = argLn > 1 ? args[0] : 0,
 					node, // stub to test when fnc is a node reference
-					fncOk = !fnc || typeof fnc === 'function' || (node = flow.findNode(fnc)),
+					fncOk = !fnc || typeof fnc === 'function' || ((node = flow.findNode(fnc)) && cur.allowTgt(node)),
 					time = M.ceil(M.abs(args[argLn - 1])),
 					timeOk = !isNaN(time),
 					rtn = 1;
@@ -370,7 +372,7 @@
 					cache = flow.cache.proxy,
 					node = flow.findNode(ref);
 				// if a valid node...
-				if (node) {
+				if (node && flow.nodes[flow.currentIdx].allowTgt(node)) {
 					// reset traversal cache
 					if (cache.status) {
 						delete cache.status.traversal;
@@ -387,6 +389,7 @@
 			go: function () {
 				var flow = this,
 					cache = flow.cache.proxy,
+					cur = flow.nodes[flow.currentIdx],
 					args = arguments,
 					argLn = args.length,
 					tgtLn = flow.targets.length,
@@ -394,8 +397,8 @@
 					points = [],
 					i = 0;
 				// while waypoints are valid...
-				for (; node = flow.findNode(args[i]); i++) {
-					// add waypoint
+				for (; (node = flow.findNode(args[i])) && cur.allowTgt(node); i++) {
+					// add to points
 					points.push(node);
 				}
 				// if waypoints were omitted, or waypoints were given and valid...
@@ -959,6 +962,7 @@
 		node.pendable = !parent ? 1 : parent.pendable; // flow-root is pending, otherwise copy pending flag
 		node.name = name || '_root';
 		node.isRoot = !name || !parent;
+		node.restrict = parent ? parent.restrict : 0;
 		node.rootIdx = node.isRoot ? node.idx : parent.rootIdx;
 		node.depth = parent ? parent.depth.concat(name ? name : '') : [''];
 		node.path = node.depth.join('/') + '/';
@@ -1008,6 +1012,11 @@
 									// allow/deny pending in this and descendant states
 									node.pendable = !!def[i];
 								break;
+
+								case keys.restrict : // restrict flag
+									// if retrict is truthy, set restricted paths to self
+									if (def[i]) node.restrict = node.path;
+								break;
 							}
 						} else {
 							// throw error - unknown meta
@@ -1022,6 +1031,10 @@
 		node.localPath = parent ? node.id.substr(Math.max(flow.nodes[node.rootIdx].id.length - 1,1)) : '/';
 	};
 	sys.objects.Node.prototype = {
+		allowTgt: function (tgt) {
+			var node = this;
+			return node.flow.exec || !node.restrict || !tgt.path.indexOf(node.restrict);
+		},
 		// add single variable - supports cfg can be a string or object
 		addVarDef: function (cfg) {
 			var node = this,
@@ -1199,7 +1212,7 @@
 		}
 	};
 
-	window.Flow = function () {
+	window.Flow = window.Flow || function () {
 		var flow = this,
 			args = arguments,
 			argLn = args.length,
