@@ -1,8 +1,8 @@
 # Flow
 by Bemi Faison
 
-version 0.2.0
-(3/27/11)
+version 0.2.1
+(3/28/11)
 
 ## DESCRIPTION
 
@@ -10,7 +10,7 @@ Flow is a JavaScript library that minimizes execution complexity, redundancy, an
 
 ## FILES
 
-* flow-min.js - Flow framework and dependencies (minified with the [YUI Compressor](http://developer.yahoo.com/yui/compressor/), version 2.4.2)
+* flow-min.js - Flow framework and dependencies (minified with the [UglifyJS](http://marijnhaverbeke.nl/uglifyjs) )
 * src/ - Directory containing the source code
 * src-test/ - Test suite
 * LICENSE - The legal terms and conditions under which this software may be used
