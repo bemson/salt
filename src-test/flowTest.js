@@ -449,6 +449,35 @@ FlowTest.prototype = {
 		assertUndefined('sum is undefined (again)', flow.vars('sum'));
 		assertSame('one flow exists',1,Flow().length);
 		cleanUp();
+		flow = new Flow({
+			a: {
+				_restrict: 1,
+				b: {
+					_restrict: 0
+				},
+				c: {},
+				d: function () {
+					this.wait();
+				}
+			},
+			d: {}
+		}, 1);
+		assertTrue('at root of restricted flow', flow.go(1));
+		assertTrue('can go to d', flow.go('d'));
+		assertTrue('in a',flow.go('/a'));
+		assertFalse('can not go to d from a', flow.go('/d'));
+		assertFalse('can not target d from a', flow.target('/d'));
+		assertTrue('can go to a/c',flow.go('c'));
+		assertFalse('can not go to d from c', flow.go('/d'));
+		assertFalse('can not target d from c', flow.target('/d'));
+		assertTrue('can go to a/b',flow.go('../b'));
+		assertFalse('can not go to d from b', flow.go('/d'));
+		assertFalse('can not target d from b', flow.target('/d'));
+		assertTrue('can go to a/d',flow.go('../d'));
+		assertTrue('paused at d', flow.status().paused);
+		assertFalse('can not wait with reference to /d from d', flow.wait('/d',100));
+		assertTrue('can exploit loophole and target /d with function', flow.wait(flow.map().d, 0));
+		cleanUp();
 	},
 	testTokens: function () {
 		var flow, map;
