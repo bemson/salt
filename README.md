@@ -6,11 +6,11 @@ version 0.2.1
 
 ## DESCRIPTION
 
-Flow is a JavaScript library that minimizes execution complexity, redundancy, and concurrency for confident web development.
+Flow is a JavaScript library that controls when functions execute, minimizing complexity, redundancy, and concurrency for confident web development.
 
 ## FILES
 
-* flow-min.js - Flow framework and dependencies (minified with the [UglifyJS](http://marijnhaverbeke.nl/uglifyjs) )
+* flow-min.js - Flow framework and dependencies (minified with [UglifyJS](http://marijnhaverbeke.nl/uglifyjs) )
 * src/ - Directory containing the source code
 * src-test/ - Test suite
 * LICENSE - The legal terms and conditions under which this software may be used
