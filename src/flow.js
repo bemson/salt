@@ -1,5 +1,5 @@
 /*
- * Flow v0.2.1
+ * Flow v0.2.1.1
  * http://github.com/bemson/Flow/
  *
  * Copyright 2011, Bemi Faison
@@ -116,7 +116,7 @@
 							var fnc = function (key) {
 									// returns the flow, when this map-function is passed as a reference
 									// returns false  when the flow is dead or locked
-									return flow.dead ? !1 : (key === sys.fkey ? flow : ((flow.exec || !flow.locked) ? flow.target(node, [].slice.call(arguments)) : !1));
+									return flow.dead ? !1 : (key === sys.fkey ? flow : ((flow.exec || (flow.nodes[flow.currentIdx].allowTgt(node) && !flow.locked)) ? flow.target(node, [].slice.call(arguments)) : !1));
 								};
 							fnc.toString = function () {
 								return node.id
