@@ -1,5 +1,5 @@
 /*
- * Flow v0.2.1.1
+ * Flow v0.2.1.2
  * http://github.com/bemson/Flow/
  *
  * Copyright 2011, Bemi Faison
@@ -156,6 +156,7 @@
 							internal: !!flow.exec,
 							depth: node.depth.length - 1,
 							phase: flow.phase,
+							restriction: node.restrict || '',
 							location: node.id,
 							index: node.idx,
 							state: node.name,
@@ -411,8 +412,10 @@
 					flow.clearDelay();
 					// if there are targets or waypoints...
 					if (tgtLn || points.length) {
-						// stage waypoints
-						flow.stage.waypoints = points;
+						// if there are waypoints, stage them
+						if (points.length) {
+							flow.stage.waypoints = points;
+						}
 						// traverse towards a target
 						flow.traverse();
 						// flag that the flow moved or will move for the given waypoints, or false when there are childFlows preventing movement
@@ -588,6 +591,10 @@
 				// if not dead, delayed nor pending, commit stage updates
 				if (!flow.dead && !flow.delay.active && !flow.childFlows.length) flow.commitStage();
 			}
+			// cement route
+			flow.targets = flow.getRoute();
+			// clear waypoints
+			flow.stage.waypoints = [];
 			if (r > flow.recursionLimit) {
 				cb = (',' + flow.nodestack.join()).match(/(,\d+\b)+\1$/);
 				if (cb) {
