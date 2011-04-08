@@ -757,6 +757,71 @@ FlowTest.prototype = {
 		assertSame('targeting program root returns other result', finalValue, map());
 		cleanUp();
 	},
+	testIssue4: function () {
+		var page, ary = [];
+		page = new Flow({
+			_in: function () {
+				assertNotSame('b is not next target', this.query('b'), this.status().targets[0]);
+				this.go('b');
+				assertSame('b is next target', this.query('b'), this.status().targets[0]);
+				this.go();
+				assertSame('b is still next target', this.query('b'), this.status().targets[0]);
+			},
+			_main: function () {
+				assertSame('last history is b', this.status().history[1], page.b.toString());
+				ary.push(2);
+			},
+			b: function () {
+				ary.push(1);
+			}
+		});
+		page();
+		assertSame('redirected to b', ary.join(), '1,2');
+
+		ary = [];
+		page = new Flow({
+			_in: function () {
+				this.go('b');
+				this.wait();
+			},
+			_main: function () {
+				assertSame('last history is b', this.status().history[1], this.query('b'));
+				ary.push(2);
+			},
+			b: function () {
+				ary.push(1);
+			}
+		}, 1);
+		page.go(1);
+		assertSame('b is next target', page.query('b'), page.status().targets[0]);
+		assertSame('flow has two targets', 2, page.status().targets.length);
+		page.go();
+		assertSame('redirected to b', ary.join(), '1,2');
+
+		ary = [];
+		page = new Flow({
+			_in: function () {
+				this.go('b');
+				this.wait();
+			},
+			_main: function () {
+				assertSame('last history is b', this.status().history[1], this.query('b'));
+				ary.push(2);
+			},
+			b: function () {
+				assertSame('last history is c', this.status().history[2], this.query('/c'));
+				ary.push(1);
+			},
+			c: function () {
+				assertSame('three targets total', 3, this.status().targets.length);
+				ary.push(3);
+			}
+		}, 1);
+		page.go(1);
+		assertSame('b is next target', page.query('b'), page.status().targets[0]);
+		page.go('c');
+		assertSame('traversed c, b, a', ary.join(), '3,1,2');
+	},
 	testArguments: function () {
 		var flow, map, argsSent = 0, args = ['foo',1,[]], change = [0,'bar'];
 		cleanUp();
