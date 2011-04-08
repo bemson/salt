@@ -1,12 +1,12 @@
 # Flow
 by Bemi Faison
 
-version 0.2.1.1
-(3/28/11)
+version 0.2.1.2
+(4/7/11)
 
 ## DESCRIPTION
 
-Flow is a JavaScript library that controls when functions execute, minimizing complexity, redundancy, and concurrency for confident web development.
+Flow is a JavaScript library that controls when functions execute, which minimizes complexity, redundancy, and concurrency in code, for confident web development.
 
 ## FILES
 
@@ -24,66 +24,7 @@ The Flow source code (located at "src/flow.js") requires the [GSet library](http
 
 ## USAGE
 
-Below is a brief usage example. Full documentation is available in the [Flow wiki](http://github.com/bemson/Flow/wiki/).
-
-**1. Create a Flow by giving it a _program_.**
-
-Let's start with a program that logs someone in (to something) using ajax. Programs reference all the functions used in a task, grouped by their essential state. (Functionality may be further isolated based on when a state is entered, exited, targeted, etc.)
-
-    var login = new Flow({
-      _in: showLoginModal,
-      _main: focusOnForm,
-      submit: {
-        _in: disableModal,
-        _main: function () {
-          doAjaxThen(login.submit.handleAjax);
-          this.wait(login.submit.timeout, 10000); // timeout in 10 seconds
-        },
-        handleAjax: function (data) {
-          if (data.ok) {
-            login.submit.success();
-          } else {
-            login.failed('Invalid login!');
-          }
-        },
-        success: doSomethingNext,
-        timeout: function () {
-          cancelAjax();
-          login.failed('Could not reach login server!');
-        },
-        _out: function () {
-          enableModal();
-        },
-      },
-      failed: {
-        _main: function (msg) {
-          showFailMsg(msg);
-        },
-        _out: clearFailMsg
-      },
-      cancel: function () {
-        this.target(0); // exits the program
-      },
-      _out: hideLoginModal
-    });
-
-**2. Navigate your program by giving Flow a state to target.**
-
-By default, Flow returns a function-list that reflects your program terms and structure, called a _map_. For example, invoking `login()`, tells Flow to navigate toward the program root, executing the following steps (internally):
-
-    login._in();
-    login._main();
-
-Invoking `login.submit()` _next_ executes these steps (again, internally):
-
-    login.submit._in();
-    login.submit._main();
-
-Flow always navigates from it's current position, to ensure your logic is executed in the proper context.
-
-**3. There's no third step!**
-
-Once the Flow is defined, use _map_ functions directly, or bind them to event handlers. Flows may also be referenced dynamically by id, in order to access instance methods - like retrieving a new _map_ with `var myMap = Flow('my flow id').map();`.
+Full documentation is available in the [Flow wiki](http://github.com/bemson/Flow/wiki/).
 
 See the [Flow API](http://github.com/bemson/Flow/wiki/Flow-API) for more on the Flow instance and methods.
 
