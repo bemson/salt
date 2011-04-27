@@ -1,5 +1,5 @@
 /*
- * Flow v0.2.1.2
+ * Flow v0.2.1.5
  * http://github.com/bemson/Flow/
  *
  * Copyright 2011, Bemi Faison
@@ -483,7 +483,6 @@
 		flow.nodeIds = {}; // maps node id with index
 		// create master node and append given tree
 		new sys.objects.Node(flow, new sys.objects.Node(flow), tree); // create node tree
-		flow.recursionLimit = flow.nodes.length * 5; // set recursion limit (debug purposes)
 	};
 	sys.objects.Flow.prototype = {
 		target: function (node, data) {
@@ -504,8 +503,7 @@
 				node, // current node
 				cb, // stub for callback function
 				next, // next movement flags
-				hasFnc, // flags when a phase function exists
-				r = 0; // recursion limiter
+				hasFnc; // flags when a phase function exists
 
 			// exit when executing or pending, return false when pending
 			if (flow.exec || flow.childFlows.length) return !flow.childFlows.length;
@@ -527,7 +525,7 @@
 			// commit route changes from stage - sets targets
 			flow.commitStage();
 			// while not dead, paused, or pending, and there are targets...
-			while (flow.recursionLimit > r++ && !flow.dead && !flow.delay.active && !flow.childFlows.length && flow.targets.length) {
+			while (!flow.dead && !flow.delay.active && !flow.childFlows.length && flow.targets.length) {
 				// reset phase
 				flow.phase = 0;
 				// reset hasFnc
@@ -595,18 +593,6 @@
 			flow.targets = flow.getRoute();
 			// clear waypoints
 			flow.stage.waypoints = [];
-			if (r > flow.recursionLimit) {
-				cb = (',' + flow.nodestack.join()).match(/(,\d+\b)+\1$/);
-				if (cb) {
-					cb = cb[1].substr(1).split(',');
-					for (i = 0; i < cb.length; i++) {
-						cb[i] = flow.nodes[cb[i]].name;
-					}
-					throw new Error('Flow: bad redirects [ ' + cb.join(' > ') + ' ]');
-				} else {
-					throw new Error('Flow: too much recursion');
-				}
-			}
 			// clear nodestack
 			flow.nodestack = [];
 			// if not dead, no more targets, inform parents this flow has reached it's target
