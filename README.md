@@ -1,12 +1,12 @@
 # Flow
 by Bemi Faison
 
-version 0.2.1.2
-(4/7/11)
+version 0.2.2
+(4/27/11)
 
 ## DESCRIPTION
 
-Flow is a JavaScript library that controls when functions execute, which minimizes complexity, redundancy, and concurrency in code, for confident web development.
+Flow is a JavaScript framework that defines and executes related functions. Flow is designed to reduce code complexity, redundancy, and concurrency, for confident web development.
 
 ## FILES
 
@@ -20,7 +20,7 @@ Flow is a JavaScript library that controls when functions execute, which minimiz
 
 Load Flow like any other external JavaScript file.
 
-The Flow source code (located at "src/flow.js") requires the [GSet library](http://github.com/bemson/GSet/).
+The uncompressed source code, in "src/flow.js", requires the [GSet library](http://github.com/bemson/GSet/).
 
 ## USAGE
 
