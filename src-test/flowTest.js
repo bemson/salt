@@ -279,42 +279,6 @@ FlowTest.prototype = {
 		assertFalse('map.decoy.target returns false', map.decoy.target());
 		cleanUp();
 	},
-	testRecursion: function () {
-		var map,
-			randCnt = 20,
-			randName = 'rand',
-			i,
-			rand = function () {
-				return Math.floor(Math.random() * (randCnt));
-			},
-			randComponent = function () {
-				this.target('//' + randName + rand());
-			},
-			randProgram = {
-				_main: randComponent
-			};
-		cleanUp();
-		map = new Flow({
-			_main: function () {
-				map.next();
-			},
-			next: function () {
-				map();
-			}
-		});
-		assertException('caught looping', function () {
-			map();
-		});
-
-		for (i = 0; i < randCnt; i++) {
-			randProgram[randName + i] = randComponent;
-		}
-		map = new Flow(randProgram);
-		assertException('caught too many cycles', function () {
-			map();
-		});
-		cleanUp();
-	},
 	testComponents: function () {
 		var flow,map,
 			value = 0,
