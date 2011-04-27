@@ -341,8 +341,8 @@
 					time = M.ceil(M.abs(args[argLn - 1])),
 					timeOk = !isNaN(time),
 					rtn = 1;
-				// if there are targets to reach and the argument's are valid (node is not false)...
-				if (flow.targets.length && (!argLn || (timeOk && fncOk && node !== !1))) {
+				// if there are targets or staged waypoints to reach, and the argument's are valid (node is not false)...
+				if ((flow.targets.length || flow.stage.waypoints.length) && (!argLn || (timeOk && fncOk && node !== !1))) {
 					// if reset traversal cache
 					if (cache.status) {
 						delete cache.status.traversal;
@@ -495,6 +495,8 @@
 			flow.args = data;
 			// stage new waypoint
 			flow.stage.waypoints = [node];
+			// flag that our target has not been hit
+			flow.stage.hitTarget = 0;
 			// return traversal attempt
 			return flow.traverse();
 		},
