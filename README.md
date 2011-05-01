@@ -1,12 +1,12 @@
 # Flow
 by Bemi Faison
 
-version 0.2.2
-(4/27/11)
+version 0.2.2.1
+(5/1/11)
 
 ## DESCRIPTION
 
-Flow is a JavaScript framework that defines and executes related functions. Flow is designed to reduce code complexity, redundancy, and concurrency, for confident web development.
+Flow is a JavaScript framework that lets you define and execute related functions. Flow is designed to reduce code complexity, redundancy, and concurrency, for confident web development.
 
 ## FILES
 
