@@ -1,5 +1,5 @@
 /*
- * Flow v0.2.2
+ * Flow v0.2.2.1
  * http://github.com/bemson/Flow/
  *
  * Copyright 2011, Bemi Faison
@@ -1028,7 +1028,7 @@
 	sys.objects.Node.prototype = {
 		allowTgt: function (tgt) {
 			var node = this;
-			return node.flow.exec || !node.restrict || !tgt.path.indexOf(node.restrict);
+			return node.flow.exec || !node.restrict || (tgt.path.length > node.restrict.length && !tgt.path.indexOf(node.restrict));
 		},
 		// add single variable - supports cfg can be a string or object
 		addVarDef: function (cfg) {
