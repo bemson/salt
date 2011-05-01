@@ -427,11 +427,15 @@ FlowTest.prototype = {
 			d: {}
 		}, 1);
 		assertTrue('at root of restricted flow', flow.go(1));
-		assertTrue('can go to d', flow.go('d'));
-		assertTrue('in a',flow.go('/a'));
+		assertTrue('can go to /d', flow.go('d'));
+		assertSame('we are in /d', flow.status().location, flow.query('/d'));
+		assertTrue('can go to /a',flow.go('/a'));
+		assertFalse('can no longer go to a', flow.go('/a'));
+		assertSame('we are in /a', flow.status().location, flow.query('/a'));
 		assertFalse('can not go to d from a', flow.go('/d'));
 		assertFalse('can not target d from a', flow.target('/d'));
 		assertTrue('can go to a/c',flow.go('c'));
+		assertFalse('can not go to a from c', flow.go('/a'));
 		assertFalse('can not go to d from c', flow.go('/d'));
 		assertFalse('can not target d from c', flow.target('/d'));
 		assertTrue('can go to a/b',flow.go('../b'));
