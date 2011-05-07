@@ -84,6 +84,8 @@ FlowTest.prototype = {
 			'[foo': {},
 			'my/state': {},
 			'my|state': {},
+			1: {},
+			'2a': {},
 			_XYZ: 0,
 			_in: 1,
 			_out: 'echo',
@@ -93,8 +95,10 @@ FlowTest.prototype = {
 		assertInstanceOf('flow is a Gset', GSet, flow);
 		assertFunction('flow has query method', flow.query);
 		assertString('query returns string for 0 index', flow.query(0));
+		assertFalse('"//1" exists', flow.query('//1/'));
+		assertFalse('"//2a" exists', flow.query('//2a/'));
 		assertFalse('"//my|state/" exists', flow.query('//my|state/'));
-		assertFalse('"//my|state/" and "//toString/" exists', flow.query('//my|state/','//toString/'));
+		assertFalse('"//toString/" exists', flow.query('//toString/'));
 		assertFalse('program has children', flow.query(2));
 		cleanUp();
 	},
