@@ -1,5 +1,5 @@
 /*
- * Flow v0.2.2.1
+ * Flow v0.2.2.2
  * http://github.com/bemson/Flow/
  *
  * Copyright 2011, Bemi Faison
@@ -15,7 +15,7 @@
 				oneAlpha: /\w/, // at least one alpha-numeric character
 				absPath: /^\/\//, // tostring of map function
 				typeObjFnc: /^(?:object|function)$/,
-				nodeNameBad: /^toString$|[\/\|]|^[_@\[]/,
+				nodeNameBad: /^toString$|^\d|[\/\|]|^[_@\[]/,
 				relativePathFlags: /^(?:(?:\.{1,2}|[@\[][^\/]+)\/?)+/,
 				gateOkAction: /^[cg]/,
 				gateBadAlias: /^args|go|target|wait$/,
