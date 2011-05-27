@@ -1,5 +1,5 @@
 /*
- * Flow v0.2.2.2
+ * Flow v0.2.2.3
  * http://github.com/bemson/Flow/
  *
  * Copyright 2011, Bemi Faison
@@ -207,7 +207,7 @@
 					var flow = this;
 					// if in a flow function...
 					if (flow.exec) {
-						flow.locked = !v;
+						flow.locked = !!v;
 						return 1;
 					}
 					// (otherwise) ignore call
