@@ -452,6 +452,21 @@ FlowTest.prototype = {
 		assertFalse('can not target /d with a map used externally', flow.map().d());
 		cleanUp();
 	},
+	testLockMethod: function () {
+		var map = new Flow({
+			_main: function () {
+				assertTrue('can lock', this.lock(1));
+				assertTrue('flow is locked', this.lock());
+				assertTrue('can unlock flow', this.lock(0));
+				assertFalse('flow is locked', this.lock());
+				this.lock(1);
+			}
+		});
+		assertFalse('flow is not locked', Flow(map).lock());
+		map();
+		assertTrue('flow is locked', Flow(map).lock());
+		cleanUp();
+	},
 	testTokens: function () {
 		var flow, map;
 		cleanUp();
