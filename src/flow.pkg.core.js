@@ -1,5 +1,37 @@
 /*
 Flow Package: core
+
+  /*
+
+var flow = new Flow({
+  _in: function () {
+    this.go();
+    this.pkgs.core.go();
+  }
+});
+
+flow.go();
+flow.pkgs.core.go();
+
+core.methods.go = function () {
+  var pkg = core(this); // returns the package instance, which has the tank api
+  // pkg.flow is another proxy
+  pkg.flow.go(idx); // tell flow to go here
+  pkg.flow.stop(); // tell flow to stop going anywhere
+  pkg.flow.states; // array of states
+  pkg.flow.state; // the current state
+};
+
+// flow 
+flow.go = function (index) {
+  return moveFlow(this, index);
+}
+
+flow.stop = function () {
+  return stopFlow(this);
+}
+
+
 */
 !function (Flow) {
 
