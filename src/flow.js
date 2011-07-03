@@ -7,7 +7,9 @@
  */
 !function () {
   // init vars
-  var pkgs = [], // collection of extension packages
+  var sig = {}, // private signature object for priviledged access
+    pkgs = [], // collection of package-definitions
+    pkgsIdx = {}, // name index of package-definitions
     genStates = new genData( // spawn state generator
       function (name, value, parent, index, dataset) {
         // init vars
@@ -59,159 +61,148 @@
         }
       }
     );
-  function PkgChain() {}
-  function Pkg(name) {
-    // init vars
-    var pkg = this; // alias self
-    // add to packages
-    pkgs.list.push(pkg);
-    // index this package
-    pkgs.idx[name] = pkg;
-    // capture name
-    pkg.name = name;
-    // define new constructor
-    pkg._cnst = function chain() {}
-    // chain existing prototype to this constructor
-    pkg._cnst.prototype = new PkgChain();
-    // expose chain prototype via package
-    pkg.methods = chain.prototype;
-    // set as new package chain
-    PkgChain = pkg;
-    
-  }
-  function createProgram(obj) {
-    // init vars
-    var program = genStates(obj), // get states
-      flow = genStates()[0], // define flow state
-      root; // placeholder for root state
-    // prepend flow to program
-    program.unshift(flow);
-    // alias root of program (now at index 1)
-    root = program[1];
-    // set flow properties
-    with (flow) {
-      // reference index of root as child of flow
-      children.push(root.index);
-      // set name
-      name = '_flow';
-      // set depth
-      depth = 0;
-      // set location
-      location = '..//';
-    }
-    // reference the first child index
-    flow.firstChildIndex = root.index;
-    // reference the last child index
-    flow.lastChildIndex = root.index;
-    // referencelink root to flow
-    root.parentIndex = flow.index;
-    // set root index in flow
-    root.childIndex = 0;
-    // return program dataset
-    return program;
-  }
-  function proxyAPI(flow) {
-    this._Flow = flow;
-  };
+  function ModelAPI() {}
   // create
-  function createProxyAPI(proxy, cnst) {
-    // define constructor to reference
-    function api(proxy) {
-      this._Flow = proxy;
-    };
-    // set api prototype
-    api.prototype = cnst.prototype;
-    // return instance of api
-    return new api(proxy);
+  function definePackage(name) {
+    // package returns the private instance of it's public proxy
+    function pkg(pxy) {
+      // init vars
+      var flow = pxy && pxy.toString(sig); // pass secret to pxy's toString
+      // return the package instance or false
+      return flow.pkgs && flow.pkgs[name] || false;
+    }
+    // set default static properties
+    pkg.init = pkg.dataKey = pkg.invalidKey = pkg.onStart = pkg.onEnd = pkg.onFinish = pkg.onTraverse = 0;
+    // define new prototype-model for this package
+    function Model() {}
+    // chain existing FlowModel to this model
+    Model.prototype = new ModelAPI();
+    // define new FlowModel from this extended chain
+    ModelAPI = Model;
+    // expose the model's prototype for adding API methods
+    pkg.api = model.prototype;
+    // define package definition object, to capture and index this package and it's model
+    pkgsIdx[name] = pkgs.push({
+      name: name,
+      pkg: pkg,
+      model: Model
+    }) - 1;
+    // return package
+    return pkg;
+  }
+  function getStates(program) {
+    // init vars
+    var states = genStates(program); // parse initial states
+    // set parent and childIndex of root
+    states[0].parentIndex = flow.states[0].childIndex = 0;
+    // prepend flow state
+    states.unshift(genStates()[0]);
+    // reference index of root as child of flow
+    states[0].children.push(1);
+    // set name
+    states[0].name = '_flow';
+    // set depth
+    states[0].depth = 0;
+    // set location
+    states[0].location = '..//';
+    // reference the first and last child index
+    states[0].firstChildIndex = states[0].lastChildIndex = 1;
+    // return states
+    return states;
   }
   function Flow(program) {
     // init vars
-    var proxy = createFlowProxy(program), // define (private) flow and receive it's proxy (PACKAGE API)
-      flow = createPackageProxy(proxy, Pkgs), // create base api with all prototyped packages
-      returnFnc, // placeholder for final initialization action
-      i = 0, pkg; // loop vars
-    // add pkgs to base flow
+    var flow = this;
+    // define pkgs object
     flow.pkgs = {};
-    pkgs.forEach(function () {
-      
-    });
-    // with each package...
-    for (; pkg = pkgs.list[i]; i++) {
-      // if this package has a return override action, capture it
-      if (pkg.returnOverride) returnFnc = pkg.returnOverride; // overrides return action of earlier packages
-      // create api for this package, and add to pkgs
-      flow.pkgs[pkg.name] = createPackageProxy(proxy, pkg);
-    }
-    // object must have
-    
-    // return object
-    return {      
-      pkgs: {
-        core: getPackage('core')
+    // states for this program
+    flow.states = getStates(program);
+    // index of the current program state
+    flow.curStateIndex = 0;
+    // define scoped method calls for package instances
+    flow.pkgAPI = {
+      go: function () {
+        return flow.go.apply(flow, arguments);
+      },
+      stop: function () {
+        return flow.stop.apply(flow, arguments);
       }
     };
+    // with each package definition...
+    pkgs.forEach(function (pkgDef) {
+      // init vars
+      var pkg = flow.pkgs[pkgDef.name] = { // the package instance that will mirror this flow
+        flow: flow.pkgAPI // alias pkg api as "flow"
+      };
+      // use the definition's prototype
+      pkg.prototype = pkgDef.pkg.prototype;
+      // add states array
+      pkg.states = [];
+      // with each state...
+      flow.states.forEach(function (state, idx) {
+        // add blank object
+        pkg.states[idx] = new function () {};
+        // use state as prototype
+        pkg.states[idx].constructor.prototype = state;
+      });
+      // if there is a package initialization function, invoke on this package
+      if (pkgDef.pkg.init) pkgDef.pkg.init.call(pkg);
+    });
+  }
+  Flow.prototype = {
+    go: function () {
+      // fire loop towards target
+    },
+    stop: function () {
+      // set stop flag to true
+      flow.stopFlag = 1;
+    }
+  };
+
+  function FlowAPI(program) {
+    // init vars
+    var flow = new Flow(program), // define (private) flow
+      apiPkgs = {}, // define pkgs collection for this Flow
+      proxyAPI = getProxyAPI(); // create API proxy
+    // use the ModelAPI as the primary prototype
+    proxyAPI.constructor.prototype = new ModelAPI();
+    // faux toString method, for accessing the private flow
+    function proxyToString(key) { // faux toString method
+      // return corresponding flow or default toString result
+      return key === sig ? flow : Object.prototype.toString.apply(this, arguments);
+    }
+    // return an API container for the private flow
+    function getProxyAPI() {
+      // return anonymous pointer to the private flow
+      function api() {
+        // reference pkgs for targeted method calls
+        this.pkgs = apiPkgs;
+        // add custom
+        this.toString = proxyToString;
+      }
+      // return anonymous proxy instance
+      return new api();
+    }
+    // with each package-definition...
+    pkgs.forEach(function (pkgDef) {
+      // create apiProxy for this package and use it's corresponding model for a prototype
+      (apiPkgs[pkgDef.name] = getProxyAPI()).constructor.prototype = new pkgDef.model();
+    });
+    // return the flowAPI
+    return proxyAPI;
   }
   // define object pointing to flow
   // set prototype to given model
-  Flow.pkg = function (name) {
-    // if given a package name to resolve...
-    if (name) {
-      // if there is no package with this name...
-      if (!pkgs.idx.hasOwnProperty(name)) {
-        // create new package 
-        pkgs.idx[name] = new PackageDefinition();
-      }
-      // return the target package function
-      return pkgs[name];
+  FlowAPI.pkg = function (name) {
+    // if given a valid name to resolve...
+    if (typeof name === 'string' && /\w/.test(name)) {
+      // if no package has this name, create new package definition
+      if (!pkgsIdx.hasOwnProperty(name)) definePackage(name);
+      // return the package definition's pkg function
+      return pkgs[pkgsIdx[name]].pkg;
     }
-    // (otherwise) return all package instances
-    return pkgs.map(function (pkg) {})
+    // (otherwise) return false - fire error in the future?
+    return !1
   }
-  window.Flow = Flow;
+  window.Flow = FlowAPI;
 }();
-
-/*
-
-this.pkg.core.go();
-
-this.pkg.core.arguments
-
-this.go = function () {
-  this._Flow.go(); -> priviledged method
-  this._Flow.stop(); -> priviledged method
-};
-
-
-Flow._Flow.go(); -> priviledged method
-
-Flow.query();
-Flow.pkgs.core.query();
-Flow.pkgs.core._Pkg.arguments; -> "._Pkg" is the package definition
-
-both "Flow" and "core" are objects with "._Flow" pointer -> points to the flow instance proxy
-
-this.go();
-
-[Outside] Flow.pkg('debug').methods.log -> prototype log() function
-
-[Inside] this.log -> from prototype of debug package
-[Inside] this.pkgs.debug.log -> none of these can point to a prototype, but must come from a prototype
-
-"this" and "debug" can be gset objects - which would point to the same methods?
-
-must be objects that point to the same containing package methods - which point 
-
-
-What is pkgs? How will it always show the 
-
-
-Flow.prototype.log = fnc
-Flow.pkg('debug').methods.log = fnc -> updates prototype of Flow to a PkgMgr
-
-this.log(); -> this is clear
-this.pkgs.debug.log(); -> can it be the same this?
-
-when this and debug are both prototyped by the true Flow - perhaps it can be??
-
-we can prototype Flow properties?
-*/
