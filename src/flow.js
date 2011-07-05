@@ -1,5 +1,5 @@
 /*
- * Flow v0.3
+ * Flow (NextGen) v0.X
  * http://github.com/bemson/Flow/
  *
  * Copyright 2011, Bemi Faison
