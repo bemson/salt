@@ -1,17 +1,23 @@
 /*
 Flow Package: core
 */
-!function (Flow) {
+!function (window, Object, Flow, undefined) {
 
   // init vars
-  var core = Flow.pkg('core'); // define core package
+  var core = Flow.pkg('core'), // define core package
+    typeOf = function (obj) { // custom typeOf function
+      // init vars
+      var type = typeof obj; // get native type string
+      // return string, check for array when an object
+      return type === 'object' && Object.prototype.toString.call(obj) === '[object Array]' ? 'array' : type;
+    };
 
   // initialize the package instance with custom properties
   core.init = function () {
     // alias this package
     var pkg = this;
     // add arguments
-    pkg.arguments = [];
+    pkg.args = [];
     // init locked flag
     pkg.locked = 0;
     // init index of state paths
@@ -19,11 +25,26 @@ Flow Package: core
     // init child-parent flow trackers
     pkg.childFlows = [];
     pkg.parentFlows = [];
-    // with each sandboxed-state...
     pkg.states.forEach(function (state, idx) {
       // index this path with this index position
       pkg.stateIds[state.location] = idx;
+      // define map function - curried call to target method
+      state.map = function () {
+        pkg.proxy.pkgs.core.target(idx, arguments);
+      };
+      // if this state's index is not 0...
+      if (state.index) {
+        // append to parent's map function
+        pkg.states[state.parentIndex].map[state.name] = state.map;
+      }
+      // set custom toString for passing proxy reference
+      state.map.toString = function () {
+        // return this state's location
+        return state.location;
+      };
     });
+    // set map to root map
+    pkg.map = pkg.states[1].map;
   };
 
   // add static variables - could be private - doesn't matter
@@ -58,7 +79,7 @@ Flow Package: core
         if (data._on) data._on.apply(pkg.proxy);
       break;
       case 1: // in
-        if (data._in) data._in.apply(pkg.proxy, pkg.arguments);
+        if (data._in) data._in.apply(pkg.proxy, pkg.args);
       break;
       case 2: // out
         if (data._out) data._out.apply(pkg.proxy);
@@ -79,6 +100,70 @@ Flow Package: core
     
   };
 
+  // add method to return map of this flow's states
+  core.api.map = function () {
+    // return map function
+    return core(this).map;
+  };
+
+  // add method to access and edit arguments
+  core.api.args = function (a1, a2) {
+    // init vars
+    var pkg = core(this), // retrieve package-sandbox for this proxy
+      args = [].slice.call(arguments), // capture arguments as an array
+      a1Ok = a1 > -1 && Math.ceil(a1) === a1; // flag when the first argument is a valid number
+    // based on the number of arguments...
+    switch (args.length) {
+      // with zero arguments...
+      case 0 :
+        // return copy of arguments
+        return pkg.args.concat();
+      break;
+
+      // with one argument...
+      case 1:
+        // based on the type of the first argument...
+        switch (typeOf(a1)) {
+          // when the first argument is an array...
+          case 'array':
+            // replace package arguments
+            pkg.args = a1.concat();
+            // flag success
+            return true;
+          break;
+
+          // if the first argument is a number...
+          case 'number':
+            // if the number is valid...
+            if (a1Ok) {
+              // return the argument at the given index
+              return pkg.args[a1];
+            }
+          break;
+        }
+      break;
+
+      // with more than one argument...
+      default:
+        // if the index is valid...
+        if (a1Ok) {
+          // and, if the value is undefined for the last item...
+          if (a2 === undefined && a1 === pkg.args.length - 1) {
+            // remove last item
+            pkg.args.splice(-1, 1);
+          } else { // otherwise, when not a "delete" flag...
+            // set value at the given index
+            pkg.args[a1] = a2;
+          }
+          // flag success with removing or setting the value
+          return !0;
+        }
+      break;
+    }
+    // (ultimately) return false
+    return !1;
+  };
+
   // add method to program api
   core.api.target = function (idx) {
     /*
@@ -97,4 +182,4 @@ Flow Package: core
       pkg.flow.go(idx); // tell flow to go here
     }
   };
-}(Flow);
+}(this, Object, Flow);
