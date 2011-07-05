@@ -5,7 +5,7 @@
  * Copyright 2011, Bemi Faison
  * Released under the MIT License
  */
-!function () {
+!function (window, undefined) {
   // init vars
   var sig = {}, // private signature object for priviledged access
     pkgDefs = [], // collection of package-definitions
@@ -15,10 +15,16 @@
         // init vars
         var state = this, // alias state
           isInvalid = name && !pkgDefs.every(function (pkgDef) { // flag true when a package deems this an invalid key
-            return !pkgDef.pkg.invalidKey || !pkgDef.pkg.invalidKey.test(name);
+            // init vars
+            var hdlr = pkgDef.pkg.invalidKey; // get invalidKey handler - returns/evaluates true when the name is invalid
+            // return true when there is no handler, or it's function that returns true, or a regex that returns true
+            return !hdlr || !(typeof hdlr === 'function' ? hdlr(name, value) : hdlr.test(name));
           }),
           isData = name && !pkgDefs.every(function (pkgDef) { // flag true when a package deems this a data key
-            return !pkgDef.pkg.dataKey || !pkgDef.pkg.dataKey.test(name);
+            // init vars
+            var hdlr = pkgDef.pkg.dataKey; // get dataKey handler - returns/evaluates true when the name is invalid
+            // return true when there is no handler, or it's function that returns true, or a regex that returns true
+            return !hdlr || !(typeof hdlr === 'function' ? hdlr(name, value) : hdlr.test(name));
           });
         // if this key is invalid or flagged as data...
         if (isInvalid || isData) {
@@ -365,4 +371,4 @@
     });
   }
   window.Flow = FlowAPI;
-}();
+}(this);
