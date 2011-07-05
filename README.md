@@ -1,17 +1,14 @@
-# Flow
+# Flow (NextGen _EXPERIMENTAL_)
 by Bemi Faison
 
-version X.X (nextgen)
+version 0.X (nextgen)
 (7/4/11)
-
-## NextGen Branch (EXPERIMENTAL)
-
 
 ## DESCRIPTION
 
 Flow is a JavaScript framework that lets you define and execute related functions. Flow is designed to reduce code complexity, redundancy, and concurrency, for confident web development.
 
-The NextGen branch is an extensible version of Flow, which will serve as a platform for rich customizations.
+_The NextGen branch will provide an extensible platform for customizing Flow, and is under development._
 
 ### Packages
 
@@ -29,14 +26,14 @@ Packages will allow you to customize the following:
 * Customize the Flow instance
 * Respond when Flow navigates a program
   * Before navigating
-  * When navigation is halted
+  * When navigation stops
   * When navigation completes
-* Respond when any state is traversed
-* Provide methods to program functions
+* Respond when Flow traverses a state
+* Provide API methods via a proxy of the flow instance
 
 #### Data and Namespace Sandboxing (and Sharing)
 
-Packages will obviate worries over namespace and object actions. Each will have it's own proxy to the flow instance and each program state. Additions and (most) edits to these objects, would only impact the instigating package. As well, every package may leverage another's, by way of accessing it's properties and methods.
+Packages will obviate worries over namespace and object actions. Each will have it's own proxy to the flow instance and each program state. Additions and (most) edits to these objects, would only impact the instigating package. As well, every package may access methods exposed by another.
 
 ## FILES
 
@@ -47,6 +44,8 @@ Packages will obviate worries over namespace and object actions. Each will have 
 * README.md - This readme file
 
 ## INSTALLATION
+
+The _NextGen_ version of Flow requires [genData](https://github.com/bemson/genData).
 
 **The "nextgen" branch is not recommended for use at this time.**
 
@@ -70,14 +69,6 @@ D.dataKey = /^#/;
 
 // specify which keys will be ignored during compilation
 D.invalidKey = /\$/;
-
-
-// add custom properties to each state
-D.initState = function (state) {
-  var pkg = this,
-    arrayOfAllStates = pkg._Flow.states;
-  state.customDebugProperty = "State #"state.index + " in " + arrayOfAllStates.length;
-};
 
 // add private/sandboxed properties to each Flow and it's states
 D.init = function () {
