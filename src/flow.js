@@ -213,7 +213,6 @@
       // return the pkgInst
       return pkgInst;
     });
-    console.log('internal instance', flow);
   }
   Flow.prototype = {
     // head towards the current target
