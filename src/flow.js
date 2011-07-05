@@ -207,9 +207,9 @@
       }
       // add flow and proxy properties
       // expose shared api to this package instance
-      pkgDef.pkg.flow = flow.shared;
+      pkgInst.pkg.flow = flow.shared;
       // expose public proxy to this package instance
-      pkgDef.pkg.proxy = proxy;
+      pkgInst.pkg.proxy = proxy;
       // return the pkgInst
       return pkgInst;
     });
