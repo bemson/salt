@@ -1,14 +1,15 @@
 # Flow
 by Bemi Faison
 
-version 0.3 (nextgen)
-(6/26/11)
+version X.X (nextgen)
+(7/4/11)
+
+## NextGen Branch (EXPERIMENTAL)
+
 
 ## DESCRIPTION
 
 Flow is a JavaScript framework that lets you define and execute related functions. Flow is designed to reduce code complexity, redundancy, and concurrency, for confident web development.
-
-## NextGen Branch
 
 The NextGen branch is an extensible version of Flow, which will serve as a platform for rich customizations.
 
@@ -24,7 +25,7 @@ Packages will allow you to customize the following:
   * Determine which keys are invalid
   * Determine which keys are components (of a state)
   * Determine how states are structured
-* Override the value returned from instantiating a Flow
+* Override the value returned from instantiating a Flow _(Redacted)_
 * Customize the Flow instance
 * Respond when Flow navigates a program
   * Before navigating
@@ -53,67 +54,77 @@ Packages will obviate worries over namespace and object actions. Each will have 
 
 _Full documentation on the master branch is available in the [Flow wiki](http://github.com/bemson/Flow/wiki/)._
 
+See `src/flow.pkgs.core.js` for an example of a working package.
+
 ### Defining Packages
 
 The following demonstrates how to define a Flow package:
 
 ```js
 
-// define a package
-var debug = Flow.pkg('debug');
+// define a package (returns a package-definition-function)
+var D = Flow.pkg('debug'); // `D` is a function
 
-// provide a RegExp that identifies component keys (attributes of a state)
-debug.dataKey = /^#/;
+// specify which keys will become components (or attributes) of a state
+D.dataKey = /^#/;
 
-// provide a RegExp that identifies invalid keys
-debug.invalidKey = /\$/;
+// specify which keys will be ignored during compilation
+D.invalidKey = /\$/;
+
 
 // add custom properties to each state
-debug.initState = function (state) {
+D.initState = function (state) {
   var pkg = this,
     arrayOfAllStates = pkg._Flow.states;
   state.customDebugProperty = "State #"state.index + " in " + arrayOfAllStates.length;
 };
 
-// customize properties of this package when added to a new flow instance
-debug.initFlow = function () {
-  var pkg = this;
-  pkg.callsToDebugMethods = 0;
-  pkg.someSandboxedProperty = 'foo';
+// add private/sandboxed properties to each Flow and it's states
+D.init = function () {
+  // init vars
+  var pkg = this; // scope is a sandboxed clone of the true Flow instance
+  // define properties with any label, except "flow" and "proxy" (these are reserved and will be overwritten)
+  pkg.callsToApiMethods = 0;
+  // add custom properties to each cloned state in this flow
+  pkg.states.forEach(function (state) {
+    state.randomId = Math.random();
+  });
+}
+// prototype methods for package instances (created for each Flow instance)
+D.prototype.incrementApiCallCount = function () {
+  this.callsToApiMethods++;
 }
 
-// override the value returned after calling "new Flow(program [, extraParamN...])"
-debug.overrideReturn = function (extraParam1, extraParam2) {
-  var pkg = this;
-  if (extraParam1) {
-    console.log('log something for debugging purposes');
-  }
-  // if a third parameter is passed...
-  if (extraParam2) {
-    // return number of states parsed
-    return pkg._Flow.states.length;
-  } else {
-    // return the (public) Flow instance
-    return pkg._proxy;
-  }
+// do something before any flow begins traversing it's program states
+D.onStart = function () {
+  var pkg = this, // alias the function scope
+    flow, // the internal api for accessing the flow
+    current = pkg.states[flow.currentIndex], // the current state - customized according to it's init method
+    target = pkg.states[flow.targetIndex]; // the target state - customized according to it's init method
+  console.log('Starting from "',current.name,'", and going to state "', target.name,'"');
 };
 
-debug.onStart = function () {
-  var pkg = this;
-  console.log("The flow is about to navigate it's program");
-};
-debug.onStop = function () {
-  var pkg = this;
-  console.log("The flow was stopped before it completed it's navigating");
-};
-debug.onEnd = function () {
-  var pkg = this;
-  console.log("The flow has reached it's navigation target");
+// do something after a flow stops traversing it's program states
+D.onStop = function () {
+  var pkg = this, // alias the function scope
+    flow, // the internal api for accessing the flow
+    current = pkg.states[flow.currentIndex], // the current state - customized according to it's init method
+    target = pkg.states[flow.targetIndex]; // the target state - customized according to it's init method
+  console.log('Stopped at "',current.name,'", and ', (target ? 'done' : 'incomplete'));
 };
 
-debug.onTraverse = function (moveInt) {
-  var pkg = this,
-    state = pkg.state, // the current state (being traversed)
+// do something after a flow reaches it's target state in it's program
+D.onFinish = function () {
+  var pkg = this, // alias the function scope
+    flow, // the internal api for accessing the flow
+    current = pkg.states[flow.currentIndex]; // the current state - customized according to it's init method
+  console.log('Reached the state "',current.name,'"');
+};
+
+// do something when states are traversed - as each flow navigates it's program
+D.onTraverse = function (moveInt) {
+  var pkg = this, // alias the function scope
+    state = pkg.states[flow.currentIndex], // the current state (being traversed)
     msg = "Traversing ";
   switch (moveInt) {
     case 0:
@@ -132,56 +143,48 @@ debug.onTraverse = function (moveInt) {
       msg += "backwards-over";
     break;
   }
-  console.log(msg + " the " + state.name + "state");
+  console.log(msg + " the " + state.name + "state, whose random id is: " + state.randomId);
 }
 
-// provide a method to all program functions
-debug.methods.log = function () {
-  var pkg = this;
-  // if this method is not being called from it's sandbox, call from it's package
-  if (pkg.name !== 'debug') return pkg.pkgs.debug.log();
-  // increment properties specific to this package
-  pkg.callsToDebugMethods++;
-  console.log("The current state is ", pkg.state.name, ", and it's custom debug flag value is: ", pkg.state.customDebugProperty);
+// provide a method that the public flow proxy will contain
+D.api.log = function () {
+  // init vars
+  var proxy = this, // scope is the public proxy, containing all api methods from every package
+    pkg = D(proxy); // retrieve the package-instance (sandbox) associated with this flow
+  // invoke methods prototyped to the package-instance
+  pkg.incrementApiCallCount();
+  console.log("The current state is ", pkg.states[pkg.flow.currentIndex].name, ", and the 'debug' API has been called ", pkg.callsToApiMethods, " times.");
 };
 
-// provide another method to all program functions
-debug.methods.listPkgs = function () {
-  // if this method is not being called from it's sandbox, call from it's package
-  if (pkg.name !== 'debug') return pkg.pkgs.debug.listPkgs();
-  // increment properties specific to this package
-  pkg.callsToDebugMethods++;
-  console.log("Number of debug methods called by program functions (or other packages):", pkg.callsToDebugMethods);
-  console.log('Here are all the loaded packages ',
-    Flow.pkg().map(
-      function (p) {
-        return p.name;
-      }
-    )
-  );
+// api methods can call other package's api methods
+D.api.doOtherPackageMethod = function () {
+  // init vars
+  var proxy = this, // public flow proxy
+    pkg = D(proxy); // corresponding package-sandbox
+  // invoke methods prototyped to the package-instance
+  pkg.incrementApiCallCount();
+  // the scope can call other packages via the `pkgs` object
+  proxy.pkgs.someOtherPkg.anApiMethod();
+  // the package does the same, via it's reference to the flow proxy
+  pkg.proxy.pkgs.someOtherPkg.anApiMethod();
 };
 
 ```
 
-### Accessing Package Methods
+### Accessing Package API Methods
 
 Below demonstrates how a program function can access a package method.
 
 ```js
-// assume the "core" and "debug" packages are loaded.
-var myFlow = new Flow({
-    var flow = this;
-    // check to see if the debug package is present...
-    if (flow.pkgs.debug) {
-      flow.listPkgs();
-      flow.pkgs.debug.log();
-    }
-  }, true, false); // additional parameters are passed to packages with .overrideReturn methods
-
-// .go() is a core package method
-myFlow.go(1);
-// called explicitly, in case other packages override .go()
-myFlow.pkgs.core.go(1);
+// create a new flow instance
+var myFlow = new Flow();
+// check to see if the debug package has defined API methods...
+if (myFlow.pkgs.debug) {
+  // make implied call to this method - a new package could override this method-name, via the prototype-chain
+  flow.log();
+  // make explicit call to the same method, by targeting it's package first
+  flow.pkgs.debug.log();
+}
 ```
 
 ## LICENSE
