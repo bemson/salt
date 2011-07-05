@@ -160,11 +160,6 @@
       targetIndex: 0,
       // define scoped call to direct this flow
       go: function (idx) {
-        // if not compiled, exit call
-        if (!flow.compiled) {
-          // exit call
-          return false;
-        }
         // set target to the state at the given index
         flow.target = flow.states[idx];
         // set target index
@@ -174,11 +169,6 @@
       },
       // define scoped call to stop this flow
       stop: function () {
-        // if not compiled, exit call
-        if (!flow.compiled) {
-          // exit call
-          return false;
-        }
         // set internal stop flag
         flow.stop = 1;
         return true;
@@ -186,8 +176,8 @@
     };
     // init current state reference
     flow.current = flow.states[0];
-    // init target state, compiled and looping flags
-    flow.compiled = flow.target = flow.looping = 0;
+    // init target state and looping flags
+    flow.target = flow.looping = 0;
     // define a pkg instance for each definition...
     flow.pkgs = pkgDefs.map(function (pkgDef) {
       // init vars
@@ -196,12 +186,7 @@
         name: pkgDef.name
       };
       // define base package
-      function pkgBase() {
-        // expose shared api to this package instance
-        this.flow = flow.shared;
-        // expose public proxy to this package instance
-        this.proxy = proxy;
-      }
+      function pkgBase() {}
       // extend the base package prototype
       pkgBase.prototype = new pkgDef.pkg();
       // set pkg to new pkgBase
@@ -220,11 +205,14 @@
         // initialize package instance according to the definition's function
         pkgDef.pkg.init.call(pkgInst.pkg);
       }
+      // add flow and proxy properties
+      // expose shared api to this package instance
+      pkgDef.pkg.flow = flow.shared;
+      // expose public proxy to this package instance
+      pkgDef.pkg.proxy = proxy;
       // return the pkgInst
       return pkgInst;
     });
-    // flag that this flow is done compiling
-    flow.compiled = 1;
     console.log('internal instance', flow);
   }
   Flow.prototype = {
