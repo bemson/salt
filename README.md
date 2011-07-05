@@ -37,7 +37,7 @@ Packages will obviate worries over namespace and object actions. Each will have 
 
 ## FILES
 
-* flow-min.js - Flow framework and dependencies (minified with [UglifyJS](http://marijnhaverbeke.nl/uglifyjs) )
+* flow-min.js - The Flow platform (without dependencies) (minified with [UglifyJS](http://marijnhaverbeke.nl/uglifyjs) )
 * src/ - Directory containing the source code
 * src-test/ - Test suite
 * LICENSE - The legal terms and conditions under which this software may be used
@@ -89,7 +89,7 @@ D.prototype.incrementApiCallCount = function () {
 // do something before any flow begins traversing it's program states
 D.onStart = function () {
   var pkg = this, // alias the function scope
-    flow, // the internal api for accessing the flow
+    flow = pkg.flow, // the internal api for accessing the flow
     current = pkg.states[flow.currentIndex], // the current state - customized according to it's init method
     target = pkg.states[flow.targetIndex]; // the target state - customized according to it's init method
   console.log('Starting from "',current.name,'", and going to state "', target.name,'"');
@@ -98,23 +98,23 @@ D.onStart = function () {
 // do something after a flow stops traversing it's program states
 D.onStop = function () {
   var pkg = this, // alias the function scope
-    flow, // the internal api for accessing the flow
-    current = pkg.states[flow.currentIndex], // the current state - customized according to it's init method
-    target = pkg.states[flow.targetIndex]; // the target state - customized according to it's init method
-  console.log('Stopped at "',current.name,'", and ', (target ? 'done' : 'incomplete'));
+    flow = pkg.flow, // the internal api for accessing the flow
+    current = pkg.states[flow.currentIndex]; // the current state - customized according to it's init method
+  console.log('Stopped at "', current.name, '", and', (flow.targetIndex > -1 ? 'there is further to go!' : 'there is no where to go!'));
 };
 
 // do something after a flow reaches it's target state in it's program
 D.onFinish = function () {
   var pkg = this, // alias the function scope
-    flow, // the internal api for accessing the flow
+    flow = pkg.flow, // the internal api for accessing the flow
     current = pkg.states[flow.currentIndex]; // the current state - customized according to it's init method
-  console.log('Reached the state "',current.name,'"');
+  console.log('Reached the state "', current.name, '"');
 };
 
 // do something when states are traversed - as each flow navigates it's program
 D.onTraverse = function (moveInt) {
   var pkg = this, // alias the function scope
+    flow = pkg.flow, // the internal api for accessing the flow
     state = pkg.states[flow.currentIndex], // the current state (being traversed)
     msg = "Traversing ";
   switch (moveInt) {
@@ -141,10 +141,11 @@ D.onTraverse = function (moveInt) {
 D.api.log = function () {
   // init vars
   var proxy = this, // scope is the public proxy, containing all api methods from every package
+    flow = pkg.flow, // the internal api for accessing the flow
     pkg = D(proxy); // retrieve the package-instance (sandbox) associated with this flow
   // invoke methods prototyped to the package-instance
   pkg.incrementApiCallCount();
-  console.log("The current state is ", pkg.states[pkg.flow.currentIndex].name, ", and the 'debug' API has been called ", pkg.callsToApiMethods, " times.");
+  console.log("The current state is ", pkg.states[flow.currentIndex].name, ", and the 'debug' API has been called ", pkg.callsToApiMethods, " times.");
 };
 
 // api methods can call other package's api methods
