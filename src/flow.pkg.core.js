@@ -1,7 +1,7 @@
 /*
 Flow Package: core
 */
-!function (window, Object, Flow, undefined) {
+!function (window, Object, Math, Flow, undefined) {
 
   // init vars
   var core = Flow.pkg('core'), // define core package
@@ -10,12 +10,13 @@ Flow Package: core
       var type = typeof obj; // get native type string
       // return string, check for array when an object
       return type === 'object' && Object.prototype.toString.call(obj) === '[object Array]' ? 'array' : type;
-    };
+    },
+    traversalNames = '_on|_in|_out|_over|_bover'.split('|'); // get traversal fnc names
 
   // initialize the package instance with custom properties
   core.init = function () {
-    // alias this package
-    var pkg = this;
+    // init vars
+    var pkg = this; // alias self
     // add arguments
     pkg.args = [];
     // init locked flag
@@ -28,6 +29,8 @@ Flow Package: core
     pkg.states.forEach(function (state, idx) {
       // index this path with this index position
       pkg.stateIds[state.location] = idx;
+      // define array to hold traversal functions
+      state.fncs = [];
       // define map function - curried call to target method
       state.map = function () {
         pkg.proxy.pkgs.core.target(idx, arguments);
@@ -42,6 +45,16 @@ Flow Package: core
         // return this state's location
         return state.location;
       };
+      // with each traversal name...
+      traversalNames.forEach(function (name, idx) {
+        //  set traversal function to 0 or the corresponding data key (when a function)
+        state.fncs[idx] = typeof state.data[name] === 'function' ? state.data[name] : 0;
+      });
+      // if there is no _on[0] function and this state's value is a function...
+      if (!state.fncs[0] && typeof state.value === 'function') {
+        // use as the _on[0] traversal function
+        state.fncs[0] = state.value;
+      }
     });
     // set map to root map
     pkg.map = pkg.states[1].map;
@@ -73,23 +86,10 @@ Flow Package: core
       data = state.data; // data from the current state (shared amongst all package instances)
     // toggle internal flag (trust all calls)
     pkg.internal = 1;
-    // based on the traversal direction
-    switch (moveInt) {
-      case 0 :// on
-        if (data._on) data._on.apply(pkg.proxy);
-      break;
-      case 1: // in
-        if (data._in) data._in.apply(pkg.proxy, pkg.args);
-      break;
-      case 2: // out
-        if (data._out) data._out.apply(pkg.proxy);
-      break;
-      case 3: // over
-        if (data._over) data._over.apply(pkg.proxy);
-      break;
-      case 4: // bover
-        if (data._bover) data._bover.apply(pkg.proxy);
-      break;
+    // if there is a function for this motion...
+    if (state.fncs[moveInt]) {
+      // execute function, in scope of the proxy - pass arguments when traversing _on[0]
+      pkg.rtrn = states.fncs[moveInt].apply(pkg.proxy, moveInt ? [] : pkg.args);
     }
     // toggle internal flag (don't trust all calls)
     pkg.internal = 0;
@@ -104,6 +104,58 @@ Flow Package: core
   core.api.map = function () {
     // return map function
     return core(this).map;
+  };
+
+  // add method to 
+  core.api.query = function () {
+    // init vars
+  	var pkg = core(this), // get package instance
+  		args = arguments, // alias arguments
+  		i = 0, node, // loop vars
+  		nodes = []; //
+  	for (; node = pkg.findNode(args[i]); i++) {
+  		nodes.push(node.id);
+  	}
+  	// return the node id or false
+  	return (nodes.length && nodes.length === args.length) ? (nodes.length > 1 ? nodes : nodes[0]) : !1;
+  };
+
+  // add method to lock and unlock
+  core.api.lock = function () {
+    // return map function
+    return core(this).map;
+  };
+
+  // add method to manage variables
+  core.api.vars = function (a1, a2) {
+    // init vars
+		var pkg = core(this), // get package
+			args = arguments, // alias arguments
+			v = typeof a1 === 'string' && sys.rxp.oneAlpha.test(a1) && flow.resolveVar(a1),
+			i, rtn = !1; // 
+		switch (args.length) {
+			case 0: // get names of all vars
+				rtn = [];
+				for (i in flow.vars) {
+					if (flow.vars.hasOwnProperty(i)) rtn.push(i);
+				}
+			break;
+
+			case 1: // get the value of this var
+				if (v) rtn = v.values[0];
+			break;
+
+			default:
+				// if the var is valid...
+				if (v) {
+					// set the current value
+					v.values[0] = a2;
+					rtn = !0;
+				}
+			break;
+		}
+		// return result
+		return rtn;
   };
 
   // add method to access and edit arguments
@@ -182,4 +234,56 @@ Flow Package: core
       pkg.flow.go(idx); // tell flow to go here
     }
   };
-}(this, Object, Flow);
+
+  // add method to resume
+  core.api.go = function () {
+  };
+
+  // delay traversing
+  core.api.wait = function () {
+    // init vars
+		var pkg = core(this), // get package instance
+			args = arguments, // alias arguments
+			cur = pkg.states[pkg.flow.currentIndex], // 
+			cache = pkg.cache.proxy, // 
+			argLn = args.length, // 
+			M = Math, // reduce lookups
+			fnc = argLn > 1 ? args[0] : 0, // 
+			node, // stub to test when fnc is a node reference
+			fncOk = !fnc || typeof fnc === 'function' || ((node = pkg.flow.findNode(fnc)) && cur.allowTgt(node)), // 
+			time = Math.ceil(Math.abs(args[argLn - 1])), // 
+			timeOk = !isNaN(time), // 
+			rtn = 1; // 
+		// if there are targets or staged waypoints to reach, and the argument's are valid (node is not false)...
+		if ((flow.targets.length || flow.stage.waypoints.length) && (!argLn || (timeOk && fncOk && node !== !1))) {
+			// if reset traversal cache
+			if (cache.status) {
+			  // 
+				delete cache.status.traversal;
+			}
+			// clear existing delay
+			flow.clearDelay();
+			// if fnc was a node, make a function that targets it, as the callback
+			if (node) {
+			  // define callback function
+			  fnc = function () {
+			    // 
+			    flow.target(node);
+			  };
+		  }
+			// set delay to truthy value or delayed traverse call
+			pkg.delay.active = argLn ? window.setTimeout(function () {
+					// set callback next callback
+					pkg.delay.callback = fnc;
+					// clear delay
+					pkg.delay.active = 0;
+					// attempt traversal - invokes callback
+					pkg.traverse();
+				}, time) : 1;
+			// flag that the flow will be (or has been) delayed
+			rtn = 0;
+		}
+		// return boolean flag of success or failure
+		return !rtn;
+  };
+}(this, Object, Math, Flow);
