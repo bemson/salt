@@ -2,7 +2,7 @@
 by Bemi Faison
 
 version 0.X (nextgen)
-(7/4/11)
+(7/10/11)
 
 ## DESCRIPTION
 
@@ -37,7 +37,7 @@ Packages will obviate worries over namespace and object actions. Each will have 
 
 ## FILES
 
-* flow-min.js - The Flow platform (without dependencies) (minified with [UglifyJS](http://marijnhaverbeke.nl/uglifyjs) )
+* flow-min.js - The Flow platform with dependencies (minified with [UglifyJS](http://marijnhaverbeke.nl/uglifyjs) )
 * src/ - Directory containing the source code
 * src-test/ - Test suite
 * LICENSE - The legal terms and conditions under which this software may be used
