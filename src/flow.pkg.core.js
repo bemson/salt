@@ -122,7 +122,7 @@ Flow Package: core
   core.init = function () {
     // init vars
     var pkg = this; // alias self
-    // add arguments
+    // collection of arguments for traversal functions
     pkg.args = [];
     // collection of variables
     pkg.vars = {};
@@ -331,7 +331,7 @@ Flow Package: core
   core.api.lock = function () {
   };
 
-  // add method to manage variables
+  // access and edit scoped variables for a state
   core.api.vars = function (name, value) {
     // init vars
 		var pkg = core(this), // get package
@@ -373,62 +373,49 @@ Flow Package: core
 		return rtn;
   };
 
-  // add method to access and edit arguments
-  core.api.args = function (a1, a2) {
+  // access and edit the arguments passed to traversal functions
+  core.api.args = function (idx, value) {
     // init vars
-    var pkg = core(this), // retrieve package-sandbox for this proxy
-      args = [].slice.call(arguments), // capture arguments as an array
-      a1Ok = a1 > -1 && Math.ceil(a1) === a1; // flag when the first argument is a valid number
-    // based on the number of arguments...
-    switch (args.length) {
-      // with zero arguments...
-      case 0 :
-        // return copy of arguments
-        return pkg.args.concat();
-      break;
-
-      // with one argument...
-      case 1:
-        // based on the type of the first argument...
-        switch (typeOf(a1)) {
-          // when the first argument is an array...
-          case 'array':
-            // replace package arguments
-            pkg.args = a1.concat();
-            // flag success
-            return true;
-          break;
-
-          // if the first argument is a number...
-          case 'number':
-            // if the number is valid...
-            if (a1Ok) {
-              // return the argument at the given index
-              return pkg.args[a1];
-            }
-          break;
-        }
-      break;
-
-      // with more than one argument...
-      default:
-        // if the index is valid...
-        if (a1Ok) {
-          // and, if the value is undefined for the last item...
-          if (a2 === undefined && a1 === pkg.args.length - 1) {
-            // remove last item
-            pkg.args.splice(-1, 1);
-          } else { // otherwise, when not a "delete" flag...
-            // set value at the given index
-            pkg.args[a1] = a2;
-          }
-          // flag success with removing or setting the value
-          return !0;
-        }
-      break;
+		var pkg = core(this), // get package
+		  args = pkg.args, // alias arguments from this package
+		  argsLn = args.length, // capture number of args elements
+		  argCnt = arguments.length, // get number of arguments passed
+		  idxType = typeOf(idx), // get type of first argument
+			rtn = true; // value to return (default is true)
+		// if passed arguments and this flow is unlocked...
+		if (argCnt && !pkg.locked) {
+		  // if idx is an array...
+		  if (idxType === 'array') {
+		    // replace args with a copy of the idx array
+		    pkg.args = idx.concat();
+		  } else if (idxType === 'number') { // or, when idx is a number (assuming an integer)...
+		    // if a value was passed...
+		    if (argCnt > 1) {
+		      // if the value is undefined and the last index was targeted...
+		      if (value === undefined && idx === argsLn - 1) {
+		        // remove the last index
+		        args.pop();
+		      } else { // otherwise, when not setting the last index to an undefined value...
+  		      // set the value at this index
+  		      args[idx] = value;
+		      }
+		    } else if (idx > -1 && idx < argsLn) { // or, when no value is passed and the idx is a valid...
+		      // return the value at the targeted index
+		      rtn = args[idx];
+		    } else { // otherwise, when no value is passed and the index is invalid...
+		      // flag failure to retrieve this index
+		      rtn = false;
+		    }
+	    } else { // otherwise, when the type of idx is invalid...
+	      // flag failure to return anything because idx is unrecognized
+	      rtn = false;
+	    }
+    } else if (!argCnt) { // otherwise, when given no arguments...
+      // return a copy of the arguments array (always available - even to locked flows)
+      rtn = args.concat();
     }
-    // (ultimately) return false
-    return !1;
+    // send return value
+    return rtn;
   };
 
   // add method to program api
