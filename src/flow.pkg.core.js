@@ -273,13 +273,13 @@ Flow Package: core
     deactivate: function () {
     },
     // add a variable-tracking-object to this package
-    getVar: function (name) {
+    getVar: function (name, value) {
       // init vars
       var pkg = this; // alias self
       // return an existing or new variable tracking object
       return (pkg.vars.hasOwnProperty(name)) ? pkg.vars[name] : (pkg.vars[name] = {
         name: name,
-        values: []
+        values: arguments.length > 1 ? [value] : []
       });
     },
     // create/remove variable tracking objects and increase/reduce their values
@@ -332,34 +332,44 @@ Flow Package: core
   };
 
   // add method to manage variables
-  core.api.vars = function (a1, a2) {
+  core.api.vars = function (name, value) {
     // init vars
 		var pkg = core(this), // get package
-			args = arguments, // alias arguments
-			v = typeof a1 === 'string' && /\w/.test(a1) && flow.resolveVar(a1),
-			i, rtn = !1; // 
-		switch (args.length) {
-			case 0: // get names of all vars
-				rtn = [];
-				for (i in flow.vars) {
-					if (flow.vars.hasOwnProperty(i)) rtn.push(i);
-				}
-			break;
-
-			case 1: // get the value of this var
-				if (v) rtn = v.values[0];
-			break;
-
-			default:
-				// if the var is valid...
-				if (v) {
-					// set the current value
-					v.values[0] = a2;
-					rtn = !0;
-				}
-			break;
+		  argCnt = arguments.length, // get number of arguments passed
+			v, // loop vars
+			rtn = false; // value to return (default is false)
+		// if passed arguments...
+		if (argCnt) {
+		  // if the name is valid...
+		  if (typeof name === 'string' && /\w/.test(name)) {
+		    // resolve variable tracker
+		    v = pkg.getVar(name);
+		    // if a value was passed...
+		    if (argCnt > 1) {
+		      // set the current value
+		      v.values[0] = value;
+		      // flag success with setting the value
+		      rtn = true;
+		    } else { // otherwise, when no value is passed...
+		      // return the current value
+		      rtn = v.values[0];
+		    }
+		  }
+		} else { // otherwise, when passed no arguments...
+		  // prepare to return an array
+			rtn = [];
+			// with each property in the vars object...
+			for (v in pkg.vars) {
+			  // if this member is not inherited...
+				if (pkg.vars.hasOwnProperty(v)) {
+				  // add to collection of names to return
+				  rtn.push(v);
+			  }
+			}
+			// sort variable names
+			rtn.sort();
 		}
-		// return result
+		// return result of call
 		return rtn;
   };
 
