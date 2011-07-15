@@ -2,7 +2,7 @@
 by Bemi Faison
 
 version 0.X (nextgen)
-(7/10/11)
+(7/15/11)
 
 ## DESCRIPTION
 
@@ -45,7 +45,7 @@ Packages will obviate worries over namespace and object actions. Each will have 
 
 ## INSTALLATION
 
-The _NextGen_ version of Flow requires [genData](https://github.com/bemson/genData).
+The _NextGen_ version of Flow requires [genData v0.8.1](https://github.com/bemson/genData).
 
 **The "nextgen" branch is not recommended for use at this time.**
 
