@@ -11,9 +11,6 @@ Flow Package: core
       // return string, check for array when an object
       return type === 'object' && ~((new Object()).toString.call(obj).indexOf('y')) ? 'array' : type;
     },
-    rxps = [ // collection of regular expressions
-      /\w/ // 0 - one alpha numeric character
-    ],
     /*
     this generator handles any nesting and combination of _var component values...
     ...strings
@@ -83,6 +80,164 @@ Flow Package: core
         }
       }
     }),
+    genParsedQuery = new genData(function (name, value, parent, dataset, flags) { // parse token and return a state index and absolute query indicator
+      // init vars
+      var data = this, // alias self
+        slash = '/', // shorthand forward-slash character
+        parse = 1, // flags when a token may be parsed (default is true)
+        dsLn = dataset.length, // capture the length of the dataset
+        idx = -1, // the index of the state resolved by the current token (default is no state)
+        state, parentState; // placeholders for referencing and resolving states
+      // if this is the first item...
+      if (!dsLn) {
+        // flag that this is the initial array being processed
+        data.i = 1;
+      }
+      // if this is the second value...
+      if (dsLn === 1) {
+        // don't scan this value
+        flags.scan = 0;
+        // set parent (the init array) property, for tracking variables during iteration
+        parent.v = {
+          f: value[0], // the flow containing all states and state-id's
+          s: value[1], // the state to begin resolving tokens
+          p: 0, // the number of parsed tokens
+          a: 0, // flag when this query is absolute (the same every time, regardless of the starting state)
+        };
+        // init default return value
+        dataset[0] = idx;
+        // init default absolute-query flag
+        dataset[1] = 0;
+      }
+      // if iterated pased the second item from the initial array...
+      if (dsLn > 1) {
+        // reference parent property (for tracking variables)
+        data.v = parent.v;
+        // copy set information (may not be present)
+        data.s = parent.s;
+        // if this is a string whose parent is NOT the main array...
+        if (typeof value === 'string' && !parent.i) {
+          // if slashes exist...
+          if (~value.indexOf(slash)) {
+            // split into slashes
+            data.value = value.split(slash);
+          } else if (value.charAt(0) === '[') { // or, when a match-set...
+            // remove brackets and split by the match-set delimiter
+            data.value = value.slice(1,-1).split('|');
+            // init set array, to track progress while parsing this set
+            data.s = [
+              0, // flag indicating when this set has been matched
+              0, // the number of options processed in this set
+              data.value.length // the total number of options available in this set
+            ];
+          }
+        }
+        // if the resolved value is (still) a non-empty string...
+        if (typeof data.value === 'string' && value) {
+          // if this token is part of a set...
+          if (data.s) {
+            // increment the number of set-options processed
+            data.s[1]++;
+            // if this set has been satisfied...
+            if (data.s[0]) {
+              // skip parsing this token
+              parse = 0;
+            }
+          }
+          // if parsing this token...
+          if (parse) {
+            // reference the current state (for minification and performance)
+            state = data.v.s;
+            // reference the parent state (for minification and performance)
+            parentState = data.v.f.states[state.parentIndex];
+            // based on the token...
+            switch (value) {
+              case '@child':
+                idx = state.firstChildIndex;
+              break;
+
+              case '@next':
+                idx = state.nextIndex;
+              break;
+
+              case '@oldest':
+                if (parentState) idx = parentState.lastChildIndex;
+              break;
+
+              case '@parent':
+              case '..':
+                idx = state.parentIndex;
+              break;
+
+              case '@previous':
+                idx = state.previousIndex;
+              break;
+
+              case '@root': // root relative the to the current state
+                idx = state.rootIndex;
+              break;
+
+              case '@program': // program root
+              case '@flow': // parent to program root
+                // if no other tokens have been parsed
+                if (!data.v.p) {
+                  // flag that this query is absolute (since the first token is absolute)
+                  data.v.a = 1;
+                }
+                // set the index to either absolute indice
+                idx = (~value.indexOf('f')) ? 0 : 1;
+              break;
+
+              break;
+
+              case '@youngest':
+                if (parentState) idx = parentState.firstChildIndex;
+              break;
+
+              case '@self':
+              case '.':
+                idx = state.index;
+              break;
+
+              default:
+                // if value does not end with a slash...
+                if (value.slice(-1) !== slash) {
+                  // append slash
+                  value += slash;
+                }
+                // append value to token
+                state = state.location + value;
+                // set idx to the index of the targeted state (by location), or -1
+                idx = data.v.f.stateIds.hasOwnProperty(state) ? data.v.f.stateIds[state] : -1;
+            }
+            // if this is the first token parsed...
+            if (!data.v.p++) {
+              // capture whether this query is absolute or not
+              dataset[1] = data.v.a;
+            }
+            // if the resolved index is valid...
+            if (data.v.f.states[idx]) {
+              // if this token was part of a set...
+              if (data.s) {
+                // flag that the set has been satisfied
+                data.s[0]++;
+              }
+              // capture the state reference for further parsing
+              data.v.s = data.v.f.states[idx];
+              // capture the valid index
+              dataset[0] = idx;
+            } else if (!data.s || data.s[1] === data.s[2]) { // otherwise, when the index is invalid and this is not a set, or the last option in a set...
+              // clear the index
+              dataset[0] = null;
+              // truncate to two indice
+              dataset.splice(1);
+              // exit iterator
+              flags.exit = 1;
+            }
+          }
+        }
+      }
+    }),
     activeFlows = []; // collection of active flows
 
   // define traversal event names
@@ -100,6 +255,10 @@ Flow Package: core
     pkg.args = [];
     // collection of variables
     pkg.vars = {};
+    // collection of cached values
+    pkg.cache = {
+      indexOf: {} // token query cache
+    };
     // init locked flag
     pkg.locked = 0;
     // init index of state paths
@@ -251,27 +410,24 @@ Flow Package: core
     // return index of the state resolved from a state reference
     /*
     qry - (string|function.toString()|number|object.index) which points to a state
-    rootState - object - the state to begin any dynamic referencing
+    state - object - the state to begin any dynamic referencing
     */
-    indexOf: function (qry, root) {
+    indexOf: function (qry, state) {
       // init vars
       var pkg = this, // alias self
         states = pkg.states, // alias for minification and performance
         stateIds = pkg.stateIds, // alias for minification and performance
         tokens, // tokens found in tokenized queries
-        state, // state used for resolving tokenized queries
-        idx = -1, // the index to return for the resolved state (default is -1, indicates when the state could not be found)
-        parts; // placeholder for storing string manipulation results
-      // use the current state, when root is omitted
-      state = root = rootState || pkg.states[pkg.flow.currentIndex];
+        gpqResult, // stores the result from the genParsedQuery call
+        idx = -1; // the index to return for the resolved state (default is -1, indicates when the state could not be found)
+      // use the current state, when state is omitted
+      state = state || pkg.states[pkg.flow.currentIndex];
       // based on the type of qry...
       switch (typeof qry) {
         case 'object':
-          // assume the object is a state, and retreive it's index
-          qry = qry.index;
+          // assume the object is a state, and retreive it's index, as an integer
+          qry = parseInt(qry.index);
         case 'number':
-          // ensure the number is an integer
-          qry = parseInt(qry);
           // if the index is valid...
           if (states[qry]) {
             // set idx to this number
@@ -282,6 +438,7 @@ Flow Package: core
         case 'function':
           // get toString version of this function
           qry = qry + '';
+
         case 'string':
           // if qry is the _flow or _root id...
           if (qry === '..//' || qry === '//') {
@@ -290,83 +447,34 @@ Flow Package: core
           } else { // otherwise, when the string is not the _flow or _root ids...
             // get tokens in this string
             tokens = qry.match(/^(?:(?:\.{1,2}|[@\[][^\/]+)\/?)+/);
+            /*
+            THIS RXP is allowing this to pass thru...
+              [@program][a] -> no "][" pattern should be allowed
+            */
             // if there are tokens...
             if (tokens) {
               // if there is no generic or specific cache for this query...
-              if (!pkgs.cache.indexOf.hasOwnProperty(tokens[0] + root.index) && !pkgs.cache.indexOf.hasOwnProperty(tokens[0])) {
-                // init state to start resolving from
-                state = root;
-                // get remainder of query, after removing tokens
-                qry = qry.substr(0, tokens[0].length);
-                // parse the tokens to resolve a state
-                qry = genTokens(tokens[0]).forEach(function (data, idx) {
-                  // if the last state is valid...
-                  if (state) {
-                    // based on this token
-                    switch (data.value) {
-                      case '@child':
-                        nextNode = node.firstChildIdx;
-                      break;
-
-                      case '@next':
-                        nextNode = node.nextIdx;
-                      break;
-
-                      case '@oldest':
-                        if (parentNode) nextNode = parentNode.lastChildIdx;
-                      break;
-
-                      case '@parent':
-                      case '..':
-                        nextNode = node.parentIdx;
-                      break;
-
-                      case '@previous':
-                        nextNode = node.previousIdx;
-                      break;
-
-                      case '@root': // local root of flow branch
-                        nextNode = node.rootIdx;
-                      break;
-
-                      case '@program': // root of program
-                        // flag that the first token is absolute, while setting the index
-                        qryIsAbs = nextNode = 1;
-                      break;
-
-                      case '@flow': // phantom node
-                        // flag that the first token is absolute
-                        qryIsAbs = 1;
-                        nextNode = 0;
-                      break;
-
-                      case '@youngest':
-                        if (parentNode) nextNode = parentNode.firstChildIdx;
-                      break;
-
-                      case '@self':
-                      case '.':
-                        nextNode = node.idx;
-                      break;
-                    }
-                    // update state
-                    data.qry.state = state;
-                  }
-                })[0].qry.state;
-                // append qry remainder to state
-                // cache the query result
-                pkgs.cache.indexOf[tokens[0] + qryIsAbs ? ('' + root.index)] = state ? state.index : -1;
+              if (!pkg.cache.indexOf.hasOwnProperty(qry + state.index) && !pkg.cache.indexOf.hasOwnProperty(qry)) {
+                // resolve state from tokens - pass all states[0], the starting state[1], and the final string to append[2]
+                gpqResult = genParsedQuery([[pkg, state], tokens, qry.substr(tokens[0].length)]);
+                // if an index was returned...
+                if (gpqResult[0] !== null) {
+                  // set idx to the resolved state's index
+                  idx = gpqResult[0];
+                }
+                // cache the query result (original query, plus nothing or the state index)
+                pkg.cache.indexOf[qry + (gpqResult[1] ? '' : state.index)] = idx;
               }
               // return the value of the cached query id, use generic cache-id if the specific one is not present
-              idx = pkgs.cache.indexOf.hasOwnProperty(tokens[0] + root.index) ? pkgs.cache.indexOf[tokens[0] + root.index] : pkgs.cache.indexOf[tokens[0]];
+              idx = pkg.cache.indexOf.hasOwnProperty(qry + state.index) ? pkg.cache.indexOf[qry + state.index] : pkg.cache.indexOf[qry];
             } else { // otherwise, when there are no tokens...
               // if the first character is not a forward slash...
               if (qry.charAt(0) !== '/') {
                 // prepend current location
-                qry = root.location + qry;
+                qry = state.location + qry;
               } else if (qry.charAt(1) !== '/') { // or, when the second character is not a forward slash...
                 // prepend the current state's root
-                qry = states[root.rootIndex].location + qry.substr(1);
+                qry = states[state.rootIndex].location + qry.substr(1);
               }
               // if the last character is not a forward slash...
               if (qry.slice(-1) !== '/') {
@@ -376,19 +484,19 @@ Flow Package: core
               // set idx to a string match or -1
               idx = stateIds.hasOwnProperty(qry) ? stateIds[qry] : -1;
             }
-          }
+          // break; - not needed, since it's the last option
         }
       }
-      // return cachedresolved index
+      // return resolved index
       return idx;
     },
-    valid: function (qry) {
+    vetIndexOf: function (qry) {
       // init vars
       var pkg = this, // alias self
         current = pkg.states[pkg.flow.currentIndex], // get the current state
-        target = pkg.find(qry); // 
-      // return the target or -1, based on whether the target is valid, and we're within a trusted function or the target is not restricted...
-      return (~target && (pkg.trust || !pkg.states[target].location.indexOf(state.restrictPath))) ? target : 0;
+        targetIdx = pkg.indexOf(qry); // get the index of the target state
+      // return the target index or -1, based on whether the target is valid, given the trusted status of the package or the restrictions of the current state
+      return (~targetIdx && (pkg.trust || !pkg.states[targetIdx].location.indexOf(state.restrictPath))) ? targetIdx : -1;
     },
     // add a variable-tracking-object to this package
     getVar: function (name, value) {
@@ -540,17 +648,17 @@ Flow Package: core
   core.api.target = function (qry) {
     // init vars
     var pkg = core(this), // alias this package
-      tgtState = pkg.valid(qry); // retrieve the targeted state or 0
+      tgtState = pkg.vetIndexOf(qry); // retrieve the targeted state or -1
     // if the destination state is valid...
-    if (tgtState) {
+    if (~tgtState) {
       // capture arguments after the tgt
       pkg.args = [].slice.call(arguments).slice(1);
-      // set targets array
+      // reset targets array
       pkg.targets = [tgtState];
       // pkg.flow provides control and access to the true flow instance
-      pkg.flow.go(idx); // tell flow to go here
+      //pkg.flow.go(tgtState); // tell flow to go here
       // return result from traversal (if we finish), false if we stop, true if we're in a loop right now
-      return pkg.moving ? true : (pkg.hitTarget ? pkg.onResult : false);
+      //return pkg.moving ? true : (pkg.hitTarget ? pkg.onResult : false);
     }
     // otherwise, flag inability to target the state
     return false;
