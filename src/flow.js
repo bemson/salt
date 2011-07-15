@@ -29,9 +29,9 @@
         // if this key is invalid or flagged as data...
         if (isInvalid || isData) {
           // exclude from dataset and don't scan
-          flags.exclude = 1;
+          flags.omit = 1;
           // don't scan this value
-          flags.scanValue = 0;
+          flags.scan = 0;
           // if valid data, capture in parent data
           if (isData && !isInvalid) parent.data[name] = value;
         } else { // otherwise, when this key is not invalid or data...
