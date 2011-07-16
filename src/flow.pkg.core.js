@@ -241,7 +241,7 @@ Flow Package: core
     activeFlows = []; // collection of active flows
 
   // define traversal event names
-  core.events = 'main|in|out|over'.split('|');
+  core.events = 'on|in|out|over'.split('|');
 
   // customize data parsing
   core.dataKey = /^_/; // pattern for identifying data keys
@@ -263,11 +263,14 @@ Flow Package: core
     pkg.locked = 0;
     // init index of state paths
     pkg.stateIds = {};
-    // init child-parent flow trackers
-    pkg.childFlows = [];
+    // the number of child flows fired by this flow's program functions
+    pkg.childFlows = 0;
+    // collect parent flow references
     pkg.parentFlows = [];
-    // collection of targets
+    // collection of targeted states
     pkg.targets = [];
+    // identify the initial state for this flow, 0 by default
+    pkg.phase = 0;
     // initialize each state
     pkg.states.forEach(function (state, idx) {
       // init vars
@@ -276,8 +279,8 @@ Flow Package: core
       pkg.stateIds[state.location] = idx;
       // define array to hold traversal functions
       state.fncs = [];
-      // set pendable flag
-      state.pendable = parent ? parent.pendable : 0;
+      // set pendable flag, (true by default, and otherwise inherited when the parent is not pendable)
+      state.pendable = (parent && !parent.pendable) ? 0 : (state.data.hasOwnProperty('_pendable') ? !!state.data._pendable : 1);
       // set isRoot flag, based on index or "_root" component
       state.isRoot = idx < 2 ? 1 : !!state.data._root;
       // set rootIndex to self or the parent's root, based on isRoot flag
@@ -322,91 +325,8 @@ Flow Package: core
     });
   };
 
-  // hook into events
-  core.onStart = function () {
-    // init vars
-    var pkg = this; // alias this package
-    // activate this flow
-    //pkg.activate();
-  };
-  core.onStop = function () {
-    // init vars
-    var pkg = this; // alias this package
-    // remove self from active flows
-    //activeFlows.unshift();
-  };
-  core.onFinish = function () {
-    /*
-    // init vars
-    var pkg = this, // alias self
-      tgts = pkg.targets; // alias targets
-    // remove the last target...
-    tgts.pop();
-    // if there are more targets...
-    if (tgts.length) {
-      // go to the next target
-      pkg.flow.go(tgts[tgts.length - 1]);
-    } else { // otherwise, when there are no more targets...
-      // clear cache?
-      // clear history?
-      // remove from activeFlows
-      activeFlows.pop();
-      // inform parent flows
-    }*/
-  };
-
-  // executes when a state is traversed - scope is the package instance
-  core.onTraverse = function (moveInt) {
-    // init vars
-    var pkg = this, // the package instance
-      state = pkg.states[pkg.flow.currentIndex]; // the state being traversed (prototyped, read-only value)
-    // toggle internal flag (trust all calls)
-    pkg.trust = 1;
-    // if there is an out state...
-    if (pkg.outState) {
-      console.log('de-scoping', pkg.outState.name, '\n\tvCfgs:', pkg.outState.vars);
-      // descope variables in the outstate
-      pkg.scopeVars(pkg.outState, 1); 
-      // clear the outstate
-      pkg.outState = 0;
-    }
-    // based on the motion...
-    switch (moveInt) {
-      case 1: // in
-        console.log('scoping', state.name, '\n\tvCfgs:', state.vars);
-        // scope variables for this state
-        pkg.scopeVars(state);
-      break;
-
-      case 2: // out
-        // set the outState to the current state
-        pkg.outState = state;
-      break;
-    }
-    // if there is a function for this motion...
-    if (state.fncs[moveInt]) {
-      // execute function, in scope of the proxy - pass arguments when traversing _on[0]
-      pkg.rtrn = state.fncs[moveInt].apply(pkg.proxy, moveInt ? [] : pkg.args);
-    }
-    // toggle internal flag (don't trust all calls)
-    pkg.trust = 0;
-  };
-
   // define prototype of any package instances
   core.prototype = {
-    activate: function () {
-      // if there is an active flow...
-      if (activeFlows.length) {
-        // add this flow as a child of the active flow
-        activeFlows[0].childFlows.push(pkg);
-        // add the active flow as a parent of this flow
-        pkg.parentFlows.push(pkg);
-      }
-      // add self to activeFlows
-      activeFlows.shift(pkg);
-    },
-    deactivate: function () {
-    },
     // return index of the state resolved from a state reference
     /*
     qry - (string|function.toString()|number|object.index) which points to a state
@@ -490,11 +410,13 @@ Flow Package: core
       // return resolved index
       return idx;
     },
-    vetIndexOf: function (qry) {
+    //  return index of the resolved state reference, or -1 when it's invalid or unavailable from the given/current state
+    vetIndexOf: function (qry, state) {
       // init vars
       var pkg = this, // alias self
-        current = pkg.states[pkg.flow.currentIndex], // get the current state
-        targetIdx = pkg.indexOf(qry); // get the index of the target state
+        targetIdx = pkg.indexOf(qry, state); // get the index of the target state
+      // use the current state, when state is omitted
+      state = state || pkg.states[pkg.flow.currentIndex];
       // return the target index or -1, based on whether the target is valid, given the trusted status of the package or the restrictions of the current state
       return (~targetIdx && (pkg.trust || !pkg.states[targetIdx].location.indexOf(state.restrictPath))) ? targetIdx : -1;
     },
@@ -530,6 +452,123 @@ Flow Package: core
           vto.values.unshift(varCfg.use ? varCfg.value : vto.values[0]);
         }
       });
+    },
+    // flag whether this flow can move towards the next target
+    canMove: function (skipTargetCheck) {
+      // init vars
+      var pkg = this; // alias self
+      // allow movement if trusted (in a program function) or unlocked, there is somewhere to go, and there are no child flows (i.e., not pending)
+      return (pkg.trusted || !pkg.locked) && (skipTargetCheck || pkg.targets.length) && !pkg.childFlows;
+    },
+    // proceed towards the latest target
+    move: function () {
+      // go towards the first target
+      this.flow.go(this.targets[0]);
+    },
+    // stop this flow from moving further
+    stop: function () {
+      // stop the tank
+      this.flow.stop();
+    }
+  };
+
+  // do something when the tank starts moving
+  core.onBegin = function () {
+    // init vars
+    var pkg = this, // alias this package
+      cb = pkg.delay.callback; // capture callback
+    // if the current state is pendable...
+    if (pkg.states[pkg.flow.currentIndex].pendable) {
+      // if there is an active flow...
+      if (activeFlows.length) {
+				// make the currently active flow, a parent of this one
+				pkg.parentFlows.unshift(activeFlows[0]);
+				// increment the number of child flows in the parent
+				pkg.parentFlows[0].childFlows++;
+      }
+      // add this flow to the list
+      activeFlows.unshift(pkg);
+    }
+    // clear callback
+    pkg.delay.callback = 0;
+    // if there was a delayed callback...
+    if (cb) {
+      // trust program calls
+      pkg.trusted = 1;
+      // execute callback in scope of the proxy
+      cb.call(pkg.proxy);
+      // untrust program calls
+      pkg.trusted = 0;
+    }
+  };
+  // do something when the tank traverses a state
+  core.onTraverse = function (moveId) {
+    // init vars
+    var pkg = this, // the package instance
+      state = pkg.states[pkg.flow.currentIndex]; // the state being traversed (prototyped, read-only value)
+    // trust api calls
+    pkg.trusted = 1;
+    // if there is an out state...
+    if (pkg.outState) {
+      // descope variables in the outstate
+      pkg.scopeVars(pkg.outState, 1);
+      // clear the outstate
+      pkg.outState = 0;
+    }
+    // based on the motion id...
+    switch (moveId) {
+      case 1: // in
+        // scope variables for this state
+        pkg.scopeVars(state);
+      break;
+
+      case 2: // out
+        // set the outState to the current state
+        pkg.outState = state;
+      break;
+    }
+    // capture this moveId (for looking up the phase name dynamically)
+    pkg.phase = moveId;
+    // if there is a function for this motion...
+    if (state.fncs[moveId]) {
+      // execute function, in scope of the proxy - pass arguments when traversing _on[0]
+      pkg.rtrn = state.fncs[moveId].apply(pkg.proxy, moveId ? [] : pkg.args);
+    }
+    // untrust api calls and clear completed flag
+    pkg.trusted = pkg.completed = 0;
+  };
+  // do something when the tank reaches it's destination
+  core.onComplete = function () {
+    // init vars
+    var pkg = this, // alias self
+      tgts = pkg.targets; // alias targets
+    // remove the current target (just reached)
+    tgts.shift();
+    // if there are more targets...
+    if (tgts.length) {
+      // go to the next target
+      pkg.flow.go(tgts[0]);
+    } else { // otherwise, when there are no more targets...
+      // set completed flag to true
+      pkg.completed = 1;
+    }
+  };
+  // do something when the tank stops
+  core.onEnd = function () {
+    // init vars
+    var pkg = this; // alias self
+    // if this flow reached it's target state...
+    if (pkg.completed) {
+      // remove from activeFlows
+      activeFlows.pop();
+      // with each parent...
+      pkg.parentFlows.forEach(function (parent) {
+        // if this was the last child flow...
+        if (!--parent.childFlows) {
+          // tell the parent to continue traversing
+          parent.move();
+        }
+      });
     }
   };
 
@@ -540,21 +579,54 @@ Flow Package: core
   };
 
   // add method to 
-  core.api.query = function () {
+  core.api.query = function (state) {
     // init vars
     var pkg = core(this), // get package instance
-      args = arguments, // alias arguments
-      i = 0, node, // loop vars
-      nodes = []; //
-    for (; node = pkg.findNode(args[i]); i++) {
-      nodes.push(node.id);
-    }
-    // return the node id or false
-    return (nodes.length && nodes.length === args.length) ? (nodes.length > 1 ? nodes : nodes[0]) : !1;
+      states = []; // state indice resolved by query
+    // return false, a string or array of strings, based on whether a single state reference fails
+    return (
+      // at least one parameter
+      state
+      // and
+      &&
+      // all parameters resolve to states
+      [].slice.call(arguments).every(function (stateRef) {
+        // init vars
+        var idx = pkg.vetIndexOf(stateRef), // resolve index of this reference
+          result = 0; // default result
+        // if this index if not -1...
+        if (~idx) {
+          // capture the absolute path for this state
+          states.push(pkg.states[idx].location);
+          // flag that this element passed
+          result = 1;
+        }
+        // return the result
+        return result;
+      })
+    ) ? (states.length > 0 ? states : states[0]) : false;
   };
 
-  // add method to lock and unlock
-  core.api.lock = function () {
+  // access and edit the locked status of a flow
+  core.api.lock = function (set) {
+    // init vars
+    var pkg = core(this), // alias self
+      result = false; // call status
+    // if arguments were passed...
+    if (arguments.length) {
+      // if allowed to change the lock status...
+      if (pkg.trusted) {
+        // set new lock state
+        pkg.locked = !!set;
+        // flag success in changing the locked property of this flow
+        result = true;
+      }
+    } else {
+      // return current locked status
+      result = !!pkg.locked;
+    }
+    // return call status
+    return result;
   };
 
   // access and edit scoped variables for a state
@@ -648,70 +720,116 @@ Flow Package: core
   core.api.target = function (qry) {
     // init vars
     var pkg = core(this), // alias this package
-      tgtState = pkg.vetIndexOf(qry); // retrieve the targeted state or -1
-    // if the destination state is valid...
-    if (~tgtState) {
+      tgtState = pkg.vetIndexOf(qry), // resolve a state index from qry
+      result = false; // call status indicator
+    // if the destination state is valid, and the flow can move (ignoring check for current targets)...
+    if (~tgtState && pkg.canMove(1)) {
       // capture arguments after the tgt
       pkg.args = [].slice.call(arguments).slice(1);
       // reset targets array
       pkg.targets = [tgtState];
-      // pkg.flow provides control and access to the true flow instance
-      //pkg.flow.go(tgtState); // tell flow to go here
-      // return result from traversal (if we finish), false if we stop, true if we're in a loop right now
-      //return pkg.moving ? true : (pkg.hitTarget ? pkg.onResult : false);
+      // if after telling the flow to move, the arrived flag is false...
+      if () {
+      // tell flow to move
+      pkg.move();
+      // if the 
+      // return the traversal result (true, when undefined) or false, based on the final phaseId
+      return (pkg.phaseId) ? false : pkg.result;
     }
     // otherwise, flag inability to target the state
-    return false;
+    return result;
   };
 
-  // add method to resume
+  /**
+  Target, add, or insert states to traverse, or resume towards the last target state.
+  Returns false when there is no new destination, a waypoint was invalid, or the flow was locked or pending.
+
+  Forms:
+	go() - resume traversal
+	go(waypoints) - add or insert waypoints
+  **/
   core.api.go = function () {
+    // init vars
+    var pkg = core(this), // alias self
+      waypoints = [], // collection of targets to add to targets
+      result = false; // success status for this call
+    // if...
+    if (
+      // can move (ignoring check for current targets)
+      pkg.canMove(1)
+      // and
+      &&
+      // any and all state references are valid
+      [].slice.call(arguments).every(function (stateRef) {
+        // init vars
+        var idx = pkg.vetIndexOf(stateRef); // resolve index of this reference
+        // add to waypoints
+        waypoints.push(idx);
+        // return true when the resolved index is not -1
+        return ~idx;
+      })
+    ) {
+      // if there are waypoints...
+      if (waypoints.length) {
+        // add to current targets
+      }
+      // if there is (now) a target...
+      if (pkg.targets.length) {
+        // move towards the next target
+        pkg.move();
+        // indicate that the flow has successfully gone forward
+        result = true;
+      }
+    }
+    // return result
+    return result;
   };
 
   // delay traversing
   core.api.wait = function () {
     // init vars
-    var pkg = core(this), // get package instance
+    var pkg = core(this), // get package
       args = arguments, // alias arguments
-      cur = pkg.states[pkg.flow.currentIndex], // 
-      cache = pkg.cache.proxy, // 
-      argLn = args.length, // 
-      fnc = argLn > 1 ? args[0] : 0, // 
-      node, // stub to test when fnc is a node reference
-      fncOk = !fnc || typeof fnc === 'function' || ((node = pkg.flow.findNode(fnc)) && cur.allowTgt(node)), // 
-      time = Math.ceil(Math.abs(args[argLn - 1])), // 
-      timeOk = !isNaN(time), // 
-      rtn = 1; // 
-    // if there are targets or staged waypoints to reach, and the argument's are valid (node is not false)...
-    if ((flow.targets.length || flow.stage.waypoints.length) && (!argLn || (timeOk && fncOk && node !== !1))) {
-      // if reset traversal cache
-      if (cache.status) {
-        // 
-        delete cache.status.traversal;
-      }
-      // clear existing delay
-      flow.clearDelay();
-      // if fnc was a node, make a function that targets it, as the callback
-      if (node) {
-        // define callback function
-        fnc = function () {
-          // 
-          flow.target(node);
-        };
-      }
-      // set delay to truthy value or delayed traverse call
-      pkg.delay.active = argLn ? window.setTimeout(function () {
-          // set callback next callback
-          pkg.delay.callback = fnc;
-          // clear delay
-          pkg.delay.active = 0;
-          // attempt traversal - invokes callback
-          pkg.traverse();
-        }, time) : 1;
-      // flag that the flow will be (or has been) delayed
-      rtn = 0;
+      argLn = args.length, // capture number of arguments passed
+      noAction = argLn < 2, // flag when no action will be taken after a delay
+      delayFnc = noAction ? args[0] : 0, // capture first argument as action to take after the delay, when more than one argument is passed
+      isFnc = typeof delayFnc === 'function', // flag when the delay is a function
+      delayStateIdx = pkg.indexOf(delayFnc), // get state referenced by delayFnc (the first argument) - no vet check, since this would be a priviledged call
+      time = parseInt(args[argLn - 1]), // use last argument as time parameter
+      result = false; // indicates result of call
+    // if the flow can move, and the argument's are valid...
+    if (pkg.canMove() && (!argLn || (time > -1 && (noAction || ~delayStateIdx || isFnc)))) {
+      // stop the tank
+      pkg.flow.stop();
+      // clear existing delay timer
+      window.clearTimeout(pkg.delay.timer);
+      // set delay to truthy value, callback, or traversal call
+      pkg.delay.timer = argLn ?
+        window.setTimeout(
+          function () {
+            // trust the next call
+            pkg.trusted = 1;
+            // if there is a delay action and it's a state...
+            if (!noAction && ~delayStateIdx) {
+              // use the proxy's package method, to target the given state
+              pkg.proxy.pkgs.core.target(delayStateIdx);
+            } else { // otherwise, when there is no delay, or the action is a callback...
+              // if there is a callback function...
+              if (isFnc) {
+                // set delay callback (fires during the "begin" event)
+                pkg.delay.callback = delayFnc;
+              }
+              // traverse towards the current target
+              pkg.move();
+            }
+          },
+          time // number of milliseconds to wait
+        ) :
+        1; // set to 1 to pause indefinitely
+      // indicate that this flow has been delayed
+      result = true;
     }
-    // return boolean flag of success or failure
-    return !rtn;
+    // return whether this function caused a delay
+    return result;
   };
 }(this, Object, Array, Math, Flow);
