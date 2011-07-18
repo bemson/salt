@@ -102,7 +102,7 @@ Flow Package: core
           f: value[0], // the flow containing all states and state-id's
           s: value[1], // the state to begin resolving tokens
           p: 0, // the number of parsed tokens
-          a: 0, // flag when this query is absolute (the same every time, regardless of the starting state)
+          a: 0 // flag when this query is absolute (the same every time, regardless of the starting state)
         };
         // init default return value
         dataset[0] = idx;
