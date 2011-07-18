@@ -5,7 +5,7 @@
 * Copyright 2011, Bemi Faison
 * Released under the MIT License
 */
-!function (window, undefined) {
+!function (window, genData, undefined) {
   // init vars
   var sig = {}, // private signature object for priviledged access
     pkgDefs = [], // collection of package-definitions
@@ -414,4 +414,4 @@
     });
   }
   window.Flow = FlowAPI;
-}(this);
+}(this, genData);
