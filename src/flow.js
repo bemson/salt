@@ -129,7 +129,7 @@
     var flow = this; // alias this instance
     // states for this program
     flow.states = getStates(program);
-    // define shared pkg api
+    // define shared pkg api - all package instances control the tank via these members
     flow.shared = {
       // index of the current program state
       currentIndex: 0,
@@ -152,8 +152,26 @@
         flow.stop = 1;
         // flag success in setting the stop flag
         return true;
+      },
+      // add and remove post-loop functions
+      post: function (fnc) {
+        // init vars
+        var pkg = this; // alias package
+        // based on the type
+        switch (typeof fnc) {
+          case 'function':
+            // return the index of the callback after adding it to this flow's post queue
+            return pkg.posts.push(fnc);
+          break;
+
+          case 'number':
+            // clear the callback at this index
+            pkg.posts[fnc] = null;
+        }
       }
     };
+    // init posts collection
+    flow.posts = [];
     // init current state reference
     flow.current = flow.states[0];
     // init target state and loop flags
@@ -211,6 +229,8 @@
         // flag true if there is a current target
         return !!flow.target;
       }
+      // reset the posts array
+      flow.posts = [];
       // flag that this flow is looping
       flow.loop = 1;
       // fire begin event
@@ -309,7 +329,11 @@
           flow.loop = 0;
         }
       }
-      // fire post-loop functions???
+      // fire post-loop functions
+      flow.posts.forEach(function (fnc) {
+        // execute this post-function
+        fnc();
+      });
       // return the index of the current state
       return curState.index;
     },
