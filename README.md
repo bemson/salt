@@ -2,7 +2,7 @@
 by Bemi Faison
 
 version 0.X (nextgen)
-(7/15/11)
+(7/17/11)
 
 ## DESCRIPTION
 
@@ -87,28 +87,12 @@ D.prototype.incrementApiCallCount = function () {
 }
 
 // do something before any flow begins traversing it's program states
-D.onStart = function () {
+D.onBegin = function () {
   var pkg = this, // alias the function scope
     flow = pkg.flow, // the internal api for accessing the flow
     current = pkg.states[flow.currentIndex], // the current state - customized according to it's init method
     target = pkg.states[flow.targetIndex]; // the target state - customized according to it's init method
   console.log('Starting from "',current.name,'", and going to state "', target.name,'"');
-};
-
-// do something after a flow stops traversing it's program states
-D.onStop = function () {
-  var pkg = this, // alias the function scope
-    flow = pkg.flow, // the internal api for accessing the flow
-    current = pkg.states[flow.currentIndex]; // the current state - customized according to it's init method
-  console.log('Stopped at "', current.name, '", and', (flow.targetIndex > -1 ? 'there is further to go!' : 'there is no where to go!'));
-};
-
-// do something after a flow reaches it's target state in it's program
-D.onFinish = function () {
-  var pkg = this, // alias the function scope
-    flow = pkg.flow, // the internal api for accessing the flow
-    current = pkg.states[flow.currentIndex]; // the current state - customized according to it's init method
-  console.log('Reached the state "', current.name, '"');
 };
 
 // do something when states are traversed - as each flow navigates it's program
@@ -136,6 +120,19 @@ D.onTraverse = function (moveInt) {
   }
   console.log(msg + " the " + state.name + "state, whose random id is: " + state.randomId);
 }
+
+// do something after a flow stops traversing it's program states
+D.onStop = function () {
+  var pkg = this, // alias the function scope
+    flow = pkg.flow, // the internal api for accessing the flow
+    current = pkg.states[flow.currentIndex]; // the current state - customized according to it's init method
+  console.log('Stopped on "', current.name, '", at ,' current.location');
+  if (flow.targetIndex === -1) {
+    console.log('This is the end of the journey!');
+  } else {
+    console.log('There is further to go!');
+  }
+};
 
 // provide a method that the public flow proxy will contain
 D.api.log = function () {
