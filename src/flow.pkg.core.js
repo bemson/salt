@@ -253,8 +253,14 @@ Flow Package: core
     var pkg = this; // alias self
     // collection of arguments for traversal functions
     pkg.args = [];
+    // collection of state calls made while traversing
+    pkg.calls = [];
+    // collection of states encountered while traversing
+    pkg.route = [];
     // collection of variables
     pkg.vars = {};
+    // init delay object
+    pkg.delay = {};
     // collection of cached values
     pkg.cache = {
       indexOf: {} // token query cache
@@ -463,23 +469,20 @@ Flow Package: core
     // proceed towards the latest target
     move: function () {
       // init vars
-      var pkg = this; // alias self
-      // clear the result and pause flag
-      pkg.result = pkg.pause = undefined;
+      var pkg = this, // alias self
+        result = 0;
       // if there are targets...
       if (pkg.targets.length) {
         // direct tank to the first target
         pkg.flow.go(pkg.targets[0]);
+        // flag that there is somewhere to go
+        result = 1;
+      } else { // otherwise, when there are no targets
+        // clear the pause flag
+        pkg.paused = 0;
       }
-    },
-    // stop this flow from navigating it's program
-    stop: function () {
-      // init vars
-      var pkg = this; // alias self
-      // set pause flag
-      pkg.paused = 1;
-      // stop the tank
-      pkg.flow.stop();
+      // return result from move attempt (depends on if there is somewhere to go)
+      return result;
     }
   };
 
@@ -496,6 +499,15 @@ Flow Package: core
       // capture this parentFlow for later
       pkg.parentFlows.unshift(parentFlow);
     }
+    // if not paused...
+    if (!pkg.paused) {
+      // reset calls array
+      pkg.calls =  [];
+      // reset route array with the starting state index
+      pkg.route = [];
+    }
+    // clear pause flag
+    pkg.paused = 0;
     // add this flow to the activeFlows list
     activeFlows.unshift(pkg);
     // clear the delay timer
@@ -539,8 +551,15 @@ Flow Package: core
     }
     // capture this phase
     pkg.phase = phase;
+    // if the current index is not the same as the last one in the route...
+    if (state.index !== pkg.route.slice(-1)[0]) {
+      // add index to the route
+      pkg.route.push(state.index);
+    }
     // if there is a function for this phase...
     if (state.fncs[phase]) {
+      // note that we are calling this program function
+      pkg.calls.push(state.index + '.' + phase);
       // execute function, in scope of the proxy - pass arguments when traversing _on[0] on the destination state
       pkg.result = state.fncs[phase].apply(pkg.proxy, (phase || pkg.targets.length - 1) ? [] : pkg.args);
     }
@@ -554,11 +573,13 @@ Flow Package: core
     var pkg = this; // alias self
     // if stopped outside the on[0] phase...
     if (pkg.phase) {
+      // set pause flag
+      pkg.paused = 1;
       // (just) remove from activeFlows
       activeFlows.pop();
     } else { // otherwise, when stopped on a state...
-      // remove the target state (even if paused, so it isn't repeated when resumed)
-      pkg.targets.pop();
+      // remove this target state (even if paused, so it isn't repeated when resumed)
+      pkg.targets.shift();
       // if not paused and there are more targets...
       if (!pkg.paused && pkg.targets.length) {
         // go to the next target
@@ -805,10 +826,8 @@ Flow Package: core
 				// capture array of targets
 				pkg.targets = tgts;
       }
-      // move towards the next target
-      pkg.move();
-      // indicate that the flow has successfully moved forward (or been unpaused)
-      result = true;
+      // capture result of move attempt
+      result = !!pkg.move();
     }
     // return result
     return result;
@@ -821,15 +840,15 @@ Flow Package: core
       args = arguments, // alias arguments
       argLn = args.length, // capture number of arguments passed
       noAction = argLn < 2, // flag when no action will be taken after a delay
-      delayFnc = noAction ? args[0] : 0, // capture first argument as action to take after the delay, when more than one argument is passed
+      delayFnc = noAction ? 0 : args[0], // capture first argument as action to take after the delay, when more than one argument is passed
       isFnc = typeof delayFnc === 'function', // flag when the delay is a function
       delayStateIdx = pkg.indexOf(delayFnc), // get state referenced by delayFnc (the first argument) - no vet check, since this would be a priviledged call
       time = parseInt(args[argLn - 1]), // use last argument as time parameter
       result = false; // indicates result of call
     // if the flow can move, and the argument's are valid...
     if (pkg.canMove() && (!argLn || (time > -1 && (noAction || ~delayStateIdx || isFnc)))) {
-      // stop this flow
-      pkg.stop();
+      // stop the tank
+      pkg.flow.stop();
       // clear existing delay timer
       window.clearTimeout(pkg.delay.timer);
       // set delay to truthy value, callback, or traversal call
@@ -861,4 +880,61 @@ Flow Package: core
     // return whether this function caused a delay
     return result;
   };
+
+  // capture aspects of this package
+  core.api.status = function  () {
+    // init vars
+    var proxy = this, // this flow proxy
+      status = {}; // the status object to return
+    // with each package...
+    Flow.pkg().forEach(function (pkgName) {
+      // init vars
+      var pkgDef = Flow.pkg(pkgName), // the package-definition
+        stats, key; // placeholder and loop vars for scanning the status object returned
+      // if this package-definition has a status function...
+      if (pkgDef.hasOwnProperty('status') && typeof pkgDef.status === 'function') {
+        // capture the status object returned
+        stats = pkgDef.status.call(pkgDef(proxy));
+        // with each key in the status object...
+        for (key in stats) {
+          // if not inherited...
+          if (stats.hasOwnProperty(key)) {
+            // copy to status object
+            status[key] = stats[key];
+          }
+        }
+      }
+    });
+    // return final status object
+    return status;
+  };
+
+  // define status properties
+  // returns an object whose keys are copied to the final status object
+  //   newer package definitions can override the keys set by older package definitions
+  core.status = function () {
+    // init vars
+    var pkg = this, // the package instance
+      current = pkg.states[pkg.flow.currentIndex], // alias the current state
+      tgtsLn = pkg.targets.length, // capture the number of targets
+      getLocationFromIndex = function (idx) {
+        return pkg.states[idx].location;
+      };
+    // return all the objects to be displayed when in the status object
+    return { // object of status keys to return
+      trusted: !!pkg.trusted,
+      loops: Math.max((pkg.calls.join().match(new RegExp('\\b' + current.index + '.' + pkg.phase, 'g')) || []).length - 1, 0),
+      depth: current.depth,
+      paused: !!pkg.paused,
+      pending: !!pkg.childFlows,
+      pendable: !!current.pendable,
+      targets: pkg.targets.map(getLocationFromIndex),
+      route: tgtsLn ? pkg.route.map(getLocationFromIndex) : [],
+      location: current.location,
+      index: current.index,
+      phase: tgtsLn ? core.events[pkg.phase] : '',
+      state: current.name
+    };
+  };
+
 }(this, Object, Array, Math, Flow);
