@@ -2,7 +2,7 @@
 by Bemi Faison
 
 version 0.X (nextgen)
-(7/17/11)
+(7/18/11)
 
 ## DESCRIPTION
 
@@ -126,7 +126,7 @@ D.onStop = function () {
   var pkg = this, // alias the function scope
     flow = pkg.flow, // the internal api for accessing the flow
     current = pkg.states[flow.currentIndex]; // the current state - customized according to it's init method
-  console.log('Stopped on "', current.name, '", at ,' current.location');
+  console.log('Stopped on "', current.name, '", at ,' current.location);
   if (flow.targetIndex === -1) {
     console.log('This is the end of the journey!');
   } else {
