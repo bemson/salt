@@ -80,162 +80,43 @@ Flow Package: core
         }
       }
     }),
-    genParsedQuery = new genData(function (name, value, parent, dataset, flags) { // parse token and return a state index and absolute query indicator
+    genTokens = new genData(function (name, value, parent, dataset, flags) { // return tokens found in the given string
       // init vars
       var data = this, // alias self
-        slash = '/', // shorthand forward-slash character
-        parse = 1, // flags when a token may be parsed (default is true)
-        dsLn = dataset.length, // capture the length of the dataset
-        idx = -1, // the index of the state resolved by the current token (default is no state)
-        state, parentState; // placeholders for referencing and resolving states
-      // if this is the first item...
-      if (!dsLn) {
-        // flag that this is the initial array being processed
-        data.i = 1;
-      }
-      // if this is the second value...
-      if (dsLn === 1) {
-        // don't scan this value
-        flags.scan = 0;
-        // set parent (the init array) property, for tracking variables during iteration
-        parent.v = {
-          f: value[0], // the flow containing all states and state-id's
-          s: value[1], // the state to begin resolving tokens
-          p: 0, // the number of parsed tokens
-          a: 0 // flag when this query is absolute (the same every time, regardless of the starting state)
-        };
-        // init default return value
-        dataset[0] = idx;
-        // init default absolute-query flag
-        dataset[1] = 0;
-      }
-      // if iterated pased the second item from the initial array...
-      if (dsLn > 1) {
-        // reference parent property (for tracking variables)
-        data.v = parent.v;
-        // copy set information (may not be present)
-        data.s = parent.s;
-        // if this is a string whose parent is NOT the main array...
-        if (typeof value === 'string' && !parent.i) {
-          // if slashes exist...
-          if (~value.indexOf(slash)) {
-            // split into slashes
-            data.value = value.split(slash);
-          } else if (value.charAt(0) === '[') { // or, when a match-set...
-            // remove brackets and split by the match-set delimiter
-            data.value = value.slice(1,-1).split('|');
-            // init set array, to track progress while parsing this set
-            data.s = [
-              0, // flag indicating when this set has been matched
-              0, // the number of options processed in this set
-              data.value.length // the total number of options available in this set
-            ];
-          }
+        slash = '/'; // shorthand forward-slash character
+      // init set property (default is false, or "not a set")
+      data.set = 0;
+      // capture parent
+      data.parent = parent;
+      // init done property
+      data.done = 0;
+      // if this is a string...
+      if (typeof value === 'string') {
+        // if slashes exist...
+        if (~value.indexOf(slash)) {
+          // split into slashes
+          data.value = value.split(slash);
+        } else if (value.charAt(0) === '[') { // or, when a match-set...
+          // remove brackets and split by the match-set delimiter
+          data.value = value.slice(1,-1).split('|');
+          // flag that this is a set
+          data.set = 1;
         }
-        // if the resolved value is (still) a non-empty string...
-        if (typeof data.value === 'string' && value) {
-          // if this token is part of a set...
-          if (data.s) {
-            // increment the number of set-options processed
-            data.s[1]++;
-            // if this set has been satisfied...
-            if (data.s[0]) {
-              // skip parsing this token
-              parse = 0;
-            }
-          }
-          // if parsing this token...
-          if (parse) {
-            // reference the current state (for minification and performance)
-            state = data.v.s;
-            // reference the parent state (for minification and performance)
-            parentState = data.v.f.states[state.parentIndex];
-            // based on the token...
-            switch (value) {
-              case '@child':
-                idx = state.firstChildIndex;
-              break;
-
-              case '@next':
-                idx = state.nextIndex;
-              break;
-
-              case '@oldest':
-                if (parentState) idx = parentState.lastChildIndex;
-              break;
-
-              case '@parent':
-              case '..':
-                idx = state.parentIndex;
-              break;
-
-              case '@previous':
-                idx = state.previousIndex;
-              break;
-
-              case '@root': // root relative the to the current state
-                idx = state.rootIndex;
-              break;
-
-              case '@program': // program root
-              case '@flow': // parent to program root
-                // if no other tokens have been parsed
-                if (!data.v.p) {
-                  // flag that this query is absolute (since the first token is absolute)
-                  data.v.a = 1;
-                }
-                // set the index to either absolute indice
-                idx = (~value.indexOf('f')) ? 0 : 1;
-              break;
-
-              break;
-
-              case '@youngest':
-                if (parentState) idx = parentState.firstChildIndex;
-              break;
-
-              case '@self':
-              case '.':
-                idx = state.index;
-              break;
-
-              default:
-                // if value does not end with a slash...
-                if (value.slice(-1) !== slash) {
-                  // append slash
-                  value += slash;
-                }
-                // append value to token
-                state = state.location + value;
-                // set idx to the index of the targeted state (by location), or -1
-                idx = data.v.f.stateIds.hasOwnProperty(state) ? data.v.f.stateIds[state] : -1;
-            }
-            // if this is the first token parsed...
-            if (!data.v.p++) {
-              // capture whether this query is absolute or not
-              dataset[1] = data.v.a;
-            }
-            // if the resolved index is valid...
-            if (data.v.f.states[idx]) {
-              // if this token was part of a set...
-              if (data.s) {
-                // flag that the set has been satisfied
-                data.s[0]++;
-              }
-              // capture the state reference for further parsing
-              data.v.s = data.v.f.states[idx];
-              // capture the valid index
-              dataset[0] = idx;
-            } else if (!data.s || data.s[1] === data.s[2]) { // otherwise, when the index is invalid and this is not a set, or the last option in a set...
-              // clear the index
-              dataset[0] = null;
-              // truncate to two indice
-              dataset.splice(1);
-              // exit iterator
-              flags.exit = 1;
-            }
-          }
+      }
+      // if the value is (still) a string...
+      if (typeof data.value === 'string') {
+        // if the parent exists and is a set...
+        if (parent && parent.set) {
+          // identify this as part of that set
+          data.set = 1;
+          // identify this as the last option in the set
+          parent.last = data;
         }
+        // set "first" property, based on whether items already exist in the dataset
+        data.first = !dataset.length;
+      } else { // otherwise, when not a string...
+        // exclude from dataset
+        flags.omit = 1;
       }
     }),
     activeFlows = []; // collection of active flows
@@ -343,8 +224,11 @@ Flow Package: core
       var pkg = this, // alias self
         states = pkg.states, // alias for minification and performance
         stateIds = pkg.stateIds, // alias for minification and performance
-        tokens, // tokens found in tokenized queries
-        gpqResult, // stores the result from the genParsedQuery call
+        qryLeaf, // the untokenized portion of a tokenized query
+        qryState, // the state to query from, when parsing tokens
+        isAbsQry, // flags when the query begins with a @program or @flow token
+        tokens, // collection of individual tokens (extracted from the query)
+        token, // the token being parsed
         idx = -1; // the index to return for the resolved state (default is -1, indicates when the state could not be found)
       // use the current state, when state is omitted
       state = state || pkg.states[pkg.flow.currentIndex];
@@ -371,7 +255,7 @@ Flow Package: core
             // set idx to 0 or 1, based on qry
             idx = qry === '//' ? 1 : 0;
           } else { // otherwise, when the string is not the _flow or _root ids...
-            // get tokens in this string
+            // extract tokens from the query
             tokens = qry.match(/^(?:(?:\.{1,2}|[@\[][^\/]+)\/?)+/);
             /*
             THIS RXP is allowing this to pass thru...
@@ -381,15 +265,89 @@ Flow Package: core
             if (tokens) {
               // if there is no generic or specific cache for this query...
               if (!pkg.cache.indexOf.hasOwnProperty(qry + state.index) && !pkg.cache.indexOf.hasOwnProperty(qry)) {
-                // resolve state from tokens - pass all states[0], the starting state[1], and the final string to append[2]
-                gpqResult = genParsedQuery([[pkg, state], tokens, qry.substr(tokens[0].length)]);
-                // if an index was returned...
-                if (gpqResult[0] !== null) {
-                  // set idx to the resolved state's index
-                  idx = gpqResult[0];
+                // get remaining query (without token)
+                qryLeaf = qry.substr(tokens[0].length);
+                // flag when this is an absolute query
+                isAbsQry = 0;
+                // parse tokens
+                tokens = genTokens(tokens[0]);
+                // set idx to the current state's index (for the initial loop)
+                idx = state.index;
+                // while there are tokens and the found idx is valid...
+                while ((qryState = states[idx]) && tokens.length) {
+                  // remove this token for processing
+                  token = tokens.shift();
+                  // if this token is not part of a set, or it's set has not been satisfied...
+                  if (!token.set || !token.parent.done) {
+                    // based on the token value...
+                    switch (token.value) {
+                      case '@child':
+                        idx = qryState.firstChildIndex;
+                      break;
+
+                      case '@next':
+                        idx = qryState.nextIndex;
+                      break;
+
+                      case '@parent':
+                      case '..':
+                        idx = qryState.parentIndex;
+                      break;
+
+                      case '@previous':
+                        idx = qryState.previousIndex;
+                      break;
+
+                      case '@root': // root relative the to the current state
+                        idx = qryState.rootIndex;
+                      break;
+
+                      case '@program': // program root
+                      case '@flow': // parent to program root
+                        // if this is the first token to be processed...
+                        if (token.first) {
+                          // flag that this is an absolute query
+                          isAbsQry = 1;
+                        }
+                        // set the index to either absolute indice
+                        idx = (~token.value.indexOf('f')) ? 0 : 1;
+                      break;
+
+                      case '@oldest':
+                      case '@youngest':
+                        // set index to first or last child, based on whether there is a parent
+                        idx = (states[qryState.parentIndex]) ? (states[qryState.parentIndex][~token.value.indexOf('y') ? 'firstChildIndex' : 'lastChildIndex']) : -1;
+                      break;
+
+                      case '@self':
+                      case '.':
+                        idx = qryState.index;
+                      break;
+
+                      default:
+                        // if the token is not empty..
+                        if (token.value) {
+                          // fail parsing due to unrecognized token
+                          idx = -1;
+                        }
+                    }
+                    // if part of a set and the idx is valid...
+                    if (token.set) {
+                      // if the idx is valid...
+                      if (idx > -1) {
+                        // flag that we're done searching this set
+                        token.parent.done = 1;
+                      } else if (token.parent.last !== token) { // or, when invalid and this is not the last set option...
+                        // reset idx to the current state's index
+                        idx = qryState.index;
+                      }
+                    }
+                  }
                 }
+                // set index to the resolved state index or -1, append and validate with qryEnd, if present
+                idx = (qryState && (!qryLeaf || (qryState = states[stateIds[qryState.location + qryLeaf.replace(/([^\/])$/,'$1/')]]))) ? qryState.index : -1;
                 // cache the query result (original query, plus nothing or the state index)
-                pkg.cache.indexOf[qry + (gpqResult[1] ? '' : state.index)] = idx;
+                pkg.cache.indexOf[qry + (isAbsQry ? '' : state.index)] = idx;
               }
               // return the value of the cached query id, use generic cache-id if the specific one is not present
               idx = pkg.cache.indexOf.hasOwnProperty(qry + state.index) ? pkg.cache.indexOf[qry + state.index] : pkg.cache.indexOf[qry];
