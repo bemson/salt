@@ -368,8 +368,8 @@ Flow Package: core
               // set idx to a string match or -1
               idx = stateIds.hasOwnProperty(qry) ? stateIds[qry] : -1;
             }
-          // break; - not needed, since it's the last option
-        }
+          }
+        // break; - not needed, since it's the last option
       }
       // return resolved index
       return idx;
@@ -545,18 +545,21 @@ Flow Package: core
       } else { // or, when paused or there are no more targets...
         // remove from activeFlows
         activeFlows.pop();
-        // clear call arguments
-        pkg.args = [];
-        // if there are parent flows...
-        if (pkg.parentFlows.length) {
-          // queue post-loop callback
-          pkg.flow.post(function () {
-            // tell each parent flow...
-            pkg.parentFlows.forEach(function (parentFlow) {
-              // ...to continue toward it's target
-              parentFlow.move();
-            })
-          });
+        // if not paused...
+        if (!pkg.paused) {
+          // clear call arguments
+          pkg.args = [];
+          // if there are parent flows...
+          if (pkg.parentFlows.length) {
+            // queue post-loop callback
+            pkg.flow.post(function () {
+              // tell each parent flow...
+              pkg.parentFlows.forEach(function (parentFlow) {
+                // ...to continue toward it's target
+                parentFlow.move();
+              })
+            });
+          }
         }
       }
     }
@@ -675,7 +678,7 @@ Flow Package: core
       // if idx is an array...
       if (idxType === 'array') {
         // replace args with a copy of the idx array
-        pkg.args = idx.concat();
+        pkg.args = [].concat(idx);
       } else if (idxType === 'number') { // or, when idx is a number (assuming an integer)...
         // if a value was passed...
         if (argCnt > 1) {
@@ -763,26 +766,26 @@ Flow Package: core
     ) {
       // if there are waypoints...
       if ((wpLn = waypoints.length)) {
-				// if there are targets...
-				if (tgts.length) {
-					// if the last waypoint matches the current or the second target (based on the phase), remove the matching waypoint
-					if (waypoints[wpLn - 1] === tgts[pkg.phase ? 0 : 1]) {
-					  waypoints.pop();
-				  }
-					// if not in the _on[0] phase...
-					if (pkg.phase) {
-						// prepend waypoints
-						tgts = waypoints.concat(tgts);
-					} else { // otherwise, when in the _on[0] phase...
-						// insert waypoints after first target
-						tgts = [].concat(tgts[0], waypoints, tgts.slice(1));
-					}
-				} else { // otherwise, when there are targets...
-					// set route to waypoints
-					tgts = waypoints;
-				}
-				// capture array of targets
-				pkg.targets = tgts;
+        // if there are targets...
+        if (tgts.length) {
+          // if the last waypoint matches the current or the second target (based on the phase), remove the matching waypoint
+          if (waypoints[wpLn - 1] === tgts[pkg.phase ? 0 : 1]) {
+            waypoints.pop();
+          }
+          // if not in the _on[0] phase...
+          if (pkg.phase) {
+            // prepend waypoints
+            tgts = waypoints.concat(tgts);
+          } else { // otherwise, when in the _on[0] phase...
+            // replace the current target with the waypoints
+            tgts.splice.apply(tgts,[0, 1,].concat(waypoints));
+          }
+        } else { // otherwise, when there are targets...
+          // set route to waypoints
+          tgts = waypoints;
+        }
+        // capture array of targets
+        pkg.targets = tgts;
       }
       // capture result of move attempt
       result = !!pkg.move();
@@ -894,5 +897,4 @@ Flow Package: core
       state: current.name
     };
   };
-
 }(this, Object, Array, Math, Flow);
