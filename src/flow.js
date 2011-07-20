@@ -127,6 +127,8 @@
   function Flow(program, proxy) {
     // init vars
     var flow = this; // alias this instance
+    // reference original program - for cloning only
+    flow.prgm = program;
     // states for this program
     flow.states = getStates(program);
     // define shared pkg api - all package instances control the tank via these members
@@ -356,11 +358,14 @@
     }
   };
 
+  /*
+  program may be an existing flow - this effectively clones the Flow - this is not for performance but convenience
+  */
   function FlowAPI(program) {
     // init vars
     var apiPkgs = {}, // define pkgs collection for this Flow
       flowProxy = new (getFlowProxy()), // create initial flow proxy
-      flow = new Flow(program, flowProxy); // define (private) flow, and pass flowProxy for any packages
+      flow = new Flow(program instanceof ProxyModel ? program.toString(sig).prgm : program, flowProxy); // define (private) flow, and pass flowProxy for any packages
     // faux toString method, for accessing the private flow
     function proxyToString(key) { // faux toString method
       // return corresponding flow or default toString result
