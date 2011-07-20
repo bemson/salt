@@ -2,7 +2,7 @@
 by Bemi Faison
 
 version 0.X (nextgen)
-(7/18/11)
+(7/20/11)
 
 ## DESCRIPTION
 
@@ -24,12 +24,20 @@ Packages will allow you to customize the following:
   * Determine how states are structured
 * Override the value returned from instantiating a Flow _(Redacted)_
 * Customize the Flow instance
-* Respond when Flow navigates a program
+* Respond to Flow as it navigates a program
   * Before navigating
-  * When navigation stops
-  * When navigation completes
-* Respond when Flow traverses a state
-* Provide API methods via a proxy of the flow instance
+  * When traversing a state
+    * on the state
+    * in the state
+    * out the state
+    * over the state
+    * backwards-over the state
+  * When navigation ends
+* Provide API methods via a "proxy" of the flow instance
+  * Methods are defined via Packages
+  * Each Package is "sandboxed" as to not interfere with other methods of the same name
+    * Packages have their own prototype and control the private Flow instance via a simple api
+    * Packages may access other package methods
 
 #### Data and Namespace Sandboxing (and Sharing)
 
@@ -122,7 +130,7 @@ D.onTraverse = function (moveInt) {
 }
 
 // do something after a flow stops traversing it's program states
-D.onStop = function () {
+D.onEnd = function () {
   var pkg = this, // alias the function scope
     flow = pkg.flow, // the internal api for accessing the flow
     current = pkg.states[flow.currentIndex]; // the current state - customized according to it's init method
@@ -167,11 +175,11 @@ Below demonstrates how a program function can access a package method.
 ```js
 // create a new flow instance
 var myFlow = new Flow();
-// check to see if the debug package has defined API methods...
+// inspect pkgs property, to see if the debug package is present...
 if (myFlow.pkgs.debug) {
-  // make implied call to this method - a new package could override this method-name, via the prototype-chain
+  // makes implied call to a package method - newer packages can override this method name
   flow.log();
-  // make explicit call to the same method, by targeting it's package first
+  // make explicit call to a package method, by targeting the package first
   flow.pkgs.debug.log();
 }
 ```
