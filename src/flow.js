@@ -124,7 +124,7 @@
     // return states
     return states;
   }
-  function Flow(program, proxy) {
+  function Flow(program, proxy, customCfg) {
     // init vars
     var flow = this; // alias this instance
     // reference original program - for cloning only
@@ -203,7 +203,7 @@
       // if there is a package initialization function...
       if (pkgDef.pkg.init) {
         // initialize package instance according to the definition's function
-        pkgDef.pkg.init.call(pkgInst.pkg);
+        pkgDef.pkg.init.call(pkgInst.pkg, customCfg);
       }
       // add flow and proxy properties
       // expose shared api to this package instance
@@ -361,11 +361,11 @@
   /*
   program may be an existing flow - this effectively clones the Flow - this is not for performance but convenience
   */
-  function FlowAPI(program) {
+  function FlowAPI(program, customCfg) {
     // init vars
     var apiPkgs = {}, // define pkgs collection for this Flow
       flowProxy = new (getFlowProxy()), // create initial flow proxy
-      flow = new Flow(program instanceof ProxyModel ? program.toString(sig).prgm : program, flowProxy); // define (private) flow, and pass flowProxy for any packages
+      flow = new Flow(program instanceof ProxyModel ? program.toString(sig).prgm : program, flowProxy, typeof customCfg === 'object' ? customCfg : {}); // define (private) flow, and pass flowProxy for any packages
     // faux toString method, for accessing the private flow
     function proxyToString(key) { // faux toString method
       // return corresponding flow or default toString result
