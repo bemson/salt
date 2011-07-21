@@ -429,19 +429,11 @@ Flow Package: core
     move: function () {
       // init vars
       var pkg = this, // alias self
-        result = 0;
-      // if there are targets...
-      if (pkg.targets.length) {
-        // direct tank to the first target
-        pkg.flow.go(pkg.targets[0]);
-        // flag that there is somewhere to go
-        result = 1;
-      } else { // otherwise, when there are no targets
-        // clear the pause flag
-        pkg.paused = 0;
-      }
-      // return result from move attempt (depends on if there is somewhere to go)
-      return result;
+        wasPaused = pkg.paused; // capture original paused flag
+      // clear the pause flag
+      pkg.paused = 0;
+      // direct tank to the first target, return number of traversals
+      return pkg.flow.go(pkg.targets[0]) || wasPaused;
     }
   };
 
@@ -452,7 +444,7 @@ Flow Package: core
       delayFnc = pkg.delay.callback, // capture the callback function (if any)
       parentFlow = activeFlows[0];
     // if there is a parent flow and it's current state is pendable...
-    if (parentFlow && parentFlow.current.pendable) {
+    if (parentFlow && parentFlow.states[parentFlow.flow.currentIndex].pendable) {
       // increment the number of child flows for the parent flow
       parentFlow.childFlows++;
       // capture this parentFlow for later
@@ -522,6 +514,11 @@ Flow Package: core
       // execute function, in scope of the proxy - pass arguments when traversing _on[0] on the destination state
       pkg.result = state.fncs[phase].apply(pkg.proxy, (phase || pkg.targets.length - 1) ? [] : pkg.args);
     }
+    // if there are childflows...
+    if (pkg.childFlows) {
+      // stop navigating
+      pkg.flow.stop();
+    }
     // untrust api calls
     pkg.trust = 0;
   };
@@ -532,33 +529,39 @@ Flow Package: core
     var pkg = this; // alias self
     // if stopped outside the on[0] phase...
     if (pkg.phase) {
-      // set pause flag
-      pkg.paused = 1;
       // (just) remove from activeFlows
-      activeFlows.pop();
+      activeFlows.shift();
     } else { // otherwise, when stopped on a state...
       // remove this target state (even if paused, so it isn't repeated when resumed)
       pkg.targets.shift();
-      // if not paused and there are more targets...
-      if (!pkg.paused && pkg.targets.length) {
+      // if not paused and not pending and there are more targets...
+      if (!pkg.paused && !pkg.childFlows && pkg.targets.length) {
         // go to the next target
         pkg.flow.go(pkg.targets[0]);
-      } else { // or, when paused or there are no more targets...
-        // remove from activeFlows
-        activeFlows.pop();
-        // if not paused...
-        if (!pkg.paused) {
+      } else { // or, when paused or pending or there are no more targets...
+        // remove from activeFlows (since we're about to exit)
+        activeFlows.shift();
+        // if not paused nor pending...
+        if (!pkg.paused && !pkg.childFlows) {
           // clear call arguments
           pkg.args = [];
           // if there are parent flows...
           if (pkg.parentFlows.length) {
+            // with each parent flow...
+            pkg.parentFlows.forEach(function (parentFlow) {
+              // reduce the child count
+              parentFlow.childFlows--;
+            });
             // queue post-loop callback
             pkg.flow.post(function () {
               // tell each parent flow...
               pkg.parentFlows.forEach(function (parentFlow) {
-                // ...to continue toward it's target
-                parentFlow.move();
-              })
+                // if there are no child flows left...
+                if (!parentFlow.childFlows) {
+                  // ...to continue toward it's target
+                  parentFlow.move();
+                }
+              });
             });
           }
         }
@@ -809,6 +812,8 @@ Flow Package: core
       result = false; // indicates result of call
     // if the flow can move, and the argument's are valid...
     if (pkg.canMove() && (!argLn || (time > -1 && (noAction || ~delayStateIdx || isFnc)))) {
+      // note that we have paused
+      pkg.paused = 1;
       // stop the tank
       pkg.flow.stop();
       // clear existing delay timer
