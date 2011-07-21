@@ -129,6 +129,7 @@ Flow Package: core
   core.invalidKey = /^toString$|^[@\[]|[\/\|]/; // pattern for identifying invalid keys
 
   // initialize the package instance with custom properties
+  // only argument is the object passed after the program when calling "new Flow(program, extraArg)"
   core.init = function () {
     // init vars
     var pkg = this; // alias self
@@ -381,7 +382,7 @@ Flow Package: core
         targetIdx = pkg.indexOf(qry, state); // get the index of the target state
       // use the current state, when state is omitted
       state = state || pkg.states[pkg.flow.currentIndex];
-      // return the target index or -1, based on whether the target is valid, given the trusted status of the package or the restrictions of the current state
+      // return the target index or -1, based on whether the target is valid, given the trust status of the package or the restrictions of the current state
       return (~targetIdx && (pkg.trust || !pkg.states[targetIdx].location.indexOf(state.restrictPath))) ? targetIdx : -1;
     },
     // add a variable-tracking-object to this package
@@ -421,8 +422,8 @@ Flow Package: core
     canMove: function (skipTargetCheck) {
       // init vars
       var pkg = this; // alias self
-      // allow movement if trusted (in a program function) or unlocked, there is somewhere to go, and there are no child flows (i.e., not pending)
-      return (pkg.trusted || !pkg.locked) && (skipTargetCheck || pkg.targets.length) && !pkg.childFlows;
+      // allow movement if trust (in a program function) or unlocked, there is somewhere to go, and there are no child flows (i.e., not pending)
+      return (pkg.trust || !pkg.locked) && (skipTargetCheck || pkg.targets.length) && !pkg.childFlows;
     },
     // proceed towards the latest target
     move: function () {
@@ -485,7 +486,7 @@ Flow Package: core
     var pkg = this, // the package instance
       state = pkg.states[pkg.flow.currentIndex]; // the state being traversed (prototyped, read-only value)
     // trust api calls
-    pkg.trusted = 1;
+    pkg.trust = 1;
     // flag that we are no longer paused
     pkg.paused = 0;
     // if there is an out state...
@@ -522,7 +523,7 @@ Flow Package: core
       pkg.result = state.fncs[phase].apply(pkg.proxy, (phase || pkg.targets.length - 1) ? [] : pkg.args);
     }
     // untrust api calls
-    pkg.trusted = 0;
+    pkg.trust = 0;
   };
 
   // do something when the tank stops
@@ -608,7 +609,7 @@ Flow Package: core
     // if arguments were passed...
     if (arguments.length) {
       // if allowed to change the lock status...
-      if (pkg.trusted) {
+      if (pkg.trust) {
         // set new lock state
         pkg.locked = !!set;
         // flag success in changing the locked property of this flow
@@ -817,7 +818,7 @@ Flow Package: core
         window.setTimeout(
           function () {
             // trust the next call
-            pkg.trusted = 1;
+            pkg.trust = 1;
             // if there is a delay action and it's a state...
             if (!noAction && ~delayStateIdx) {
               // use the proxy's package method, to target the given state
@@ -846,17 +847,17 @@ Flow Package: core
   core.api.status = function  () {
     // init vars
     var proxy = this, // this flow proxy
-      status = {}; // the status object to return
+      status = {}; // the status object to build and ultimately return
     // with each package...
     Flow.pkg().forEach(function (pkgName) {
       // init vars
       var pkgDef = Flow.pkg(pkgName), // the package-definition
         stats, key; // placeholder and loop vars for scanning the status object returned
-      // if this package-definition has a status function...
-      if (pkgDef.hasOwnProperty('status') && typeof pkgDef.status === 'function') {
-        // capture the status object returned
-        stats = pkgDef.status.call(pkgDef(proxy));
-        // with each key in the status object...
+      // if this package-definition has a static addStatus function...
+      if (typeof pkgDef.addStatus === 'function') {
+        // pass the status object, and capture the returned object
+        stats = pkgDef.addStatus.call(pkgDef(proxy), status);
+        // with each key in the returned object (if any)...
         for (key in stats) {
           // if not inherited...
           if (stats.hasOwnProperty(key)) {
@@ -873,7 +874,7 @@ Flow Package: core
   // define status properties
   // returns an object whose keys are copied to the final status object
   //   newer package definitions can override the keys set by older package definitions
-  core.status = function () {
+  core.addStatus = function (status) {
     // init vars
     var pkg = this, // the package instance
       current = pkg.states[pkg.flow.currentIndex], // alias the current state
@@ -883,7 +884,7 @@ Flow Package: core
       };
     // return all the objects to be displayed when in the status object
     return { // object of status keys to return
-      trusted: !!pkg.trusted,
+      trust: !!pkg.trust,
       loops: Math.max((pkg.calls.join().match(new RegExp('\\b' + current.index + '.' + pkg.phase, 'g')) || []).length - 1, 0),
       depth: current.depth,
       paused: !!pkg.paused,
