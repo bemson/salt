@@ -157,22 +157,20 @@
       },
       // add and remove post-loop functions
       post: function (fnc) {
-        // init vars
-        var pkg = this; // alias package
         // based on the type
         switch (typeof fnc) {
           case 'function':
             // return the index of the callback after adding it to this flow's post queue
-            return pkg.posts.push(fnc);
+            return flow.posts.push(fnc);
           break;
 
           case 'number':
             // clear the callback at this index
-            pkg.posts[fnc] = null;
+            flow.posts[fnc] = null;
         }
       }
     };
-    // init posts collection
+    // init collection of post functions
     flow.posts = [];
     // init current state reference
     flow.current = flow.states[0];
@@ -222,6 +220,7 @@
         states = flow.states, // alias states (for minification & performance)
         shared = flow.shared, // alias shared (for minification & performance)
         dir, // direction of traversal movement
+        traversals = 0, // the number of traversal events fired
         curState = flow.current, // alias the current state (for minification & performance)
         nextIsEvent = 0, // flag when the nextInt is an event (when 0) or state index (when 1)
         nextInt = 0, // integer representing the state index or event type
@@ -311,6 +310,8 @@
           if (nextIsEvent) {
             // capture last event
             curState.lastEvent = nextInt;
+            // tick traversal event count
+            traversals++;
             // fire traverse event with the resolved next target
             flow.fire('Traverse', [nextInt]);
           } else { // otherwise, when changing the current state...
@@ -336,8 +337,8 @@
         // execute this post-function
         fnc();
       });
-      // return the index of the current state
-      return curState.index;
+      // return the number of traversal events fired
+      return traversals;
     },
     // fire package event
     fire: function (evtName, args) {
