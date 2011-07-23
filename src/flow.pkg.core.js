@@ -590,15 +590,16 @@ Flow Package: core
   core.api.query = function (state) {
     // init vars
     var pkg = core(this), // get package instance
+      args = arguments, // alias arguments
       states = []; // state indice resolved by query
     // return false, a string or array of strings, based on whether a single state reference fails
     return (
       // at least one parameter
-      state
+      args.length
       // and
       &&
       // all parameters resolve to states
-      [].slice.call(arguments).every(function (stateRef) {
+      [].slice.call(args).every(function (stateRef) {
         // init vars
         var idx = pkg.vetIndexOf(stateRef), // resolve index of this reference
           result = 0; // default result
