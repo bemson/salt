@@ -7,7 +7,8 @@
 */
 !function (window, genData, undefined) {
   // init vars
-  var sig = {}, // private signature object for priviledged access
+  var flowCnt = 0, // the number of Flow instances created
+    sig = {}, // private signature object for priviledged access
     pkgDefs = [], // collection of package-definitions
     pkgsIdx = {}, // name index of package-definitions
     genStates = new genData( // spawn state generator
@@ -133,6 +134,8 @@
     flow.states = getStates(program);
     // define shared pkg api - all package instances control the tank via these members
     flow.shared = {
+      // increment and capture the number of Flow instantiations
+      id: ++flowCnt,
       // index of the current program state
       currentIndex: 0,
       // index of the target program state
