@@ -2,7 +2,6 @@
 Flow Package: core
 */
 !function (window, Object, Array, Math, Flow, undefined) {
-
   // init vars
   var core = Flow.pkg('core'), // define core package
     typeOf = function (obj) { // custom typeOf function
@@ -152,7 +151,7 @@ Flow Package: core
     // init index of state paths
     pkg.stateIds = {};
     // the number of child flows fired by this flow's program functions
-    pkg.childFlows = 0;
+    pkg.pending = 0;
     // collect parent flow references
     pkg.parentFlows = [];
     // collection of targeted states
@@ -418,22 +417,19 @@ Flow Package: core
         }
       });
     },
-    // flag whether this flow can move towards the next target
-    canMove: function (skipTargetCheck) {
+    // proceed towards the latest/current target
+    go: function (tgt) {
       // init vars
       var pkg = this; // alias self
-      // allow movement if trust (in a program function) or unlocked, there is somewhere to go, and there are no child flows (i.e., not pending)
-      return (pkg.trust || !pkg.locked) && (skipTargetCheck || pkg.targets.length) && !pkg.childFlows;
-    },
-    // proceed towards the latest target
-    move: function () {
-      // init vars
-      var pkg = this, // alias self
-        wasPaused = pkg.paused; // capture original paused flag
-      // clear the pause flag
-      pkg.paused = 0;
-      // direct tank to the first target, return number of traversals
-      return pkg.flow.go(pkg.targets[0]) || wasPaused;
+      // if a tgt is given...
+      if (tgt > -1) {
+        // reset the targets array
+        pkg.targets = [tgt];
+      }
+      // unpause this flow
+      pkg.pause = 0;
+      // exit when pending, untrusted and locked, or direct tank to the first target and return the number of traversals completed
+      return pkg.pending || (pkg.locked && !pkg.trust) ? 0 : pkg.flow.go(pkg.targets[0]);
     }
   };
 
@@ -441,24 +437,15 @@ Flow Package: core
   core.onBegin = function () {
     // init vars
     var pkg = this, // alias this package
-      delayFnc = pkg.delay.callback, // capture the callback function (if any)
+      delayFnc = pkg.delay.callback, // capture the callback (if any)
       parentFlow = activeFlows[0];
-    // if there is a parent flow and it's current state is pendable...
-    if (parentFlow && parentFlow.states[parentFlow.flow.currentIndex].pendable) {
+    // if the active flow is unique and it's current state is pendable...
+    if (parentFlow && !~pkg.parentFlows.indexOf(parentFlow) && parentFlow.states[parentFlow.flow.currentIndex].pendable) {
       // increment the number of child flows for the parent flow
-      parentFlow.childFlows++;
-      // capture this parentFlow for later
+      parentFlow.pending++;
+      // capture for later
       pkg.parentFlows.unshift(parentFlow);
     }
-    // if not paused...
-    if (!pkg.paused) {
-      // reset calls array
-      pkg.calls =  [];
-      // reset route array with the starting state index
-      pkg.route = [];
-    }
-    // clear pause flag
-    pkg.paused = 0;
     // add this flow to the activeFlows list
     activeFlows.unshift(pkg);
     // clear the delay timer
@@ -467,8 +454,12 @@ Flow Package: core
     pkg.delay.callback = 0;
     // if there was a delayed callback...
     if (delayFnc) {
+      // trust api calls
+      pkg.trust = 1;
       // execute the delayed function in scope of the proxy
       delayFnc.call(pkg.proxy);
+      // untrust api calls
+      pkg.trust = 0;
     }
   };
 
@@ -479,8 +470,6 @@ Flow Package: core
       state = pkg.states[pkg.flow.currentIndex]; // the state being traversed (prototyped, read-only value)
     // trust api calls
     pkg.trust = 1;
-    // flag that we are no longer paused
-    pkg.paused = 0;
     // if there is an out state...
     if (pkg.outState) {
       // descope variables in the outstate
@@ -514,8 +503,8 @@ Flow Package: core
       // execute function, in scope of the proxy - pass arguments when traversing _on[0] on the destination state
       pkg.result = state.fncs[phase].apply(pkg.proxy, (phase || pkg.targets.length - 1) ? [] : pkg.args);
     }
-    // if there are childflows...
-    if (pkg.childFlows) {
+    // if we are pending...
+    if (pkg.pending) {
       // stop navigating
       pkg.flow.stop();
     }
@@ -526,40 +515,62 @@ Flow Package: core
   // do something when the tank stops
   core.onEnd = function () {
     // init vars
-    var pkg = this; // alias self
+    var pkg = this, // alias self
+      blocked = pkg.pause || pkg.pending; // flag when this flow can not move forward
     // if stopped outside the on[0] phase...
     if (pkg.phase) {
       // (just) remove from activeFlows
       activeFlows.shift();
     } else { // otherwise, when stopped on a state...
-      // remove this target state (even if paused, so it isn't repeated when resumed)
-      pkg.targets.shift();
+      // if the tank no longer has a target...
+      if (!~pkg.flow.targetIndex) {
+        // remove this target state (even if paused, so it isn't repeated when resumed)
+        pkg.targets.shift();
+      }
       // if not paused and not pending and there are more targets...
-      if (!pkg.paused && !pkg.childFlows && pkg.targets.length) {
+      if (!blocked && pkg.targets.length) {
         // go to the next target
         pkg.flow.go(pkg.targets[0]);
       } else { // or, when paused or pending or there are no more targets...
         // remove from activeFlows (since we're about to exit)
         activeFlows.shift();
-        // if not paused nor pending...
-        if (!pkg.paused && !pkg.childFlows) {
+        // if not blocked (neither paused nor pending)...
+        if (!blocked) {
           // clear call arguments
           pkg.args = [];
+          // clear calls array
+          pkg.calls = [];
+          // clear route
+          pkg.route = [];
           // if there are parent flows...
           if (pkg.parentFlows.length) {
-            // with each parent flow...
-            pkg.parentFlows.forEach(function (parentFlow) {
-              // reduce the child count
-              parentFlow.childFlows--;
-            });
             // queue post-loop callback
             pkg.flow.post(function () {
+              // copy the parents
+              var parents = [].concat(pkg.parentFlows);
+              // clear parents
+              pkg.parentFlows = [];
+              // with each parent...
+              parents.forEach(function (parentFlow) {
+                // remove child from parent
+                parentFlow.pending--;
+              });
               // tell each parent flow...
-              pkg.parentFlows.forEach(function (parentFlow) {
+              parents.forEach(function (parentFlow) {
                 // if there are no child flows left...
-                if (!parentFlow.childFlows) {
-                  // ...to continue toward it's target
-                  parentFlow.move();
+                if (!parentFlow.pending) {
+                  // trust api calls
+                  parentFlow.trust = 1;
+                  // if not in "on" phase...
+                  if (parentFlow.phase) {
+                    // tell the parent to resume (towards it's target)
+                    parentFlow.go();
+                  } else { // otherwise, when pended during the parent's "on" phase...
+                    // tell the parent's tank to complete this cycle
+                    parentFlow.flow.go();
+                  }
+                  // untrust api calls
+                  parentFlow.trust = 0;
                 }
               });
             });
@@ -717,24 +728,19 @@ Flow Package: core
   core.api.target = function (qry) {
     // init vars
     var pkg = core(this), // alias this package
-      tgtState = pkg.vetIndexOf(qry), // resolve a state index from qry
-      result = false; // call status indicator
-    // if the destination state is valid, and the flow can move (ignoring check for current targets)...
-    if (~tgtState && pkg.canMove(1)) {
+      tgtIdx = pkg.vetIndexOf(qry), // resolve a state index from qry
+      result = 0; // call status indicator, set to false initially
+    // if the destination state is valid, and the flow can move...
+    if (~tgtIdx) {
       // capture arguments after the tgt
       pkg.args = [].slice.call(arguments).slice(1);
-      // reset targets array
-      pkg.targets = [tgtState];
-      // tell flow to move
-      pkg.move();
-      // if the last phase is on and we're not paused...
-      if (!pkg.phase && !pkg.paused) {
-        // set result to true or the last function's return value, based on whether that value is `undefined` (as in, no value was returned)
-        result  = pkg.result === undefined ? true : pkg.result;
-      }
+      // navigate towards this index
+      pkg.go(tgtIdx);
+      // set result to false when we're pending, paused, or not on the "on" state, otherwise, set to true or the return value
+      result = (pkg.pending || pkg.phase || pkg.pause) ? 0 : (pkg.result === undefined ? 1 : pkg.result);
     }
-    // otherwise, flag inability to target the state
-    return result;
+    // (otherwise) return flag when we've completed navigating to the target state
+    return !!result;
   };
 
   /**
@@ -749,16 +755,12 @@ Flow Package: core
     // init vars
     var pkg = core(this), // alias self
       tgts = pkg.targets, // alias array of current state targtes
+      wasPaused = pkg.pause, // capture current paused status
       waypoints = [], // collection of targets to add to targets
       wpLn, // placeholder for the number of waypoints added
-      result = false; // success status for this call
-    // if...
+      result = 0; // success status for this call
+    // if any and all state references are valid...
     if (
-      // can move (ignoring check for current targets)
-      pkg.canMove(1)
-      // and
-      &&
-      // any and all state references are valid
       [].slice.call(arguments).every(function (stateRef) {
         // init vars
         var idx = pkg.vetIndexOf(stateRef); // resolve index of this reference
@@ -791,11 +793,11 @@ Flow Package: core
         // capture array of targets
         pkg.targets = tgts;
       }
-      // capture result of move attempt
-      result = !!pkg.move();
+      // capture result of move attempt or true when paused
+      result = pkg.go() || wasPaused;
     }
     // return result
-    return result;
+    return !!result;
   };
 
   // delay traversing
@@ -809,25 +811,23 @@ Flow Package: core
       isFnc = typeof delayFnc === 'function', // flag when the delay is a function
       delayStateIdx = pkg.indexOf(delayFnc), // get state referenced by delayFnc (the first argument) - no vet check, since this would be a priviledged call
       time = parseInt(args[argLn - 1]), // use last argument as time parameter
-      result = false; // indicates result of call
-    // if the flow can move, and the argument's are valid...
-    if (pkg.canMove() && (!argLn || (time > -1 && (noAction || ~delayStateIdx || isFnc)))) {
-      // note that we have paused
-      pkg.paused = 1;
+      result = 0; // indicates result of call
+    // if trusted and the the argument's are valid...
+    if (pkg.trust && (!argLn || (time > -1 && (noAction || ~delayStateIdx || isFnc)))) {
+      // flag that we've paused this flow
+      pkg.pause = 1;
       // stop the tank
       pkg.flow.stop();
-      // clear existing delay timer
+      // clear any existing delay
       window.clearTimeout(pkg.delay.timer);
       // set delay to truthy value, callback, or traversal call
       pkg.delay.timer = argLn ?
         window.setTimeout(
           function () {
-            // trust the next call
-            pkg.trust = 1;
-            // if there is a delay action and it's a state...
+            // if there is a delay action and it's a state index...
             if (!noAction && ~delayStateIdx) {
-              // use the proxy's package method, to target the given state
-              pkg.proxy.pkgs.core.target(delayStateIdx);
+              // go to this state index
+              pkg.go(delayStateIdx);
             } else { // otherwise, when there is no delay, or the action is a callback...
               // if there is a callback function...
               if (isFnc) {
@@ -835,17 +835,17 @@ Flow Package: core
                 pkg.delay.callback = delayFnc;
               }
               // traverse towards the current target
-              pkg.move();
+              pkg.go();
             }
           },
           time // number of milliseconds to wait
         ) :
         1; // set to 1 to pause indefinitely
       // indicate that this flow has been delayed
-      result = true;
+      result = 1;
     }
     // return whether this function caused a delay
-    return result;
+    return !!result;
   };
 
   // capture aspects of this package
@@ -884,22 +884,23 @@ Flow Package: core
     var pkg = this, // the package instance
       current = pkg.states[pkg.flow.currentIndex], // alias the current state
       tgtsLn = pkg.targets.length, // capture the number of targets
+      showTraverseInfo = pkg.pause || tgtsLn || pkg.pending, // permit showing traversal information when paused, pending, or there are targets
       getLocationFromIndex = function (idx) {
         return pkg.states[idx].location;
       };
     // return all the objects to be displayed when in the status object
     return { // object of status keys to return
       trust: !!pkg.trust,
-      loops: Math.max((pkg.calls.join().match(new RegExp('\\b' + current.index + '.' + pkg.phase, 'g')) || []).length - 1, 0),
+      loops: showTraverseInfo ? Math.max((pkg.calls.join().match(new RegExp('\\b' + current.index + '.' + pkg.phase, 'g')) || []).length - 1, 0) : 0,
       depth: current.depth,
-      paused: !!pkg.paused,
-      pending: !!pkg.childFlows,
+      paused: !!pkg.pause,
+      pending: !!pkg.pending,
       pendable: !!current.pendable,
-      targets: pkg.targets.map(getLocationFromIndex),
-      route: tgtsLn ? pkg.route.map(getLocationFromIndex) : [],
+      targets: showTraverseInfo ? pkg.targets.map(getLocationFromIndex) : [],
+      route: showTraverseInfo ? pkg.route.map(getLocationFromIndex) : [],
       location: current.location,
       index: current.index,
-      phase: tgtsLn ? core.events[pkg.phase] : '',
+      phase: showTraverseInfo ? core.events[pkg.phase] : '',
       state: current.name
     };
   };
