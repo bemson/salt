@@ -1,10 +1,10 @@
-/*
-* Flow (NextGen) v0.X
-* http://github.com/bemson/Flow/
-*
-* Copyright 2011, Bemi Faison
-* Released under the MIT License
-*/
+/*!
+ * Flow (NextGen) v0.X
+ * http://github.com/bemson/Flow/
+ *
+ * Copyright 2011, Bemi Faison
+ * Released under the MIT License
+ */
 !function (window, genData, undefined) {
   // init vars
   var flowCnt = 0, // the number of Flow instances created
@@ -75,6 +75,100 @@
   function ProxyModel() {}
   // create
   function definePackage(name) {
+
+    /**
+      Shims for missing native object methods (on crap browsers). Code borrowed from https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/
+      Ofcourse, we're targeting IE here. I didn't want to include this, but - then again - no one wants to work with IE... We just have to.
+    */
+    if (!pkgDefs.every) {
+      Array.prototype.every = function(fun /*, thisp */)
+      {
+        "use strict";
+
+        if (this === void 0 || this === null)
+          throw new TypeError();
+
+        var t = Object(this);
+        var len = t.length >>> 0;
+        if (typeof fun !== "function")
+          throw new TypeError();
+
+        var thisp = arguments[1];
+        for (var i = 0; i < len; i++)
+        {
+          if (i in t && !fun.call(thisp, t[i], i, t))
+            return false;
+        }
+
+        return true;
+      };
+    }
+    if (!pkgDefs.filter) {
+      Array.prototype.filter = function(fun /*, thisp */) {
+        "use strict";
+
+        if (this === void 0 || this === null)
+          throw new TypeError();
+
+        var t = Object(this);
+        var len = t.length >>> 0;
+        if (typeof fun !== "function")
+          throw new TypeError();
+
+        var res = [];
+        var thisp = arguments[1];
+        for (var i = 0; i < len; i++) {
+          if (i in t) {
+            var val = t[i]; // in case fun mutates this
+            if (fun.call(thisp, val, i, t))
+              res.push(val);
+          }
+        }
+
+        return res;
+      };
+    }
+    if (!pkgDefs.forEach) {
+      Array.prototype.forEach = function(fun /*, thisp */) {
+        "use strict";
+
+        if (this === void 0 || this === null)
+          throw new TypeError();
+
+        var t = Object(this);
+        var len = t.length >>> 0;
+        if (typeof fun !== "function")
+          throw new TypeError();
+
+        var thisp = arguments[1];
+        for (var i = 0; i < len; i++) {
+          if (i in t)
+            fun.call(thisp, t[i], i, t);
+        }
+      };
+    }
+    if (!pkgDefs.map) {
+      Array.prototype.map = function(fun /*, thisp */) {
+        "use strict";
+
+        if (this === void 0 || this === null)
+          throw new TypeError();
+
+        var t = Object(this);
+        var len = t.length >>> 0;
+        if (typeof fun !== "function")
+          throw new TypeError();
+
+        var res = new Array(len);
+        var thisp = arguments[1];
+        for (var i = 0; i < len; i++) {
+          if (i in t)
+            res[i] = fun.call(thisp, t[i], i, t);
+        }
+
+        return res;
+      };
+    }
     // package returns the private instance of it's public proxy
     function pkg(pxy) {
       // init vars
@@ -408,8 +502,11 @@
     if (arguments.length) {
       // if given a valid name to resolve...
       if (typeof name === 'string' && /\w/.test(name)) {
-        // if no package has this name, create new package definition
-        if (!pkgsIdx.hasOwnProperty(name)) definePackage(name);
+        // if no package has this name...
+        if (!pkgsIdx.hasOwnProperty(name)) {
+          // create new package definition
+          definePackage(name);
+        }
         // return the package definition's pkg function
         return pkgDefs[pkgsIdx[name]].pkg;
       }
