@@ -8,7 +8,7 @@ Flow Package: core
       // init vars
       var type = typeof obj; // get native type string
       // return string, check for array when an object
-      return type === 'object' && ~((new Object()).toString.call(obj).indexOf('y')) ? 'array' : type;
+      return type === 'object' && ~({}.toString.call(obj).indexOf('y')) ? 'array' : type;
     },
     /*
     this generator handles any nesting and combination of _var component values...
