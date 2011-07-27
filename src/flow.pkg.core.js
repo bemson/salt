@@ -28,7 +28,7 @@ Flow Package: core
       // flag when this is an object
       data.O = typeof value === 'object';
       // flag when this is an Array
-      data.A = value instanceof Array;
+      data.A = typeOf(value) === 'array';
       // flag that this has a value (true by default)
       data.V = 1;
       // if there is a parent...
