@@ -466,7 +466,7 @@ Flow Package: core
       }
       // unpause this flow
       pkg.pause = 0;
-      // exit when pending, untrusted and locked, or direct tank to the first target and return the number of traversals completed
+      // exit when pending, locked and untrusted, or direct tank to the first target and return the number of traversals completed
       return pkg.pending || (pkg.locked && !pkg.trust) ? 0 : pkg.flow.go(pkg.targets[0]);
     }
   };
@@ -873,8 +873,12 @@ Flow Package: core
                 // set delay callback (fires during the "begin" event)
                 pkg.delay.callback = delayFnc;
               }
-              // traverse towards the current target
+              // trust this motion
+              pkg.trust = 1;
+              // traverse towards the current target - second param tells the package to ignore the trust flag
               pkg.go();
+              // untrust future calls
+              pkg.trust = 0;
             }
           },
           time // number of milliseconds to wait
