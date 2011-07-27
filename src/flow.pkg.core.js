@@ -726,16 +726,29 @@ Flow Package: core
       argsLn = args.length, // capture number of args elements
       argCnt = arguments.length, // get number of arguments passed
       idxType = typeOf(idx), // get type of first argument
-      rtn = true; // value to return (default is true)
-    // if passed arguments and this flow is unlocked...
-    if (argCnt && !pkg.locked) {
-      // if idx is an array...
-      if (idxType === 'array') {
-        // replace args with a copy of the idx array
-        pkg.args = [].concat(idx);
-      } else if (idxType === 'number') { // or, when idx is a number (assuming an integer)...
-        // if a value was passed...
-        if (argCnt > 1) {
+      isValidNumber = idxType == 'number' && idx > -1, // flag when idx is a valid number
+      isArray = idxType == 'array', // flag when idx is an array
+      setting = isArray || argCnt > 1, // flag when attempting to set arguments
+      rtn = false; // value to return (default is false)
+    // if passed arguments...
+    if (argCnt) {
+      // if not setting...
+      if (!setting) {
+        // when a valid number...
+        if (isValidNumber) {
+          // return the targeted index
+          rtn = args[idx];
+        }
+      } else if (pkg.trust || !pkg.locked) { // or setting, while trusted or unlocked...
+        // if an array...
+        if (isArray) {
+          // replace args with a copy of the array
+          pkg.args = [].concat(idx);
+          // flag success with replacing the arguments
+          rtn = true;
+        }
+        // if a valid number...
+        if (isValidNumber) {
           // if the value is undefined and the last index was targeted...
           if (value === undefined && idx === argsLn - 1) {
             // remove the last index
@@ -744,20 +757,13 @@ Flow Package: core
             // set the value at this index
             args[idx] = value;
           }
-        } else if (idx > -1 && idx < argsLn) { // or, when no value is passed and the idx is a valid...
-          // return the value at the targeted index
-          rtn = args[idx];
-        } else { // otherwise, when no value is passed and the index is invalid...
-          // flag failure to retrieve this index
-          rtn = false;
+          // flag success with removing or setting the target index
+          rtn = true;
         }
-      } else { // otherwise, when the type of idx is invalid...
-        // flag failure to return anything because idx is unrecognized
-        rtn = false;
       }
-    } else if (!argCnt) { // otherwise, when given no arguments...
+    } else { // otherwise, when given no arguments...
       // return a copy of the arguments array (always available - even to locked flows)
-      rtn = args.concat();
+      rtn = [].concat(args);
     }
     // send return value
     return rtn;
