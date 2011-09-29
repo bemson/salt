@@ -8,7 +8,7 @@ Flow Package: core
       // init vars
       var type = typeof obj; // get native type string
       // return string, check for array when an object
-      return type === 'object' && ~{}.toString.call(obj).indexOf('y') ? 'array' : type;
+      return type === 'object' && ~((new Object()).toString.call(obj).indexOf('y')) ? 'array' : type;
     },
     /*
     this generator handles any nesting and combination of _var component values...
@@ -28,7 +28,7 @@ Flow Package: core
       // flag when this is an object
       data.O = typeof value === 'object';
       // flag when this is an Array
-      data.A = typeOf(value) === 'array';
+      data.A = value instanceof Array;
       // flag that this has a value (true by default)
       data.V = 1;
       // if there is a parent...
@@ -120,10 +120,8 @@ Flow Package: core
     }),
     activeFlows = []; // collection of active flows
 
-  // Relies on shims from Flow library: .every(), .filter(), .forEach(), .map()
-  // shim Array.prototype.indexOf()
-  if (!activeFlows.indexOf) {
-    Array.prototype.indexOf = function(searchElement /*, fromIndex */) {
+  if (!activeFlows.every) {
+    Array.prototype.every = function(fun /*, thisp */) {
       "use strict";
 
       if (this === void 0 || this === null)
@@ -131,30 +129,16 @@ Flow Package: core
 
       var t = Object(this);
       var len = t.length >>> 0;
-      if (len === 0)
-        return -1;
+      if (typeof fun !== "function")
+        throw new TypeError();
 
-      var n = 0;
-      if (arguments.length > 0) {
-        n = Number(arguments[1]);
-        if (n !== n) // shortcut for verifying if it's NaN
-          n = 0;
-        else if (n !== 0 && n !== (Infinity) && n !== -(Infinity))
-          n = (n > 0 || -1) * Math.floor(Math.abs(n));
+      var thisp = arguments[1];
+      for (var i = 0; i < len; i++) {
+        if (!fun.call(thisp, t[i], i, t))
+          return false;
       }
 
-      if (n >= len)
-        return -1;
-
-      var k = n >= 0
-            ? n
-            : Math.max(len - Math.abs(n), 0);
-
-      for (; k < len; k++) {
-        if (k in t && t[k] === searchElement)
-          return k;
-      }
-      return -1;
+      return true;
     };
   }
 
@@ -466,7 +450,7 @@ Flow Package: core
       }
       // unpause this flow
       pkg.pause = 0;
-      // exit when pending, locked and untrusted, or direct tank to the first target and return the number of traversals completed
+      // exit when pending, untrusted and locked, or direct tank to the first target and return the number of traversals completed
       return pkg.pending || (pkg.locked && !pkg.trust) ? 0 : pkg.flow.go(pkg.targets[0]);
     }
   };
@@ -475,14 +459,17 @@ Flow Package: core
   core.onBegin = function () {
     // init vars
     var pkg = this, // alias this package
-      delayFnc = pkg.delay.callback, // capture the callback (if any)
+      delayFnc = pkg.delay.callback, // capture the callback function (if any)
       parentFlow = activeFlows[0];
-    // if the active flow is unique and it's current state is pendable...
-    if (parentFlow && !~pkg.parentFlows.indexOf(parentFlow) && parentFlow.states[parentFlow.flow.currentIndex].pendable) {
+    // if there is a parent flow and it's current state is pendable...
+    if (parentFlow && parentFlow.states[parentFlow.flow.currentIndex].pendable) {
       // increment the number of child flows for the parent flow
       parentFlow.pending++;
-      // capture for later
-      pkg.parentFlows.unshift(parentFlow);
+      // if this parent is unique...
+      if (!~pkg.parentFlows.indexOf(parentFlow)) {
+        // capture for later
+        pkg.parentFlows.unshift(parentFlow);
+      }
     }
     // add this flow to the activeFlows list
     activeFlows.unshift(pkg);
@@ -582,23 +569,21 @@ Flow Package: core
           pkg.route = [];
           // if there are parent flows...
           if (pkg.parentFlows.length) {
+            // remove a child from each parent
+            pkg.parentFlows.forEach(function (parentFlow) {
+              // remove child from parent (now)
+              pkg.parentFlows.pending--;
+            });
             // queue post-loop callback
             pkg.flow.post(function () {
               // copy the parents
               var parents = [].concat(pkg.parentFlows);
               // clear parents
               pkg.parentFlows = [];
-              // with each parent...
-              parents.forEach(function (parentFlow) {
-                // remove child from parent
-                parentFlow.pending--;
-              });
               // tell each parent flow...
               parents.forEach(function (parentFlow) {
                 // if there are no child flows left...
-                if (!parentFlow.pending) {
-                  // trust api calls
-                  parentFlow.trust = 1;
+                if (!--parentFlow.pending) {
                   // if not in "on" phase...
                   if (parentFlow.phase) {
                     // tell the parent to resume (towards it's target)
@@ -607,8 +592,6 @@ Flow Package: core
                     // tell the parent's tank to complete this cycle
                     parentFlow.flow.go();
                   }
-                  // untrust api calls
-                  parentFlow.trust = 0;
                 }
               });
             });
@@ -628,16 +611,15 @@ Flow Package: core
   core.api.query = function (state) {
     // init vars
     var pkg = core(this), // get package instance
-      args = arguments, // alias arguments
       states = []; // state indice resolved by query
     // return false, a string or array of strings, based on whether a single state reference fails
     return (
       // at least one parameter
-      args.length
+      state
       // and
       &&
       // all parameters resolve to states
-      [].slice.call(args).every(function (stateRef) {
+      [].slice.call(arguments).every(function (stateRef) {
         // init vars
         var idx = pkg.vetIndexOf(stateRef), // resolve index of this reference
           result = 0; // default result
@@ -726,29 +708,16 @@ Flow Package: core
       argsLn = args.length, // capture number of args elements
       argCnt = arguments.length, // get number of arguments passed
       idxType = typeOf(idx), // get type of first argument
-      isValidNumber = idxType == 'number' && idx > -1, // flag when idx is a valid number
-      isArray = idxType == 'array', // flag when idx is an array
-      setting = isArray || argCnt > 1, // flag when attempting to set arguments
-      rtn = false; // value to return (default is false)
-    // if passed arguments...
-    if (argCnt) {
-      // if not setting...
-      if (!setting) {
-        // when a valid number...
-        if (isValidNumber) {
-          // return the targeted index
-          rtn = args[idx];
-        }
-      } else if (pkg.trust || !pkg.locked) { // or setting, while trusted or unlocked...
-        // if an array...
-        if (isArray) {
-          // replace args with a copy of the array
-          pkg.args = [].concat(idx);
-          // flag success with replacing the arguments
-          rtn = true;
-        }
-        // if a valid number...
-        if (isValidNumber) {
+      rtn = true; // value to return (default is true)
+    // if passed arguments and this flow is unlocked...
+    if (argCnt && !pkg.locked) {
+      // if idx is an array...
+      if (idxType === 'array') {
+        // replace args with a copy of the idx array
+        pkg.args = [].concat(idx);
+      } else if (idxType === 'number') { // or, when idx is a number (assuming an integer)...
+        // if a value was passed...
+        if (argCnt > 1) {
           // if the value is undefined and the last index was targeted...
           if (value === undefined && idx === argsLn - 1) {
             // remove the last index
@@ -757,13 +726,20 @@ Flow Package: core
             // set the value at this index
             args[idx] = value;
           }
-          // flag success with removing or setting the target index
-          rtn = true;
+        } else if (idx > -1 && idx < argsLn) { // or, when no value is passed and the idx is a valid...
+          // return the value at the targeted index
+          rtn = args[idx];
+        } else { // otherwise, when no value is passed and the index is invalid...
+          // flag failure to retrieve this index
+          rtn = false;
         }
+      } else { // otherwise, when the type of idx is invalid...
+        // flag failure to return anything because idx is unrecognized
+        rtn = false;
       }
-    } else { // otherwise, when given no arguments...
+    } else if (!argCnt) { // otherwise, when given no arguments...
       // return a copy of the arguments array (always available - even to locked flows)
-      rtn = [].concat(args);
+      rtn = args.concat();
     }
     // send return value
     return rtn;
@@ -879,12 +855,8 @@ Flow Package: core
                 // set delay callback (fires during the "begin" event)
                 pkg.delay.callback = delayFnc;
               }
-              // trust this motion
-              pkg.trust = 1;
-              // traverse towards the current target - second param tells the package to ignore the trust flag
+              // traverse towards the current target
               pkg.go();
-              // untrust future calls
-              pkg.trust = 0;
             }
           },
           time // number of milliseconds to wait
@@ -940,12 +912,12 @@ Flow Package: core
     // return all the objects to be displayed when in the status object
     return { // object of status keys to return
       trust: !!pkg.trust,
-      loops: showTraverseInfo ? Math.max((pkg.calls.join().match(new RegExp('\\b' + current.index + '.' + pkg.phase, 'g')) || []).length - 1, 0) : 0,
+      loops: Math.max((pkg.calls.join().match(new RegExp('\\b' + current.index + '.' + pkg.phase, 'g')) || []).length - 1, 0),
       depth: current.depth,
       paused: !!pkg.pause,
       pending: !!pkg.pending,
       pendable: !!current.pendable,
-      targets: showTraverseInfo ? pkg.targets.map(getLocationFromIndex) : [],
+      targets: pkg.targets.map(getLocationFromIndex),
       route: showTraverseInfo ? pkg.route.map(getLocationFromIndex) : [],
       location: current.location,
       index: current.index,
