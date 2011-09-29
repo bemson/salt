@@ -1,32 +1,43 @@
 /*!
  * Flow (NextGen) v0.X
- * http://github.com/bemson/Flow/
+ * http://github.com/bemson/Flow/tree/nextGen
  *
  * Copyright 2011, Bemi Faison
  * Released under the MIT License
  */
-!function (window, genData, undefined) {
+!function (window, Array, genData, undefined) {
   // init vars
   var flowCnt = 0, // the number of Flow instances created
     sig = {}, // private signature object for priviledged access
     pkgDefs = [], // collection of package-definitions
     pkgsIdx = {}, // name index of package-definitions
+    pkgsFlagKey = function (hdlrKey, name, value) { // tests a string against each package's handler
+      // return true when there is a name, pkgs, and each pkg's handler passes
+      return name.length && pkgDefs.some(function (pkgDef) {
+        // init vars
+        var hdlr = pkgDef.pkg[hdlrKey]; // get dataKey handler - returns/evaluates true when the name is invalid
+        // based on the type...
+        switch (typeof hdlr) {
+          case 'function' :
+            // exit loop if this function confirms that this pair pass
+            return hdlr(name, value);
+          case 'object' :
+            // if the object is a regular expression...
+            if (hdlr instanceof RegExp) {
+              // return result of testing it against the name
+              return hdlr.test(name);
+            }
+        }
+        // return false by default (i.e., no handler)
+        return false;
+      });
+    },
     genStates = new genData( // spawn state generator
       function (name, value, parent, dataset, flags) {
         // init vars
         var state = this, // alias state
-          isInvalid = name && !pkgDefs.every(function (pkgDef) { // flag true when a package deems this an invalid key
-            // init vars
-            var hdlr = pkgDef.pkg.invalidKey; // get invalidKey handler - returns/evaluates true when the name is invalid
-            // return true when there is no handler, or it's function that returns true, or a regex that returns true
-            return !hdlr || !(typeof hdlr === 'function' ? hdlr(name, value) : hdlr.test(name));
-          }),
-          isData = name && !pkgDefs.every(function (pkgDef) { // flag true when a package deems this a data key
-            // init vars
-            var hdlr = pkgDef.pkg.dataKey; // get dataKey handler - returns/evaluates true when the name is invalid
-            // return true when there is no handler, or it's function that returns true, or a regex that returns true
-            return !hdlr || !(typeof hdlr === 'function' ? hdlr(name, value) : hdlr.test(name));
-          });
+          isInvalid = pkgsFlagKey('invalidKey', name, value), // cache whether this state is invalid
+          isData = pkgsFlagKey('dataKey', name, value); // cache whether this state is data
         // if this key is invalid or flagged as data...
         if (isInvalid || isData) {
           // exclude from dataset and don't scan
@@ -70,14 +81,36 @@
           }
         }
       }
+    ),
+    genPkgStates = new genData( // spawn package-state generator (clones genState output)
+      function (name, value, parent, dataset, flags) {
+        // init vars
+        var state = this,
+          mbr;
+        // if this is the array container...
+        if (!parent) {
+          // exclude from the dataset
+          flags.omit = 1;
+        } else { // otherwise, when a state object...
+          // don't scan further
+          flags.scan = 0;
+          // with each state property available...
+          for (mbr in value) {
+            // if not inherited and not inContext (since it can't be maintained)...
+            if (value.hasOwnProperty(mbr) && mbr !== 'inContext') {
+              // add to self
+              state[mbr] = value[mbr];
+            }
+          }
+        }
+      }
     );
   /**
     Shims for missing native object methods (on crap browsers). Code borrowed from https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/
     Ofcourse, we're targeting IE here. I didn't want to include this, but - then again - no one wants to work with IE... We just have to.
   */
-  if (!pkgDefs.every) {
-    Array.prototype.every = function(fun /*, thisp */)
-    {
+  if (!pkgDefs.some) {
+    Array.prototype.some = function(fun /*, thisp */) {
       "use strict";
 
       if (this === void 0 || this === null)
@@ -89,13 +122,12 @@
         throw new TypeError();
 
       var thisp = arguments[1];
-      for (var i = 0; i < len; i++)
-      {
-        if (i in t && !fun.call(thisp, t[i], i, t))
-          return false;
+      for (var i = 0; i < len; i++) {
+        if (i in t && fun.call(thisp, t[i], i, t))
+          return true;
       }
 
-      return true;
+      return false;
     };
   }
   if (!pkgDefs.filter) {
@@ -137,8 +169,7 @@
 
       var thisp = arguments[1];
       for (var i = 0; i < len; i++) {
-        if (i in t)
-          fun.call(thisp, t[i], i, t);
+        fun.call(thisp, t[i], i, t);
       }
     };
   }
@@ -157,8 +188,7 @@
       var res = new Array(len);
       var thisp = arguments[1];
       for (var i = 0; i < len; i++) {
-        if (i in t)
-          res[i] = fun.call(thisp, t[i], i, t);
+        res[i] = fun.call(thisp, t[i], i, t);
       }
 
       return res;
@@ -166,6 +196,19 @@
   }
   // define prototype base for FlowAPI instances
   function ProxyModel() {}
+  // make sure it's constructor points to the public Flow(API) function (for those who care)
+  ProxyModel.prototype.constructor = FlowAPI;
+  // define prototype base for Package instances
+  function pkgModel() {};
+  // define base methods
+  pkgModel.prototype.inState = function (idx) {
+    // if the index is valid and we're on it...
+    if (idx < this.states.length) {
+      return true;
+    }
+    return false;
+  };
+
   // create
   function definePackage(name) {
     // package returns the private instance of it's public proxy
@@ -175,27 +218,34 @@
       // return the package instance with this name
       return typeof flow === 'object' && (flow.pkgs.filter(function (pkgInst) {
         return pkgInst.name === name
-      })[0] || {}).pkg
+      })[0] || {}).pkg || false
     }
+    pkg.prototype = new pkgModel();
     // set default static properties
     pkg.init = pkg.dataKey = pkg.invalidKey = pkg.onBegin = pkg.onEnd = pkg.onTraverse = 0;
     // define new prototype-model for this package
-    function Model() {}
+    function pxyModel() {}
     // chain existing FlowModel to this model
-    Model.prototype = new ProxyModel();
+    pxyModel.prototype = new ProxyModel();
     // define new FlowModel from this extended chain
-    ProxyModel = Model;
+    ProxyModel = pxyModel;
     // expose the model's prototype for adding API methods
-    pkg.api = Model.prototype;
+    pkg.proxy = pxyModel.prototype;
+    // define new state-prototype-model
+    function stateModel() {}
+    // expose the stateModel's prototype for adding API methods
+    pkg.state = stateModel.prototype;
     // define package definition object, to capture and index this package and it's model
     pkgsIdx[name] = pkgDefs.push({
       name: name,
       pkg: pkg,
-      model: Model
+      model: pxyModel,
+      state: stateModel
     }) - 1;
     // return package
     return pkg;
   }
+
   function getStates(program) {
     // init vars
     var states = genStates(program); // parse initial states
@@ -215,12 +265,17 @@
     states[0].location = '..//';
     // reference the first and last child index
     states[0].firstChildIndex = states[0].lastChildIndex = 1;
+    // if we haven't captured
     // return states
     return states;
   }
+
   function Flow(program, proxy, customCfg) {
     // init vars
     var flow = this; // alias this instance
+    if (typeof customCfg !== 'object') {
+      customCfg = {};
+    }
     // reference original program - for cloning only
     flow.prgm = program;
     // states for this program
@@ -231,18 +286,26 @@
       id: ++flowCnt,
       // index of the current program state
       currentIndex: 0,
-      // index of the target program state
-      targetIndex: 0,
+      // index of the target program state (-1 indicates idle or at rest)
+      targetIndex: -1,
       // define scoped call to direct this flow
-      go: function (idx) {
-        // set target to the state at the given index
-        flow.target = flow.states[idx];
-        // set target index
-        flow.shared.targetIndex = idx;
-        // set internal stop flag
-        flow.stop = 0;
-        // traverse towards the target
-        return flow.go();
+      go: function (tgt) {
+        // init vars
+        var idx = ~~tgt, // convert to integer
+          tgtState = typeof tgt !== 'object' && flow.states[idx]; // alias the target state (if any)
+        // if the target is a valid...
+        if (tgtState && (idx > 0 || idx == tgt)) {
+          // capture the targeted state
+          flow.target = tgtState;
+          // set target index
+          flow.shared.targetIndex = idx;
+          // set internal stop flag
+          flow.stop = 0;
+          // traverse towards the target - return number of traversals
+          return flow.go();
+        }
+        // otherwise, return false, to indicate that this call failed
+        return false;
       },
       // define scoped call to stop this flow
       stop: function () {
@@ -253,17 +316,27 @@
       },
       // add and remove post-loop functions
       post: function (fnc) {
+        var idx;
         // based on the type
         switch (typeof fnc) {
           case 'function':
             // return the index of the callback after adding it to this flow's post queue
-            return flow.posts.push(fnc);
+            return flow.posts.push(fnc) - 1;
           break;
 
           case 'number':
-            // clear the callback at this index
-            flow.posts[fnc] = null;
+            // convert to an integer
+            idx = ~~fnc;
+            // if the target is a valid...
+            if (flow.posts[fnc]) {
+              // clear the callback at this index
+              flow.posts[fnc] = null;
+              // return success
+              return true;
+            }
         }
+        // (otherwise) flag that this call failed
+        return false;
       }
     };
     // init collection of post functions
@@ -276,38 +349,36 @@
     flow.pkgs = pkgDefs.map(function (pkgDef) {
       // init vars
       var pkgInst = { // init pkg instance
-        // capture package name for lookups
-        name: pkgDef.name
-      };
+          // capture package name for lookups
+          name: pkgDef.name
+        };
       // define base package
       function pkgBase() {}
       // extend the base package prototype
       pkgBase.prototype = new pkgDef.pkg();
       // set pkg to new pkgBase
       pkgInst.pkg = new pkgBase();
-      // clone states from this flow
-      pkgInst.pkg.states = flow.states.map(function (state) {
-        // define anonymous constructor
-        function copyState() {};
-        // use state as prototype for this object
-        copyState.prototype = state;
-        // return copy of this state
-        return new copyState();
-      });
+      // copy states array
+      pkgInst.pkg.states = genPkgStates(
+        flow.states,
+        [],
+        pkgDef.state
+      );
       // if there is a package initialization function...
-      if (pkgDef.pkg.init) {
+      if (typeof pkgDef.pkg.init === 'function') {
         // initialize package instance according to the definition's function
         pkgDef.pkg.init.call(pkgInst.pkg, customCfg);
       }
       // add flow and proxy properties
       // expose shared api to this package instance
-      pkgInst.pkg.flow = flow.shared;
+      pkgInst.pkg.tank = flow.shared;
       // expose public proxy to this package instance
       pkgInst.pkg.proxy = proxy;
       // return the pkgInst
       return pkgInst;
     });
   }
+
   Flow.prototype = {
     // head towards the current target
     go: function () {
@@ -430,24 +501,28 @@
       }
       // fire post-loop functions
       flow.posts.forEach(function (fnc) {
-        // execute this post-function
-        fnc();
+        if (typeof fnc === 'function') {
+          // execute this post-function
+          fnc();
+        }
       });
       // return the number of traversal events fired
       return traversals;
     },
     // fire package event
     fire: function (evtName, args) {
-      // prepend evtName with "on" prefix
-      evtName = 'on' + evtName;
       // use args or array - assumes args is an array
       args = args || [];
+      // prepend event name
+      args.unshift(evtName.toLowerCase());
+      // prepend evtName with "on" prefix
+      evtName = 'on' + evtName;
       // with each package instance...
       this.pkgs.forEach(function (pkgInst) {
         // init vars
         var callback = pkgDefs[pkgsIdx[pkgInst.name]].pkg[evtName]; // get callback from this package instance's definition
-        // if the callback is valid...
-        if (callback) {
+        // if the callback is a function...
+        if (typeof callback === 'function') {
           // execute call back in scope of the package instance, with given args
           callback.apply(pkgInst.pkg, args);
         }
@@ -459,6 +534,11 @@
   program may be an existing flow - this effectively clones the Flow - this is not for performance but convenience
   */
   function FlowAPI(program, customCfg) {
+    // if not invoked with the "new" operator...
+    if (!(this instanceof arguments.callee)) {
+      // throw an error
+      throw new Error('Requires "new"');
+    }
     // init vars
     var apiPkgs = {}, // define pkgs collection for this Flow
       flowProxy = new (getFlowProxy()), // create initial flow proxy
@@ -494,6 +574,7 @@
     // return the flow proxy
     return flowProxy;
   }
+
   // define object pointing to flow
   // set prototype to given model
   FlowAPI.pkg = function (name) {
@@ -510,7 +591,7 @@
         return pkgDefs[pkgsIdx[name]].pkg;
       }
       // (otherwise) return false - fire error in the future?
-      return !1;
+      return false;
     }
     // (otherwise) return list of package names
     return pkgDefs.map(function (pkgDef) {
@@ -518,5 +599,7 @@
       return pkgDef.name;
     });
   }
+
+  // expose Flow
   window.Flow = FlowAPI;
-}(this, genData);
+}(this, Array, genData);
