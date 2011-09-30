@@ -602,13 +602,13 @@ Flow Package: core
   };
 
   // add method to return map of this flow's states
-  core.api.map = function () {
+  core.proxy.map = function () {
     // return pre-made function-list - from the root state
     return core(this).states[1].map;
   };
 
   // add method to 
-  core.api.query = function (state) {
+  core.proxy.query = function (state) {
     // init vars
     var pkg = core(this), // get package instance
       states = []; // state indice resolved by query
@@ -637,7 +637,7 @@ Flow Package: core
   };
 
   // access and edit the locked status of a flow
-  core.api.lock = function (set) {
+  core.proxy.lock = function (set) {
     // init vars
     var pkg = core(this), // alias self
       result = false; // call status
@@ -659,7 +659,7 @@ Flow Package: core
   };
 
   // access and edit scoped variables for a state
-  core.api.vars = function (name, value) {
+  core.proxy.vars = function (name, value) {
     // init vars
     var pkg = core(this), // get package
       argCnt = arguments.length, // get number of arguments passed
@@ -701,7 +701,7 @@ Flow Package: core
   };
 
   // access and edit the arguments passed to traversal functions
-  core.api.args = function (idx, value) {
+  core.proxy.args = function (idx, value) {
     // init vars
     var pkg = core(this), // get package
       args = pkg.args, // alias arguments from this package
@@ -746,7 +746,7 @@ Flow Package: core
   };
 
   // add method to program api
-  core.api.target = function (qry) {
+  core.proxy.target = function (qry) {
     // init vars
     var pkg = core(this), // alias this package
       tgtIdx = pkg.vetIndexOf(qry), // resolve a state index from qry
@@ -772,7 +772,7 @@ Flow Package: core
     go() - resume traversal
     go(waypoints) - add or insert waypoints
   **/
-  core.api.go = function () {
+  core.proxy.go = function () {
     // init vars
     var pkg = core(this), // alias self
       tgts = pkg.targets, // alias array of current state targtes
@@ -822,7 +822,7 @@ Flow Package: core
   };
 
   // delay traversing
-  core.api.wait = function () {
+  core.proxy.wait = function () {
     // init vars
     var pkg = core(this), // get package
       args = arguments, // alias arguments
@@ -870,7 +870,7 @@ Flow Package: core
   };
 
   // capture aspects of this package
-  core.api.status = function  () {
+  core.proxy.status = function  () {
     // init vars
     var proxy = this, // this flow proxy
       status = {}; // the status object to build and ultimately return
