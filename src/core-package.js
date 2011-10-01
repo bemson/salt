@@ -147,7 +147,7 @@ Flow Package: core
 
   // customize data parsing
   core.dataKey = /^_/; // pattern for identifying data keys
-  core.invalidKey = /^toString$|^[@\[]|[\/\|]/; // pattern for identifying invalid keys
+  core.invalidKey = /^\W+$|^toString$|^[@\[]|[\/\|]/; // pattern for identifying invalid keys
 
   // initialize the package instance with custom properties
   // only argument is the object passed after the program when calling "new Flow(program, extraArg)"
@@ -253,12 +253,15 @@ Flow Package: core
         token, // the token being parsed
         idx = -1; // the index to return for the resolved state (default is -1, indicates when the state could not be found)
       // use the current state, when state is omitted
-      state = state || pkg.states[pkg.flow.currentIndex];
+      state = state || pkg.states[pkg.tank.currentIndex];
       // based on the type of qry...
       switch (typeof qry) {
         case 'object':
-          // assume the object is a state, and retreive it's index, as an integer
-          qry = parseInt(qry.index);
+          // if not the null object...
+          if (qry !== null) {
+            // assume the object is a state, and retrieve it's index property value
+            qry = qry.index;
+          }
         case 'number':
           // if the index is valid...
           if (states[qry]) {
@@ -266,11 +269,10 @@ Flow Package: core
             idx = qry;
           }
         break;
-      
+
         case 'function':
           // get toString version of this function
           qry = qry + '';
-
         case 'string':
           // if qry is the _flow or _root id...
           if (qry === '..//' || qry === '//') {
@@ -402,7 +404,7 @@ Flow Package: core
       var pkg = this, // alias self
         targetIdx = pkg.indexOf(qry, state); // get the index of the target state
       // use the current state, when state is omitted
-      state = state || pkg.states[pkg.flow.currentIndex];
+      state = state || pkg.states[pkg.tank.currentIndex];
       // return the target index or -1, based on whether the target is valid, given the trust status of the package or the restrictions of the current state
       return (~targetIdx && (pkg.trust || !pkg.states[targetIdx].location.indexOf(state.restrictPath))) ? targetIdx : -1;
     },
@@ -451,7 +453,7 @@ Flow Package: core
       // unpause this flow
       pkg.pause = 0;
       // exit when pending, untrusted and locked, or direct tank to the first target and return the number of traversals completed
-      return pkg.pending || (pkg.locked && !pkg.trust) ? 0 : pkg.flow.go(pkg.targets[0]);
+      return pkg.pending || (pkg.locked && !pkg.trust) ? 0 : pkg.tank.go(pkg.targets[0]);
     }
   };
 
@@ -462,7 +464,7 @@ Flow Package: core
       delayFnc = pkg.delay.callback, // capture the callback function (if any)
       parentFlow = activeFlows[0];
     // if there is a parent flow and it's current state is pendable...
-    if (parentFlow && parentFlow.states[parentFlow.flow.currentIndex].pendable) {
+    if (parentFlow && parentFlow.states[parentFlow.tank.currentIndex].pendable) {
       // increment the number of child flows for the parent flow
       parentFlow.pending++;
       // if this parent is unique...
@@ -492,7 +494,7 @@ Flow Package: core
   core.onTraverse = function (phase) {
     // init vars
     var pkg = this, // the package instance
-      state = pkg.states[pkg.flow.currentIndex]; // the state being traversed (prototyped, read-only value)
+      state = pkg.states[pkg.tank.currentIndex]; // the state being traversed (prototyped, read-only value)
     // trust api calls
     pkg.trust = 1;
     // if there is an out state...
@@ -531,7 +533,7 @@ Flow Package: core
     // if we are pending...
     if (pkg.pending) {
       // stop navigating
-      pkg.flow.stop();
+      pkg.tank.stop();
     }
     // untrust api calls
     pkg.trust = 0;
@@ -548,14 +550,14 @@ Flow Package: core
       activeFlows.shift();
     } else { // otherwise, when stopped on a state...
       // if the tank no longer has a target...
-      if (!~pkg.flow.targetIndex) {
+      if (!~pkg.tank.targetIndex) {
         // remove this target state (even if paused, so it isn't repeated when resumed)
         pkg.targets.shift();
       }
       // if not paused and not pending and there are more targets...
       if (!blocked && pkg.targets.length) {
         // go to the next target
-        pkg.flow.go(pkg.targets[0]);
+        pkg.tank.go(pkg.targets[0]);
       } else { // or, when paused or pending or there are no more targets...
         // remove from activeFlows (since we're about to exit)
         activeFlows.shift();
@@ -575,7 +577,7 @@ Flow Package: core
               pkg.parentFlows.pending--;
             });
             // queue post-loop callback
-            pkg.flow.post(function () {
+            pkg.tank.post(function () {
               // copy the parents
               var parents = [].concat(pkg.parentFlows);
               // clear parents
@@ -590,7 +592,7 @@ Flow Package: core
                     parentFlow.go();
                   } else { // otherwise, when pended during the parent's "on" phase...
                     // tell the parent's tank to complete this cycle
-                    parentFlow.flow.go();
+                    parentFlow.tank.go();
                   }
                 }
               });
@@ -602,9 +604,26 @@ Flow Package: core
   };
 
   // add method to return map of this flow's states
-  core.proxy.map = function () {
-    // return pre-made function-list - from the root state
-    return core(this).states[1].map;
+  core.proxy.map = function (qry) {
+    // init vars
+    var pkg = core(this), // alias the package instance
+      mapIdx = 1, // state index to retrieve map
+      qryIdx; // indice to resolve from given query
+    // if arguments were given...
+    if (arguments.length) {
+      // get the index of the qry
+      qryIdx = pkg.indexOf(qry);
+      // if the query is valid...
+      if (~qryIdx) {
+        // set mapIdx to the found qryIdx
+        mapIdx = Math.max(mapIdx, qryIdx);
+      } else { // otherwise, when the query is invalid...
+        // return false
+        return false;
+      }
+    }
+    // return pre-made function-list - from the root or queried state
+    return pkg.states[mapIdx].map;
   };
 
   // add method to 
@@ -831,14 +850,14 @@ Flow Package: core
       delayFnc = noAction ? 0 : args[0], // capture first argument as action to take after the delay, when more than one argument is passed
       isFnc = typeof delayFnc === 'function', // flag when the delay is a function
       delayStateIdx = pkg.indexOf(delayFnc), // get state referenced by delayFnc (the first argument) - no vet check, since this would be a priviledged call
-      time = parseInt(args[argLn - 1]), // use last argument as time parameter
+      time = ~~args[argLn - 1], // use last argument as time parameter
       result = 0; // indicates result of call
     // if trusted and the the argument's are valid...
     if (pkg.trust && (!argLn || (time > -1 && (noAction || ~delayStateIdx || isFnc)))) {
       // flag that we've paused this flow
       pkg.pause = 1;
       // stop the tank
-      pkg.flow.stop();
+      pkg.tank.stop();
       // clear any existing delay
       window.clearTimeout(pkg.delay.timer);
       // set delay to truthy value, callback, or traversal call
@@ -903,7 +922,7 @@ Flow Package: core
   core.addStatus = function (status) {
     // init vars
     var pkg = this, // the package instance
-      current = pkg.states[pkg.flow.currentIndex], // alias the current state
+      current = pkg.states[pkg.tank.currentIndex], // alias the current state
       tgtsLn = pkg.targets.length, // capture the number of targets
       showTraverseInfo = pkg.pause || tgtsLn || pkg.pending, // permit showing traversal information when paused, pending, or there are targets
       getLocationFromIndex = function (idx) {
