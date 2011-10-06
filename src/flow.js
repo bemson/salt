@@ -2,6 +2,9 @@
  * Flow (NextGen) v0.X
  * http://github.com/bemson/Flow/tree/nextGen
  *
+ * Dependencies:
+ * genData v1.1 / Bemi Faison (c) 2011 / MIT (http://github.com/bemson/genData)
+ *
  * Copyright 2011, Bemi Faison
  * Released under the MIT License
  */
