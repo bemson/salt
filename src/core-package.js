@@ -4,12 +4,6 @@ Flow Package: core
 !function (window, Object, Array, Math, Flow, undefined) {
   // init vars
   var core = Flow.pkg('core'), // define core package
-    typeOf = function (obj) { // custom typeOf function
-      // init vars
-      var type = typeof obj; // get native type string
-      // return string, check for array when an object
-      return type === 'object' && ~((new Object()).toString.call(obj).indexOf('y')) ? 'array' : type;
-    },
     /*
     this generator handles any nesting and combination of _var component values...
     ...strings
@@ -22,64 +16,72 @@ Flow Package: core
       > _var: [{foo: 'bar'}, {hello: 'world'}]
       > _var: [['g',{foo: 'bar'}], 'alpha', {accts: 9}] // mixed
     */
-    genVars = new genData(function (name, value, parent, dataset, flags) { // generator to extract variable pairs from a _var component
+    generateVariableConfigurationObjects = new genData(function (name, value, parent, dataset, flags, shared) { // generator to extract variable pairs from a _var component
       // init vars
-      var data = this; // alias self
+      var data = this, // alias self
+        keep = 1, // flag when this data will be a variable configuration
+        obj = { // variable configuration object
+          name: data.name, // name of variable
+          value: data.value, // initial variable value
+          use: 1 // flag to use this value (true by default)
+        };
+      // omit everything
+      flags.omit = 1;
       // flag when this is an object
       data.O = typeof value === 'object';
       // flag when this is an Array
       data.A = value instanceof Array;
-      // flag that this has a value (true by default)
-      data.V = 1;
       // if there is a parent...
       if (parent) {
         // if the parent is an array...
         if (parent.A) {
           // if this is an object...
           if (data.O) {
-            // exclude from result when this is an object within an array
-            flags.exclude = 1;
+            // exclude from resulting array
+            keep = 0;
           }
         } else { // otherwise, when the parent is not an array (assume the parent is an object)...
-          // don't scan the children of this object (because it's the value, not a _var config)
-          flags.scanValue = 0;
+          // don't scan the children of this object (because it's the value of this _vars config, not a new one)
+          flags.scan = 0;
         }
-      } else if (data.O) { // otherwise, when the first item is an object...
-        // exclude from the result
-        flags.exclude = 1;
+      } else { // otherwise, when there is no parent...
+        // if there is no keys in shared...
+        if (!shared.keys) {
+          // init shared.keys
+          shared.keys = {};
+        }
+        // if the first item is an object...
+        if (data.O) {
+          // exclude from the result
+          keep = 0;
+        }
       }
-      // if this data has not been exluced...
-      if (!flags.exclude) {
+      // if keeping this data...
+      if (keep) {
         // if there is no parent, or the parent is an array...
         if (!parent || parent.A) {
           // use the value as the name
-          data.name = value;
+          obj.name = value;
           // set the value to undefined
-          data.value = undefined;
+          obj.value = undefined;
           // flag that this data has no value
-          data.V = 0;
+          obj.use = 0;
         }
-        // if the name is invalid...
-        if (data.name == null || !/\w/.test(data.name)) {
-          // exclude this data
-          flags.exclude = 1;
-        }
-        // if this data is still not excluded...
-        if (!flags.exclude) {
-          // find and remove any data with the same name
-          dataset
-            .filter(function (d, i) {
-              // get the (one) item with the same name
-              return d.name === data.name && ((d.I = i) || 1);
-            })
-            .forEach(function (d) {
-              // remove the duplicate index (only ever one)
-              dataset.splice(d.I,1);
-            });
+        // if the (resolved) name is valid...
+        if (isVariableNameValid(obj.name)) {
+          // convert name to string
+          obj.name += '';
+          // if this key name exists...
+          if (shared.keys.hasOwnProperty(obj.name)) {
+            // remove existing variable configuration
+            dataset.splice(shared.keys[obj.name], 1);
+          }
+          // add to dataset and capture index
+          shared.keys[obj.name] = dataset.push(obj) - 1;
         }
       }
     }),
-    genTokens = new genData(function (name, value, parent, dataset, flags) { // return tokens found in the given string
+    generateTokens = new genData(function (name, value, parent, dataset, flags) { // return tokens found in the given string
       // init vars
       var data = this, // alias self
         slash = '/'; // shorthand forward-slash character
@@ -142,8 +144,28 @@ Flow Package: core
     };
   }
 
+  // returns true when the argument is a valid variable name
+  function isVariableNameValid(name) {
+    return name != null && /\w/.test(name);
+  }
+
+  // custom typeOf adds 'array' to native typeof output
+  function typeOf(obj) {
+    // init vars
+    var type = typeof obj; // get native type string
+    // return string, check for array when an object
+    return type === 'object' && ~((new Object()).toString.call(obj).indexOf('y')) ? 'array' : type;
+  }
+
+
   // define traversal event names
-  core.events = 'on|in|out|over'.split('|');
+  core.events = [
+    'on',
+    'in',
+    'out',
+    'over',
+    'bover'
+  ];
 
   // customize data parsing
   core.dataKey = /^_/; // pattern for identifying data keys
@@ -186,8 +208,8 @@ Flow Package: core
       var parent = idx && pkg.states[state.parentIndex]; // capture parent when available
       // index this path with this index position
       pkg.stateIds[state.location] = idx;
-      // define array to hold traversal functions
-      state.fncs = [];
+      // add reference to the package-instance containing this state
+      state.pkg = pkg;
       // set pendable flag, (true by default, and otherwise inherited when the parent is not pendable)
       state.pendable = (parent && !parent.pendable) ? 0 : (state.data.hasOwnProperty('_pendable') ? !!state.data._pendable : 1);
       // set isRoot flag, based on index or "_root" component
@@ -201,15 +223,8 @@ Flow Package: core
         // invoke target explicitly
         return pkg.proxy.pkgs.core.target(idx, arguments);
       };
-      // add variable configurations for this node
-      state.vars = genVars(state.data._vars).map(function (data) {
-        // return an object based on the given flags
-        return {
-          name: data.name, // variable name
-          value: data.value, // variable value
-          use: data.V // flag indicating whether this value should be used when this variable is scoped
-        };
-      });
+      // add variable configurations for this state
+      state.vars = generateVariableConfigurationObjects(state.data._vars);
       // if this state's index is not 0...
       if (state.index) {
         // append to parent's map function
@@ -220,11 +235,11 @@ Flow Package: core
         // return this state's location
         return state.location;
       };
-      // with each traversal name...
-      core.events.forEach(function (name, idx) {
+      // define array to hold traversal functions for each traversal name...
+      state.fncs = core.events.map(function (name) {
         name = '_' + name;
         //  set traversal function to 0 or the corresponding data key (when a function)
-        state.fncs[idx] = typeof state.data[name] === 'function' ? state.data[name] : 0;
+        return typeof state.data[name] === 'function' ? state.data[name] : 0;
       });
       // if there is no _on[0] function and this state's value is a function...
       if (!state.fncs[0] && typeof state.value === 'function') {
@@ -294,7 +309,7 @@ Flow Package: core
                 // flag when this is an absolute query
                 isAbsQry = 0;
                 // parse tokens
-                tokens = genTokens(tokens[0]);
+                tokens = generateTokens(tokens[0]);
                 // set idx to the current state's index (for the initial loop)
                 idx = state.index;
                 // while there are tokens and the found idx is valid...
@@ -412,34 +427,11 @@ Flow Package: core
     getVar: function (name, value) {
       // init vars
       var pkg = this; // alias self
-      // return an existing or new variable tracking object
-      return (pkg.vars.hasOwnProperty(name)) ? pkg.vars[name] : (pkg.vars[name] = {
+      // return false when name is invalid or an existing or new variable tracking object
+      return isVariableNameValid(name) && (pkg.vars.hasOwnProperty(name) ? pkg.vars[name] : (pkg.vars[name] = {
         name: name,
         values: arguments.length > 1 ? [value] : []
-      });
-    },
-    // create/remove variable tracking objects and increase/reduce their values
-    scopeVars: function (state, descope) {
-      // init vars
-      var pkg = this; // alias self (for closure)
-      // with each variable in the given state
-      state.vars.forEach(function (varCfg) {
-        // init vars
-        var vto = pkg.getVar(varCfg.name); // the variable tracking object with this name
-        // if descoping variables...
-        if (descope) {
-          // remove current value from values
-          vto.values.shift();
-          // if no other values exist...
-          if (!vto.values.length) {
-            // remove the variable tracking object
-            delete pkg.vars[varCfg.name];
-          }
-        } else { // otherwise, when scoping a variable tracking object...
-          // add new or copied value, based on the config
-          vto.values.unshift(varCfg.use ? varCfg.value : vto.values[0]);
-        }
-      });
+      }));
     },
     // proceed towards the latest/current target
     go: function (tgt) {
@@ -500,7 +492,7 @@ Flow Package: core
     // if there is an out state...
     if (pkg.outState) {
       // descope variables in the outstate
-      pkg.scopeVars(pkg.outState, 1);
+      pkg.outState.scopeVars(1);
       // clear the outstate
       pkg.outState = 0;
     }
@@ -508,7 +500,7 @@ Flow Package: core
     switch (phase) {
       case 1: // in
         // scope variables for this state
-        pkg.scopeVars(state);
+        state.scopeVars();
       break;
 
       case 2: // out
@@ -601,6 +593,31 @@ Flow Package: core
         }
       }
     }
+  };
+
+  // add method to de/scope variables
+  core.state.scopeVars = function (descope) {
+    // init vars
+    var state = this, // alias self (for closure)
+      pkg = state.pkg; // alias the package containing this state
+    // with each variable in the given state
+    state.vars.forEach(function (varCfg) {
+      // init vars
+      var vto = pkg.getVar(varCfg.name); // the variable tracking object with this name
+      // if descoping variables...
+      if (descope) {
+        // remove current value from values
+        vto.values.shift();
+        // if no other values exist...
+        if (!vto.values.length) {
+          // remove the variable tracking object
+          delete pkg.vars[varCfg.name];
+        }
+      } else { // otherwise, when scoping a variable tracking object...
+        // add new or copied value, based on the config
+        vto.values.unshift(varCfg.use ? varCfg.value : vto.values[0]);
+      }
+    });
   };
 
   // add method to return map of this flow's states
