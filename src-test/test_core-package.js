@@ -30,6 +30,15 @@ test('Instance', 16, function () {
   });
 });
 
+test('State', 9, function () {
+  var state = Flow.pkg('core')(new Flow()).states[0];
+  'pendable|isRoot|rootIndex|restrict|map|vars|fncs'.split('|').forEach(function (mbr) {
+    ok(state.hasOwnProperty(mbr), 'Has the "' + mbr + '" member-property.');
+  });
+  equal(typeof state.scopeVars, 'function', 'Has the "scopeVars" member-function.');
+  equal(typeof state.canTgt, 'function', 'Has the "canTgt" member-function.');
+});
+
 test('Proxy', 9, function () {
   var flow = new Flow();
   'map|query|lock|vars|args|target|go|wait|status'.split('|').forEach(function (mbr) {
@@ -37,17 +46,9 @@ test('Proxy', 9, function () {
   });
 });
 
-test('State', 8, function () {
-  var state = Flow.pkg('core')(new Flow()).states[0];
-  'pendable|isRoot|rootIndex|restrictPath|map|vars|fncs'.split('|').forEach(function (mbr) {
-    ok(state.hasOwnProperty(mbr), 'Has the "' + mbr + '" member-property.');
-  });
-  equal(typeof state.scopeVars, 'function', 'Has the "scopeVars" member-function.');
-});
-
 module('Parsing');
 
-test('data and invalid keys', 3, function () {
+test('program keys', 3, function () {
   var corePkg = Flow.pkg('core'),
     defCnt = corePkg(new Flow()).states.length,
     data = {
@@ -175,8 +176,8 @@ test('_restrict', 6, function () {
         _restrict: 1
       }
     })).states;
-  '|||//a/b/|//a/b/|//b/'.split('|').forEach(function (restrictFlag, stateIdx) {
-      equal(states[stateIdx].restrictPath, restrictFlag, 'The state at index ' + stateIdx + ', has the expected "restrictPath" value.');
+  '|||1|1|1'.split('|').forEach(function (restricted, stateIdx) {
+      equal(states[stateIdx].restrict, restricted, 'The state at index ' + stateIdx + ', has the expected "restricted" flag.');
   });
 });
 
@@ -258,7 +259,7 @@ test('_vars', 30, function () {
 
 module('Instance');
 
-test('getVar()', 15, function () {
+test('.getVar()', 15, function () {
   var corePkg = Flow.pkg('core'),
     pkgInst = corePkg(new Flow()),
     vars,
@@ -299,9 +300,54 @@ test('getVar()', 15, function () {
   equal(vto.values[0], value, 'The second vto has the expected initial value.');
 });
 
+test('.go()', function () {
+});
+
+test('.indexOf()', function () {
+  var coreInst = Flow.pkg('core')(new Flow({
+      a: {
+        b: {
+          c: 1
+        }
+      },
+      d: {
+        e: 1
+      },
+      f: 1,
+      g: 1
+    })),
+    states = coreInst.states,
+    randIdx = ~~(Math.random() * states.length),
+    qryPaths = '//'.split('|');
+  function customFunction() {};
+  customFunction.toString = function () {
+    return qryPath;
+  };
+  [null, undefined, function (){}].forEach(function (arg) {
+    equal(coreInst.indexOf(arg), -1, 'Returns -1 when the argument is ' + arg + '.');
+  });
+  equal(coreInst.indexOf(NaN), -1, 'Returns -1 when the query is an out-of-range number.');
+  equal(coreInst.indexOf(randIdx), randIdx, 'Returns the same index when the query is an in-range number.');
+});
+
+test('.vetIndexOf()', function () {
+  var coreDef = Flow.pkg('core'),
+    coreInst = coreDef(new Flow(
+      {
+        _restrict: 1,
+        node: {
+          _restrict: 1,
+        }
+      }
+    ));
+  equal(coreInst.vetIndexOf(2, coreInst.states[1]), 2, 'Returns the expected index when targeting a descendant of a restricted state.');
+  equal(coreInst.vetIndexOf(2, coreInst.states[2]), -1, 'Returns -1 when targeting the restricted state.');
+  equal(coreInst.vetIndexOf(1, coreInst.states[2]), -1, 'Returns -1 when targeting a state outside the path of the restricted state.');
+});
+
 module('State');
 
-test('scopeVars()', 5, function () {
+test('.scopeVars()', 5, function () {
   var corePkg = Flow.pkg('core'),
     value = 'bar',
     coreInst = corePkg(new Flow({
@@ -320,6 +366,9 @@ test('scopeVars()', 5, function () {
   equal(vto.values.length, 1, 'Passing a truthy value removes an index from the vto values.');
   state.scopeVars(1);
   ok(!coreInst.vars.hasOwnProperty('foo'), 'When the vto has no more values, descoping removes the vto from the package-instance.');
+});
+
+test('.canTgt()', function () {
 });
 
 module('Proxy');
