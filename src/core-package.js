@@ -216,8 +216,8 @@ Flow Package: core
       state.isRoot = idx < 2 ? 1 : !!state.data._root;
       // set rootIndex to self or the parent's root, based on isRoot flag
       state.rootIndex = state.isRoot ? state.index : parent.rootIndex;
-      // set restrict flag, based on the truthiness of the "_restrict" component or the parent's restricted flag
-      state.restrict = !!(state.data._restrict || (parent && parent.restrict));
+      // set restricted path to this state's location, based on the presence of the "_restrict" component or the parent's restrict path
+      state.restrictPath = state.data._restrict ? state.location : (parent ? parent.restrictPath : '');
       // define map function - a curried call to .target()
       state.map = function () {
         // invoke target explicitly
@@ -421,7 +421,7 @@ Flow Package: core
       // use the current state, when state is omitted
       state = state || pkg.states[pkg.tank.currentIndex];
       // return the target index or -1, based on whether the target is valid, given the trust status of the package or the restrictions of the current state
-      return (~targetIdx && (pkg.trust || state.canTgt(pkg.states[targetIdx]))) ? targetIdx : -1;
+      return (~targetIdx && (pkg.trust || !pkg.states[targetIdx].location.indexOf(state.restrictPath))) ? targetIdx : -1;
     },
     // add a variable-tracking-object to this package
     getVar: function (name, value) {
@@ -593,14 +593,6 @@ Flow Package: core
         }
       }
     }
-  };
-
-  // add method to determine if another state can be targeted from this state
-  core.state.canTgt = function (targetState) {
-    // init vars
-    var state = this; // alias self
-    // return true if this state has no restrictions, or when the target is not this state but within it's path
-    return !state.restrict || (state !== targetState && !targetState.location.indexOf(state.location));
   };
 
   // add method to de/scope variables
