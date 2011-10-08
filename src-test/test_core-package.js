@@ -16,7 +16,7 @@ test('Dependencies', 2, function () {
 test('Definition', 8, function () {
   var corePkgDef = Flow.pkg('core');
   'addStatus|events|dataKey|invalidKey|init|onBegin|onTraverse|onEnd'.split('|').forEach(function (mbr) {
-    ok(corePkgDef[mbr], 'The package-definition has a "' + mbr + '" member.');
+    ok(corePkgDef.hasOwnProperty(mbr), 'The package-definition has a "' + mbr + '" member.');
   });
 });
 
@@ -86,9 +86,10 @@ test('program keys', 3, function () {
   ok(hasAllData, 'A state, defined with underscore prefixed keys, has the expected data properties.');
 });
 
-test('_on', 2, function () {
+test('_on', 3, function () {
   var corePkg = Flow.pkg('core'),
     fnc = function () {};
+  equal(corePkg(new Flow(fnc)).states[1].fncs[0], fnc, 'A single function passed to a new Flow is compiled as a function of the state.');
   equal(corePkg(new Flow({_on: fnc})).states[1].fncs[0], fnc, 'The _on component was compiled as a function of the state.');
   equal(corePkg(new Flow({_on: 1})).states[1].fncs[0], 0, 'The _on component was not compiled when not a function.');
 });
@@ -303,7 +304,7 @@ test('.getVar()', 15, function () {
 test('.go()', function () {
 });
 
-test('.indexOf()', function () {
+test('.indexOf()', 8, function () {
   var coreInst = Flow.pkg('core')(new Flow({
       a: {
         b: {
@@ -323,10 +324,11 @@ test('.indexOf()', function () {
   customFunction.toString = function () {
     return qryPath;
   };
-  [null, undefined, function (){}].forEach(function (arg) {
-    equal(coreInst.indexOf(arg), -1, 'Returns -1 when the argument is ' + arg + '.');
+  [null, undefined, function (){}, {}, []].forEach(function (arg) {
+    equal(coreInst.indexOf(arg), -1, 'Returns -1 when the argument is a "' + T.type(arg) + '".');
   });
   equal(coreInst.indexOf(NaN), -1, 'Returns -1 when the query is an out-of-range number.');
+  equal(coreInst.indexOf(''), -1, 'Returns -1 when the query is an empty string.');
   equal(coreInst.indexOf(randIdx), randIdx, 'Returns the same index when the query is an in-range number.');
 });
 
@@ -336,7 +338,7 @@ test('.vetIndexOf()', function () {
       {
         _restrict: 1,
         node: {
-          _restrict: 1,
+          _restrict: 1
         }
       }
     ));
@@ -373,19 +375,102 @@ test('.canTgt()', function () {
 
 module('Proxy');
 
-test('.query', function () {
+test('presence', function () {
+
+});
+
+test('.lock()', function  () {
+  var flow = new Flow(function () {
+      equal(this.lock(), false);
+    }),
+    coreInst = Flow.pkg('core')(flow);
+});
+
+test('.query()', function () {
   var program = {
 
   };
 });
 
-test('.target', function () {
+test('.target()', 22, function () {
+  var rtnVal = {},
+    testVal = {},
+    flow = new Flow({
+      noRtn: function () {}, // 2
+      rtnUndefined: function () { // 3
+        return undefined;
+      },
+      rtn: function () { // 4
+        return rtnVal;
+      },
+      args: { // 5
+        simple: function () { // 6
+          equal(arguments.length, 2, 'Passes additional arguments to the _on function.');
+          ok(arguments[0] === rtnVal && arguments[1] === testVal, 'The expected arguments are passed to the _on function.');
+        },
+        stepped: { // 7
+          _in: function  () {
+            equal(arguments.length, 0, 'No arguments passed to the _in function.');
+          },
+          _on: function () {
+            equal(arguments[0], testVal, 'The expected arguments is passed to the _on function after invoking an _in function.');
+          },
+          _out: function () {
+            equal(arguments.length, 0, 'No arguments passed to the _out function.');
+          }
+        }
+      },
+      bover: { // 8
+        _bover: function () {
+            equal(arguments.length, 0, 'No arguments passed to the _bover function.');
+        }
+      },
+      over: { // 9
+        _over: function () {
+            equal(arguments.length, 0, 'No arguments passed to the _over function.');
+        }
+      },
+      redirect: { // 10
+        _in: function () {
+          ok(this === flow, 'Scope of the component functions is the flow instance.');
+          equal(this.target(NaN), false, 'Returns false when redirecting with invalid parameters.');
+          equal(this.target(1), false, 'Returns false when redirecting with valid paremeters.');
+          this.target(11, rtnVal);
+        },
+        _on: function () {
+          return rtnVal;
+        },
+        end: function () { // 11
+          equal(arguments[0], rtnVal, 'Arguments are changed during redirection.');
+          return false;
+        }
+      }
+    });
+  [
+    [null, false, 'Returns false when the query is "null".'],
+    [undefined, false, 'Returns false when the query is "undefined" (or no query is passed).'],
+    [NaN, false, 'Returns false when the query is an out-of-range number.'],
+    ['', false, 'Returns false when the query is an invalid string.'],
+    [1, true, 'Returns true when the target state has no _on function.'],
+    [0, true, 'Can target the _flow state.'],
+    [2, true, 'Returns true when the function has no return value.'],
+    [3, true, 'Returns true when the function returns "undefined".'],
+    [4, rtnVal, 'Returns the return value when the function returns anything besides "undefined".'],
+    [4, rtnVal, 'Can target the current state.']
+  ].forEach(function (set) {
+    equal(flow.target(set[0]), set[1], set[2]);
+  });
+  flow.target(6, rtnVal, testVal);
+  flow.target(7, testVal);
+  flow.target(0, testVal);
+  equal(flow.target(10, testVal), false, 'Returns result of the final targeted state\'s _on function.');
+  flow.target(0, testVal);
 });
 
-test('.go', function () {
+test('.go()', function () {
 });
 
-test('.vars', function () {
+test('.vars()', function () {
   var flow = new Flow(),
     vName = 'foo',
     vValue = 1,
@@ -397,13 +482,12 @@ test('.vars', function () {
   equal(flow.vars(vName), undefined, 'Returns "undefined" when retrieving an unknown variable.');
   equal(flow.vars(vName, vValue), true, 'Returns true when setting a variable.');
   equal(flow.vars(vName), vValue, 'Returns the value previously set.');
-
 });
 
-test('.args', function () {
+test('.args()', function () {
 });
 
-test('.map', function () {
+test('.map()', function () {
   var program = {
       a: {
         b: {
