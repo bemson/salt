@@ -450,7 +450,8 @@
     // proceed towards the latest/current target
     go: function (tgt) {
       // init vars
-      var pkg = this; // alias self
+      var pkg = this, // alias self
+        wasPaused = pkg.pause; // flag if this flow is being told to go after having been paused
       // if a tgt is given...
       if (tgt > -1) {
         // reset the targets array
@@ -459,7 +460,7 @@
       // unpause this flow
       pkg.pause = 0;
       // exit when pending, untrusted and locked, or direct tank to the first target and return the number of traversals completed
-      return pkg.pending || (pkg.locked && !pkg.trust) ? 0 : pkg.tank.go(pkg.targets[0]);
+      return pkg.pending || (pkg.locked && !pkg.trust) ? 0 : pkg.tank.go(!pkg.targets.length && wasPaused ? pkg.tank.currentIndex : pkg.targets[0]);
     }
   };
 
