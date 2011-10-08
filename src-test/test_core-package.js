@@ -485,6 +485,49 @@ test('.target()', 22, function () {
 test('.go()', function () {
 });
 
+test('.wait()', 10, function () {
+  var tic = -3,
+    flow = new Flow({
+      _in: function () {
+        equal(this.wait(1), true, 'Returns true from a trusted routine with valid arguments.');
+      },
+      _on: function () {
+        this.target(0);
+        equal(this.wait(NaN, 1), false, 'Returns false when passed invalid arguments.');
+        this.wait(2, 1);
+      },
+      redir: function () {
+        ok(1, 'Assumes the first parameter is a query, when passed two arguments.');
+        this.wait(function () {
+          ok(this === flow, 'Scope of callback is the same as that of a component function.');
+          equal(this.wait(3, 1), true, 'Can be called within the _on component function.');
+        },1);
+      },
+      perpetual: function () {
+        if (tic++) {
+          this.wait(1);
+        } else {
+          equal(tic, 1, 'Reinvokes the _on function when called perpetually.');
+          this.target(4);
+        }
+      },
+      done: function () {
+        equal(this.wait(), true, 'Returns true from a trusted routine with no arguments.');
+      },
+      complete: function () {
+        ok(1, 'Pauses indefinitely when passed no arguments.');
+        start();
+      }
+    });
+  equal(flow.wait(), false, 'Returns false when called from an untrusted routine.');
+  equal(flow.wait(1), false, 'Returns false when called from an untrusted routine, and given an argument.');
+  flow.target(1);
+  setTimeout(function () {
+    flow.target(5);
+  }, 50);
+  stop();
+});
+
 test('.vars()', 12, function () {
   var flow = new Flow(),
     vName = 'foo',
