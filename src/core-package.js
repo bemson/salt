@@ -1,6 +1,9 @@
-/*
-Flow Package: core
-*/
+/*!
+ * Flow Package: Core v0.X / Bemi Faison (c) 2011 / MIT
+ * 
+ * Depends on the Flow platform
+ * http://github.com/bemson/Flow/tree/nextgen
+ */
 !function (window, Object, Array, Math, Flow, undefined) {
   // init vars
   var core = Flow.pkg('core'), // define core package
@@ -289,6 +292,10 @@ Flow Package: core
           // get toString version of this function
           qry = qry + '';
         case 'string':
+          // if the string is empty...
+          if (qry == '') {
+            break;
+          }
           // if qry is the _flow or _root id...
           if (qry === '..//' || qry === '//') {
             // set idx to 0 or 1, based on qry
@@ -450,7 +457,7 @@ Flow Package: core
   };
 
   // do something when the tank starts moving
-  core.onBegin = function () {
+  core.onBegin = function (evtName) {
     // init vars
     var pkg = this, // alias this package
       delayFnc = pkg.delay.callback, // capture the callback function (if any)
@@ -483,7 +490,7 @@ Flow Package: core
   };
 
   // do something when the tank traverses a state
-  core.onTraverse = function (phase) {
+  core.onTraverse = function (evtName, phase) {
     // init vars
     var pkg = this, // the package instance
       state = pkg.states[pkg.tank.currentIndex]; // the state being traversed (prototyped, read-only value)
@@ -532,7 +539,7 @@ Flow Package: core
   };
 
   // do something when the tank stops
-  core.onEnd = function () {
+  core.onEnd = function (evtName) {
     // init vars
     var pkg = this, // alias self
       blocked = pkg.pause || pkg.pending; // flag when this flow can not move forward
@@ -793,19 +800,19 @@ Flow Package: core
   core.proxy.target = function (qry) {
     // init vars
     var pkg = core(this), // alias this package
-      tgtIdx = pkg.vetIndexOf(qry), // resolve a state index from qry
-      result = 0; // call status indicator, set to false initially
+      tgtIdx = pkg.vetIndexOf(qry); // resolve a state index from qry
     // if the destination state is valid, and the flow can move...
     if (~tgtIdx) {
       // capture arguments after the tgt
       pkg.args = [].slice.call(arguments).slice(1);
       // navigate towards this index
       pkg.go(tgtIdx);
-      // set result to false when we're pending, paused, or not on the "on" state, otherwise, set to true or the return value
-      result = (pkg.pending || pkg.phase || pkg.pause) ? 0 : (pkg.result === undefined ? 1 : pkg.result);
+    } else { // otherwise, when the target state is invalid...
+      // return false
+      return false;
     }
-    // (otherwise) return flag when we've completed navigating to the target state
-    return !!result;
+    // return false when the navigation does not complete, or return the output of _on component or true when there is none (or it returns undefined)
+    return (pkg.pending || pkg.phase || pkg.pause) ? false : (pkg.result === undefined ? true : pkg.result);
   };
 
   /**
