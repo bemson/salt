@@ -379,11 +379,28 @@ test('presence', function () {
 
 });
 
-test('.lock()', function  () {
+test('.lock()', 17, function  () {
   var flow = new Flow(function () {
-      equal(this.lock(), false);
+      var scope = this;
+      [null, undefined, false, true].forEach(function (arg) {
+        equal(scope.lock(arg), true, 'Returns true when called from a trusted routine and passed "' + T.type(arg) + '".');
+        if (arg) {
+          ok(scope.lock(), 'Passing a "' + T.type(arg) + '" locked the Flow.');
+        } else {
+          ok(!scope.lock(), 'Passing a "' + T.type(arg) + '" unlocked the Flow.');
+        }
+      });
+      
     }),
     coreInst = Flow.pkg('core')(flow);
+  equal(flow.lock(), false, 'A flow is unlocked by default.');
+  [null, undefined, false, true].forEach(function (arg) {
+    equal(flow.lock(), false, 'A flow can not be locked by an untrusted routine, even when passed "' + T.type(arg) + '".');
+  });
+  equal(flow.target(1), true, 'An unlocked flow may be directed.');
+  equal(flow.lock(), true, 'Returns true when called from outside and the Flow is locked.');
+  equal(flow.target(0), true, '.target() returns false for a locked Flow');
+  equal(flow.lock(0), false, 'A flow can not be unlocked by an untrusted routine.');
 });
 
 test('.query()', function () {
