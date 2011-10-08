@@ -193,6 +193,10 @@
     pkg.cache = {
       indexOf: {} // token query cache
     };
+    // flag when api calls are trusted
+    pkg.trust = 0;
+    // flag when a component function is being executed
+    pkg.inFnc = 0;
     // init locked flag
     pkg.locked = 0;
     // init index of state paths
@@ -223,8 +227,13 @@
       state.restrict = !!(state.data._restrict || (parent && parent.restrict));
       // define map function - a curried call to .target()
       state.map = function () {
-        // invoke target explicitly
-        return pkg.proxy.pkgs.core.target(idx, arguments);
+        // init vars
+        var args = [].slice.call(arguments), // capture any arguments
+          scope = pkg.proxy.pkgs.core; // alias this package-proxy
+        // prepend the target index
+        args.unshift(idx);
+        // invoke target explicitly, pass along arguments
+        return scope.target.apply(scope, args);
       };
       // add variable configurations for this state
       state.vars = generateVariableConfigurationObjects(state.data._vars);
@@ -526,8 +535,12 @@
     if (state.fncs[phase]) {
       // note that we are calling this program function
       pkg.calls.push(state.index + '.' + phase);
+      // flag that we're inside a component function
+      pkg.inFnc = 1;
       // execute function, in scope of the proxy - pass arguments when traversing _on[0] on the destination state
       pkg.result = state.fncs[phase].apply(pkg.proxy, (phase || pkg.targets.length - 1) ? [] : pkg.args);
+      // flag that we're outside a component function
+      pkg.inFnc = 0;
     }
     // if we are pending...
     if (pkg.pending) {
@@ -606,7 +619,7 @@
   core.state.canTgt = function (targetState) {
     // init vars
     var state = this; // alias self
-    // return true if this state has no restrictions, or when the target is not this state but within it's path
+    // return true if this state has no restrictions, or when the target is not this state and within it's path
     return !state.restrict || (state !== targetState && !targetState.location.indexOf(state.location));
   };
 
@@ -636,26 +649,9 @@
   };
 
   // add method to return map of this flow's states
-  core.proxy.map = function (qry) {
-    // init vars
-    var pkg = core(this), // alias the package instance
-      mapIdx = 1, // state index to retrieve map
-      qryIdx; // indice to resolve from given query
-    // if arguments were given...
-    if (arguments.length) {
-      // get the index of the qry
-      qryIdx = pkg.indexOf(qry);
-      // if the query is valid...
-      if (~qryIdx) {
-        // set mapIdx to the found qryIdx
-        mapIdx = Math.max(mapIdx, qryIdx);
-      } else { // otherwise, when the query is invalid...
-        // return false
-        return false;
-      }
-    }
-    // return pre-made function-list - from the root or queried state
-    return pkg.states[mapIdx].map;
+  core.proxy.map = function () {
+    // return pre-made function-list
+    return core(this).states[1].map;
   };
 
   // add method to 
@@ -811,8 +807,8 @@
       // return false
       return false;
     }
-    // return false when the navigation does not complete, or return the output of _on component or true when there is none (or it returns undefined)
-    return (pkg.pending || pkg.phase || pkg.pause) ? false : (pkg.result === undefined ? true : pkg.result);
+    // return false when called during navigation or the navigation has not completed. Otherwise, return the result of the _on function, or true when that result is undefined.
+    return (pkg.inFnc || pkg.pending || pkg.phase || pkg.pause) ? false : (pkg.result === undefined ? true : pkg.result);
   };
 
   /**
