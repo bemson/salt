@@ -20,12 +20,12 @@ test('Definition', 8, function () {
   });
 });
 
-test('Instance', 16, function () {
+test('Instance', 18, function () {
   var coreInst = Flow.pkg('core')(new Flow());
   'indexOf|vetIndexOf|getVar|go'.split('|').forEach(function (mbr) {
     equal(typeof coreInst[mbr], 'function', 'The package-instance method "' + mbr + '" is present.');
   });
-  'args|calls|route|vars|delay|cache|locked|stateIds|pending|parentFlows|targets|phase'.split('|').forEach(function (mbr) {
+  'inFnc|trust|args|calls|route|vars|delay|cache|locked|stateIds|pending|parentFlows|targets|phase'.split('|').forEach(function (mbr) {
     ok(typeof coreInst[mbr] !== 'undefined', 'The package-instance property "' + mbr + '" is present.');
   });
 });
@@ -410,6 +410,8 @@ test('.target()', 22, function () {
         },
         stepped: { // 7
           _in: function  () {
+            ok(this === flow, 'Scope of the component functions is the flow instance.');
+            equal(this.target(NaN), false, 'Returns false when redirecting with invalid parameters.');
             equal(arguments.length, 0, 'No arguments passed to the _in function.');
           },
           _on: function () {
@@ -431,13 +433,9 @@ test('.target()', 22, function () {
         }
       },
       redirect: { // 10
-        _in: function () {
-          ok(this === flow, 'Scope of the component functions is the flow instance.');
-          equal(this.target(NaN), false, 'Returns false when redirecting with invalid parameters.');
+        _on: function () {
           equal(this.target(1), false, 'Returns false when redirecting with valid paremeters.');
           this.target(11, rtnVal);
-        },
-        _on: function () {
           return rtnVal;
         },
         end: function () { // 11
@@ -462,7 +460,7 @@ test('.target()', 22, function () {
   });
   flow.target(6, rtnVal, testVal);
   flow.target(7, testVal);
-  flow.target(0, testVal);
+  flow.target(4, testVal);
   equal(flow.target(10, testVal), false, 'Returns result of the final targeted state\'s _on function.');
   flow.target(0, testVal);
 });
@@ -487,34 +485,43 @@ test('.vars()', function () {
 test('.args()', function () {
 });
 
-test('.map()', function () {
-  var program = {
+test('.map()', 12, function () {
+  var rtnVal = {},
+    program = {
       a: {
-        b: {
-          c: {}
-        },
-        d: {}
+        b: 1,
+        c: 1
+      },
+      undef: function () {
+        return undefined;
+      },
+      delayed: function () {
+        this.wait();
+      },
+      rtnVal: function () {
+        return rtnVal;
+      },
+      sum: function (a, b) {
+        return a + b;
+      },
+      redirect: function () {
+        equal(map.rtnVal(), false, 'Returns false when invoked within a component function.');
+        return false;
       }
     },
-    type = T.type,
     flow = new Flow(program),
     coreInst = Flow.pkg('core')(flow),
     curIndex = coreInst.tank.currentIndex,
     map = flow.map();
-  [null, undefined, NaN, /./, 'foo', {}, [], function () {}].forEach(function (arg) {
-    equal(flow.map(arg), false, 'This method returns false when given \'' + arg + '\', a "' + type(arg) + '".');
-  });
-  equal(typeof map, 'function', 'Method returns a function by default.');
-  ok(flow.map().hasOwnProperty('toString'), 'Map functions have custom .toString function.');
-  ok(map.a && map.a.b && map.a.b.c && map.a.d, 'Map functions match the program order and heirarchy.');
-  equal(typeof map(), 'boolean', 'Map functions return a boolean.');
-  ok(curIndex !== coreInst.tank.currentIndex, 'Map functions change the state of a flow instance.');
-  coreInst.states.forEach(function (state, idx) {
-    var map = flow.map(idx);
-    if (idx) {
-      equal(state.map, map, 'Passing ' + idx + ' returns the .map member of the corresponding state.');
-    } else {
-      equal(coreInst.states[1].map, map, 'Passing 0, returns the .map member from the program state (at index 1).');
-    }
-  });
+  equal(typeof map, 'function', 'Returns a function by default.');
+  equal(map, coreInst.states[1].map, 'The function is the ".map" member of the _program state.');
+  ok(map.hasOwnProperty('toString'), 'Have a custom .toString function.');
+  ok(map.a && map.a.b && map.a.c, 'Functions match the order and heirarchy of the program.');
+  equal(map(), true, 'Returns true when the corresponding state has no _on function');
+  equal(map.undef(), true, 'Returns true when the corresponding state has an _on function that returns "undefined"".');
+  equal(map.delayed(), false, 'Returns false when a component function halts traversal.');
+  equal(map.rtnVal(), rtnVal, 'Returns a value when the corresponding state has an _on function that returns a value.');
+  equal(map.sum(2, 2), 4, 'Passes arguments to the _on function.');
+  equal(map.redirect(), rtnVal, 'Returns result of the final state when redirected.');
+  ok(curIndex !== coreInst.tank.currentIndex, 'Changes the current state of a Flow.');
 });
