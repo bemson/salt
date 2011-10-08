@@ -468,16 +468,17 @@ test('.target()', 22, function () {
 test('.go()', function () {
 });
 
-test('.vars()', function () {
+test('.vars()', 12, function () {
   var flow = new Flow(),
     vName = 'foo',
-    vValue = 1,
-    type = T.type;
-  equal(type(flow.vars()), 'array', 'Returns an array when called without arguments.');
+    vValue = 1;
+  equal(T.type(flow.vars()), 'array', 'Returns an array when called without arguments.');
+  equal(flow.vars().length, 0, 'The array is empty by default.');
   [null, undefined, [], {}, function () {}, NaN].forEach(function (arg) {
     equal(flow.vars(arg), false, 'Returns false when the first argument is not a string.');
   });
   equal(flow.vars(vName), undefined, 'Returns "undefined" when retrieving an unknown variable.');
+  equal(flow.vars()[0], vName, 'The array contains the names of active variables.');
   equal(flow.vars(vName, vValue), true, 'Returns true when setting a variable.');
   equal(flow.vars(vName), vValue, 'Returns the value previously set.');
 });
