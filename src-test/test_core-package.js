@@ -20,12 +20,12 @@ test('Definition', 8, function () {
   });
 });
 
-test('Instance', 18, function () {
+test('Instance', 17, function () {
   var coreInst = Flow.pkg('core')(new Flow());
   'indexOf|vetIndexOf|getVar|go'.split('|').forEach(function (mbr) {
     equal(typeof coreInst[mbr], 'function', 'The package-instance method "' + mbr + '" is present.');
   });
-  'inFnc|trust|args|calls|route|vars|delay|cache|locked|stateIds|pending|parentFlows|targets|phase'.split('|').forEach(function (mbr) {
+  'trust|args|calls|route|vars|delay|cache|locked|stateIds|pending|parentFlows|targets|phase'.split('|').forEach(function (mbr) {
     ok(typeof coreInst[mbr] !== 'undefined', 'The package-instance property "' + mbr + '" is present.');
   });
 });

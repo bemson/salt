@@ -195,8 +195,6 @@
     };
     // flag when api calls are trusted
     pkg.trust = 0;
-    // flag when a component function is being executed
-    pkg.inFnc = 0;
     // init locked flag
     pkg.locked = 0;
     // init index of state paths
@@ -535,12 +533,8 @@
     if (state.fncs[phase]) {
       // note that we are calling this program function
       pkg.calls.push(state.index + '.' + phase);
-      // flag that we're inside a component function
-      pkg.inFnc = 1;
       // execute function, in scope of the proxy - pass arguments when traversing _on[0] on the destination state
       pkg.result = state.fncs[phase].apply(pkg.proxy, (phase || pkg.targets.length - 1) ? [] : pkg.args);
-      // flag that we're outside a component function
-      pkg.inFnc = 0;
     }
     // if we are pending...
     if (pkg.pending) {
@@ -808,7 +802,7 @@
       return false;
     }
     // return false when called during navigation or the navigation has not completed. Otherwise, return the result of the _on function, or true when that result is undefined.
-    return (pkg.inFnc || pkg.pending || pkg.phase || pkg.pause) ? false : (pkg.result === undefined ? true : pkg.result);
+    return (pkg.trust || pkg.pending || pkg.phase || pkg.pause) ? false : (pkg.result === undefined ? true : pkg.result);
   };
 
   /**
