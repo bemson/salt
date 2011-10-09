@@ -1,10 +1,10 @@
 /*!
  * Flow Package: Core v0.X / Bemi Faison (c) 2011 / MIT
- * 
+ *
  * Depends on the Flow platform
  * http://github.com/bemson/Flow/tree/nextgen
  */
-!function (window, Object, Array, Math, Flow, undefined) {
+!function (window, Object, Array, Math, Flow, isNaN, undefined) {
   // init vars
   var core = Flow.pkg('core'), // define core package
     /*
@@ -746,8 +746,7 @@
   core.proxy.args = function (idx, value) {
     // init vars
     var pkg = core(this), // get package
-      args = pkg.args, // alias arguments from this package
-      argsLn = args.length, // capture number of args elements
+      pkgArgs = pkg.args, // alias arguments from this package
       argCnt = arguments.length, // get number of arguments passed
       idxType = typeOf(idx), // get type of first argument
       rtn = true; // value to return (default is true)
@@ -757,31 +756,28 @@
       if (idxType === 'array') {
         // replace args with a copy of the idx array
         pkg.args = [].concat(idx);
-      } else if (idxType === 'number') { // or, when idx is a number (assuming an integer)...
+      } else if (idxType === 'number' && !isNaN(idx) && (idx = ~~idx) > -1) { // or, when idx is a number...
         // if a value was passed...
         if (argCnt > 1) {
           // if the value is undefined and the last index was targeted...
-          if (value === undefined && idx === argsLn - 1) {
+          if (value === undefined && idx === pkgArgs.length - 1) {
             // remove the last index
-            args.pop();
-          } else { // otherwise, when not setting the last index to an undefined value...
-            // set the value at this index
-            args[idx] = value;
+            pkgArgs.pop();
+          } else { // otherwise, when not removing the last index
+            // set the value of the target index
+            pkgArgs[idx] = value;
           }
-        } else if (idx > -1 && idx < argsLn) { // or, when no value is passed and the idx is a valid...
-          // return the value at the targeted index
-          rtn = args[idx];
-        } else { // otherwise, when no value is passed and the index is invalid...
-          // flag failure to retrieve this index
-          rtn = false;
+        } else { // otherwise, when a second parameter was not passed...
+          // return the value of the targeted index (could be undefined)
+          rtn = pkgArgs[idx];
         }
-      } else { // otherwise, when the type of idx is invalid...
+      } else { // otherwise, when idx is invalid (wrong type or a negative number)...
         // flag failure to return anything because idx is unrecognized
         rtn = false;
       }
     } else if (!argCnt) { // otherwise, when given no arguments...
-      // return a copy of the arguments array (always available - even to locked flows)
-      rtn = args.concat();
+      // return a copy of the arguments array (available to locked flows)
+      rtn = [].concat(pkgArgs);
     }
     // send return value
     return rtn;
@@ -967,4 +963,4 @@
       state: current.name
     };
   };
-}(this, Object, Array, Math, Flow);
+}(this, Object, Array, Math, Flow, isNaN);

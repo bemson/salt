@@ -489,23 +489,23 @@ test('.wait()', 10, function () {
   var tic = -3,
     flow = new Flow({
       _in: function () {
-        equal(this.wait(1), true, 'Returns true from a trusted routine with valid arguments.');
+        equal(this.wait(100), true, 'Returns true from a trusted routine with valid arguments.');
       },
       _on: function () {
         this.target(0);
-        equal(this.wait(NaN, 1), false, 'Returns false when passed invalid arguments.');
-        this.wait(2, 1);
+        equal(this.wait(NaN, 100), false, 'Returns false when passed invalid arguments.');
+        this.wait(2, 100);
       },
       redir: function () {
         ok(1, 'Assumes the first parameter is a query, when passed two arguments.');
         this.wait(function () {
           ok(this === flow, 'Scope of callback is the same as that of a component function.');
-          equal(this.wait(3, 1), true, 'Can be called within the _on component function.');
-        },1);
+          equal(this.wait(3, 100), true, 'Can be called within the _on component function.');
+        },100);
       },
       perpetual: function () {
         if (tic++) {
-          this.wait(1);
+          this.wait(100);
         } else {
           equal(tic, 1, 'Reinvokes the _on function when called perpetually.');
           this.target(4);
@@ -520,11 +520,11 @@ test('.wait()', 10, function () {
       }
     });
   equal(flow.wait(), false, 'Returns false when called from an untrusted routine.');
-  equal(flow.wait(1), false, 'Returns false when called from an untrusted routine, and given an argument.');
+  equal(flow.wait(100), false, 'Returns false when called from an untrusted routine, and given an argument.');
   flow.target(1);
   setTimeout(function () {
     flow.target(5);
-  }, 50);
+  }, 1000);
   stop();
 });
 
@@ -544,6 +544,39 @@ test('.vars()', 12, function () {
 });
 
 test('.args()', function () {
+  var val1 = {},
+    val2 = {},
+    valAry = [val1, val2],
+    flow = new Flow({
+      none: {
+        _in: function () {
+          var args = this.args();
+          equal(arguments.length, 0, 'No arguments are passed to non _on functions.');
+          equal(args.length, 0, 'There are no flow arguments.');
+        },
+        _on: function () {
+          
+        }
+      },
+      paused: function () {
+        this.wait();
+      }
+    }),
+    map = flow.map();
+  equal(T.type(flow.args()), 'array', 'Returns an array when passed no parameters.');
+  equal(flow.args(1), undefined, 'Returns "undefined" when passed a valid index.');
+  [NaN, -1, function () {}, {}, true].forEach(function (arg) {
+    equal(flow.args(arg), false, 'Returns false when the first index is "' + arg + '".');
+  });
+  equal(flow.args(valAry), true, 'Returns true when passed an array.');
+  equal(flow.args()[valAry.length - 1], valAry[valAry.length - 1], 'Passing an array replaces the flow arguments.');
+  map.none();
+  equal(flow.args().length, 0, 'There are no arguments when a flow completes navigating.');
+  map.paused(val1);
+  equal(flow.args()[0], val1, 'Arguments are available when the flow is paused.');
+  equal(flow.args(1, val2), true, 'Returns true when passed a valid index and second argument.');
+  flow.args(1, undefined);
+  equal(flow.args().length, 1, 'Removes the last argument when setting the last indice to undefined.');
 });
 
 test('.map()', 12, function () {
