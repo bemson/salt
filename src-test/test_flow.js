@@ -511,3 +511,20 @@ test('postBacks', 9, function () {
   ok(!pkgDef.onTraverse, '.onTraverse is reset.');
   ok(!pkgDef.onEnd, '.onEnd is reset.');
 });
+
+module('Scenario');
+
+test('Newer packages override same-name proxy methods.', function () {
+  var firstPkgDef = Flow.pkg(FT.pkgName),
+    secondPkgDef = Flow.pkg('override'),
+    value = 'hello world!';
+    flow = new Flow(value);
+  firstPkgDef.proxy.greet = function () {
+    return firstPkgDef(this).states[1].value;
+  };
+  secondPkgDef.proxy.greet = function () {
+    return this.pkgs[FT.pkgName].greet();
+  };
+  strictEqual(flow.greet, secondPkgDef.proxy.greet, 'The last defined package overrides methods defined by earlier packages.');
+  equal(flow.greet(), value, 'Newer packages can invoke older package methods.');
+});
