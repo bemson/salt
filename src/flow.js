@@ -294,14 +294,13 @@
       // define scoped call to direct this flow
       go: function (tgt) {
         // init vars
-        var idx = ~~tgt, // convert to integer
-          tgtState = typeof tgt !== 'object' && flow.states[idx]; // alias the target state (if any)
+        var tgtState = flow.states[tgt]; // alias the target state (if any)
         // if the target is a valid...
-        if (tgtState && (idx > 0 || idx == tgt)) {
+        if (tgtState) {
           // capture the targeted state
           flow.target = tgtState;
           // set target index
-          flow.shared.targetIndex = idx;
+          flow.shared.targetIndex = tgtState.index;
           // set internal stop flag
           flow.stop = 0;
           // traverse towards the target - return number of traversals
