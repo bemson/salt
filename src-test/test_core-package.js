@@ -482,7 +482,106 @@ test('.target()', 22, function () {
   flow.target(0, testVal);
 });
 
-test('.go()', function () {
+test('.go()', 18, function () {
+  var tic = 0,
+    multiTic = 0,
+    pendTic = 0,
+    pendFlow = new Flow({
+      _in: function () {
+        this.wait();
+      }
+    }),
+    flow = new Flow({
+      retValue: function () {
+        return 1;
+      },
+      multiple: {
+        a: function () {
+          multiTic++;
+        },
+        b: function () {
+          multiTic++;
+        },
+        c: function () {
+          multiTic++;
+        }
+      },
+      redirect: {
+        _root: 1,
+        _in: function () {
+          this.go('/add1');
+        },
+        _on: function () {
+          equal(tic, 6, 'Prepends waypoints when invoked outside an _on function.');
+        },
+        add1: function () {
+          tic += 1;
+          this.go('/add2');
+        },
+        add2: {
+          _on: function () {
+            equal(tic, 1, 'Appends waypoints when invoked in an _on function.');
+            tic += 2;
+          },
+          _out: function () {
+            this.go('/add3');
+          }
+        },
+        add3: function () {
+          tic += 3;
+        }
+      },
+      pause: {
+        _in: function () {
+          this.wait();
+        }
+      },
+      fauxPause: {
+        _in: function () {
+          this.wait(100);
+          this.go();
+        },
+        _on: function () {
+          ok(1, 'Cancels prior delays set by proxy.wait().');
+        }
+      },
+      pending: {
+        _on: function () {
+          pendFlow.go(1);
+        },
+        stop: function () {
+          ok(1, 'Impacts route when called on a pending flow.');
+        }
+      },
+      nonpending: function () {
+        pendTic++;
+        pendFlow.go(1);
+      }
+    });
+  equal(flow.go(), false, 'Returns false when passed no arguments and there is no target state.');
+  [
+    [null, false, 'Returns false when the query is "null".'],
+    [undefined, false, 'Returns false when the query is "undefined" (or no query is passed).'],
+    [NaN, false, 'Returns false when the query is an out-of-range number.'],
+    ['', false, 'Returns false when the query is an invalid string.'],
+    [0, true, 'Returns true when the flow traverses a state.'],
+    ['//retValue/', true, 'Ignores the value returned by an _on function.'],
+    ['//pause/', true, 'Returns true even when navigation is stopped.']
+  ].forEach(function (set) {
+    equal(flow.go(set[0]), set[1], set[2]);
+  });
+  equal(flow.go(4, 5, 6, ''), false, 'Returns false when one target state is invalid.');
+  equal(flow.go(4, 5, 6), true, 'Returns true when all target states are valid.');
+  equal(multiTic, 3, 'Traverses multiple states.');
+  flow.go('//redirect/');
+  flow.go('//fauxPause/');
+  flow.go('//pending/');
+  equal(flow.go('//pending/stop'), false, 'Returns false when the flow is pending (another flow).');
+  pendFlow.go();
+  pendFlow.go(0);
+  equal(flow.go('//nonpending/'), true, 'Unpends parent flows.');
+  pendFlow.go();
+  equal(pendTic, 1, 'Did not fire the _on function of a pending state!');
 });
 
 test('.wait()', 10, function () {
@@ -543,7 +642,7 @@ test('.vars()', 12, function () {
   equal(flow.vars(vName), vValue, 'Returns the value previously set.');
 });
 
-test('.args()', function () {
+test('.args()', 18, function () {
   var val1 = {},
     val2 = {},
     valAry = [val1, val2],
@@ -553,9 +652,11 @@ test('.args()', function () {
           var args = this.args();
           equal(arguments.length, 0, 'No arguments are passed to non _on functions.');
           equal(args.length, 0, 'There are no flow arguments.');
+          this.args(0, val2);
         },
-        _on: function () {
-          
+        _on: function (arg) {
+          equal(arg, val2, 'Sets arguments passed to the _on function.');
+          equal(arguments.length, 1, 'No additional arguments are sent.');
         }
       },
       paused: function () {
@@ -570,6 +671,8 @@ test('.args()', function () {
   });
   equal(flow.args(valAry), true, 'Returns true when passed an array.');
   equal(flow.args()[valAry.length - 1], valAry[valAry.length - 1], 'Passing an array replaces the flow arguments.');
+  valAry.push(val1);
+  ok(flow.args().length !== valAry.length, 'Returns a cloned array.');
   map.none();
   equal(flow.args().length, 0, 'There are no arguments when a flow completes navigating.');
   map.paused(val1);
@@ -618,4 +721,22 @@ test('.map()', 12, function () {
   equal(map.sum(2, 2), 4, 'Passes arguments to the _on function.');
   equal(map.redirect(), rtnVal, 'Returns result of the final state when redirected.');
   ok(curIndex !== coreInst.tank.currentIndex, 'Changes the current state of a Flow.');
+});
+
+module('Scenario')
+
+test('A locked flow denies external changes via proxy.args().', function () {
+  
+});
+
+test('proxy.go() does not clear flow arguments.', function () {
+  
+});
+
+test('proxy.go() resumes paused flows', function () {
+  
+});
+
+test('proxy.status() is accurate during navigation.', function () {
+  
 });
