@@ -202,7 +202,7 @@
     // the number of child flows fired by this flow's program functions
     pkg.pending = 0;
     // collect parent flow references
-    pkg.parentFlows = [];
+    pkg.parents = [];
     // collection of targeted states
     pkg.targets = [];
     // identify the initial state for this flow, 0 by default
@@ -475,9 +475,9 @@
       // increment the number of child flows for the parent flow
       parentFlow.pending++;
       // if this parent is unique...
-      if (!~pkg.parentFlows.indexOf(parentFlow)) {
+      if (!~pkg.parents.indexOf(parentFlow)) {
         // capture for later
-        pkg.parentFlows.unshift(parentFlow);
+        pkg.parents.unshift(parentFlow);
       }
     }
     // add this flow to the activeFlows list
@@ -502,48 +502,51 @@
     // init vars
     var pkg = this, // the package instance
       state = pkg.states[pkg.tank.currentIndex]; // the state being traversed (prototyped, read-only value)
-    // trust api calls
-    pkg.trust = 1;
-    // if there is an out state...
-    if (pkg.outState) {
-      // descope variables in the outstate
-      pkg.outState.scopeVars(1);
-      // clear the outstate
-      pkg.outState = 0;
-    }
-    // based on the motion id...
-    switch (phase) {
-      case 1: // in
-        // scope variables for this state
-        state.scopeVars();
-      break;
+    // if going towards an actual target...
+    if (pkg.targets.length) {
+      // trust api calls
+      pkg.trust = 1;
+      // if there is an out state...
+      if (pkg.outState) {
+        // descope variables in the outstate
+        pkg.outState.scopeVars(1);
+        // clear the outstate
+        pkg.outState = 0;
+      }
+      // based on the motion id...
+      switch (phase) {
+        case 1: // in
+          // scope variables for this state
+          state.scopeVars();
+        break;
 
-      case 2: // out
-        // set the outState to the current state
-        pkg.outState = state;
-      break;
+        case 2: // out
+          // set the outState to the current state
+          pkg.outState = state;
+        break;
+      }
+      // capture this phase
+      pkg.phase = phase;
+      // if the current index is not the same as the last one in the route...
+      if (state.index !== pkg.route.slice(-1)[0]) {
+        // add index to the route
+        pkg.route.push(state.index);
+      }
+      // if there is a function for this phase...
+      if (state.fncs[phase]) {
+        // note that we are calling this program function
+        pkg.calls.push(state.index + '.' + phase);
+        // execute function, in scope of the proxy - pass arguments when traversing _on[0] on the destination state
+        pkg.result = state.fncs[phase].apply(pkg.proxy, (phase || pkg.targets.length - 1) ? [] : pkg.args);
+      }
+      // if we are pending...
+      if (pkg.pending) {
+        // stop navigating
+        pkg.tank.stop();
+      }
+      // untrust api calls
+      pkg.trust = 0;
     }
-    // capture this phase
-    pkg.phase = phase;
-    // if the current index is not the same as the last one in the route...
-    if (state.index !== pkg.route.slice(-1)[0]) {
-      // add index to the route
-      pkg.route.push(state.index);
-    }
-    // if there is a function for this phase...
-    if (state.fncs[phase]) {
-      // note that we are calling this program function
-      pkg.calls.push(state.index + '.' + phase);
-      // execute function, in scope of the proxy - pass arguments when traversing _on[0] on the destination state
-      pkg.result = state.fncs[phase].apply(pkg.proxy, (phase || pkg.targets.length - 1) ? [] : pkg.args);
-    }
-    // if we are pending...
-    if (pkg.pending) {
-      // stop navigating
-      pkg.tank.stop();
-    }
-    // untrust api calls
-    pkg.trust = 0;
   };
 
   // do something when the tank stops
@@ -577,30 +580,24 @@
           // clear route
           pkg.route = [];
           // if there are parent flows...
-          if (pkg.parentFlows.length) {
+          if (pkg.parents.length) {
             // remove a child from each parent
-            pkg.parentFlows.forEach(function (parentFlow) {
+            pkg.parents.forEach(function (parentFlow) {
               // remove child from parent (now)
-              pkg.parentFlows.pending--;
+              parentFlow.pending--;
             });
             // queue post-loop callback
             pkg.tank.post(function () {
               // copy the parents
-              var parents = [].concat(pkg.parentFlows);
+              var parents = [].concat(pkg.parents);
               // clear parents
-              pkg.parentFlows = [];
+              pkg.parents = [];
               // tell each parent flow...
               parents.forEach(function (parentFlow) {
                 // if there are no child flows left...
-                if (!--parentFlow.pending) {
-                  // if not in "on" phase...
-                  if (parentFlow.phase) {
-                    // tell the parent to resume (towards it's target)
-                    parentFlow.go();
-                  } else { // otherwise, when pended during the parent's "on" phase...
-                    // tell the parent's tank to complete this cycle
-                    parentFlow.tank.go();
-                  }
+                if (!parentFlow.pending) {
+                  // tell the parent to resume (towards it's target)
+                  parentFlow.go();
                 }
               });
             });
