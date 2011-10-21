@@ -6,7 +6,8 @@ var T = {
 
 module('Package');
 
-test('Dependencies', 2, function () {
+test('Dependencies', 3, function () {
+  ok(Array.prototype.indexOf, 'Array.prototype.indexOf exists.');
   ok(Array.prototype.every, 'Array.prototype.every exists.');
   ok(Flow.pkg().filter(function (pkg) {
       return pkg === 'core';
