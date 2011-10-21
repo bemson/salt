@@ -25,7 +25,7 @@ test('Instance', 17, function () {
   'indexOf|vetIndexOf|getVar|go'.split('|').forEach(function (mbr) {
     equal(typeof coreInst[mbr], 'function', 'The package-instance method "' + mbr + '" is present.');
   });
-  'trust|args|calls|route|vars|delay|cache|locked|stateIds|pending|parentFlows|targets|phase'.split('|').forEach(function (mbr) {
+  'trust|args|calls|route|vars|delay|cache|locked|stateIds|pending|parents|targets|phase'.split('|').forEach(function (mbr) {
     ok(typeof coreInst[mbr] !== 'undefined', 'The package-instance property "' + mbr + '" is present.');
   });
 });
@@ -486,10 +486,8 @@ test('.go()', 18, function () {
   var tic = 0,
     multiTic = 0,
     pendTic = 0,
-    pendFlow = new Flow({
-      _in: function () {
-        this.wait();
-      }
+    pendFlow = new Flow(function () {
+      this.wait();
     }),
     flow = new Flow({
       retValue: function () {
@@ -550,7 +548,7 @@ test('.go()', 18, function () {
           pendFlow.go(1);
         },
         stop: function () {
-          ok(1, 'Impacts route when called on a pending flow.');
+          ok(1, 'Changes route while a flow is pending.');
         }
       },
       nonpending: function () {
@@ -576,9 +574,8 @@ test('.go()', 18, function () {
   flow.go('//redirect/');
   flow.go('//fauxPause/');
   flow.go('//pending/');
-  equal(flow.go('//pending/stop'), false, 'Returns false when the flow is pending (another flow).');
+  equal(flow.go('//pending/stop/'), false, 'Returns false when the flow is pending (another flow).');
   pendFlow.go();
-  pendFlow.go(0);
   equal(flow.go('//nonpending/'), true, 'Unpends parent flows.');
   pendFlow.go();
   equal(pendTic, 1, 'Did not fire the _on function of a pending state!');
@@ -596,15 +593,16 @@ test('.wait()', 10, function () {
         this.wait(2, 100);
       },
       redir: function () {
+        var scope = this;
         ok(1, 'Assumes the first parameter is a query, when passed two arguments.');
         this.wait(function () {
-          ok(this === flow, 'Scope of callback is the same as that of a component function.');
+          ok(this === scope, 'Scope of callback is the same as that of a component function.');
           equal(this.wait(3, 100), true, 'Can be called within the _on component function.');
-        },100);
+        }, 100);
       },
       perpetual: function () {
         if (tic++) {
-          this.wait(100);
+          this.wait(3, 100);
         } else {
           equal(tic, 1, 'Reinvokes the _on function when called perpetually.');
           this.target(4);
@@ -620,12 +618,14 @@ test('.wait()', 10, function () {
     });
   equal(flow.wait(), false, 'Returns false when called from an untrusted routine.');
   equal(flow.wait(100), false, 'Returns false when called from an untrusted routine, and given an argument.');
+
   flow.target(1);
   setTimeout(function () {
     flow.target(5);
   }, 1000);
   stop();
 });
+
 
 test('.vars()', 12, function () {
   var flow = new Flow(),
