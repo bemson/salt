@@ -107,96 +107,58 @@
           }
         }
       }
-    );
+    ),
+    arrayPrototype = Array.prototype; // alias for minification purposes
   /**
-    Shims for missing native object methods (on crap browsers). Code borrowed from https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/
+    Shims for missing native object methods (on crap browsers).
+    WARNING: These methods are not robust and do no validation! They merely support the needs of this library.
+    Shim these methods yourself before loading this script, if you want something equivalent to https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/
     Ofcourse, we're targeting IE here. I didn't want to include this, but - then again - no one wants to work with IE... We just have to.
   */
-  if (!pkgDefs.some) {
-    Array.prototype.some = function(fun /*, thisp */) {
-      "use strict";
-
-      if (this === void 0 || this === null)
-        throw new TypeError();
-
-      var t = Object(this);
-      var len = t.length >>> 0;
-      if (typeof fun !== "function")
-        throw new TypeError();
-
-      var thisp = arguments[1];
-      for (var i = 0; i < len; i++) {
-        if (i in t && fun.call(thisp, t[i], i, t))
+  if (!arrayPrototype.some) {
+    arrayPrototype.some = function(fnc, scope) {
+      for (var i = 0, j = this.length; i < j; i++) {
+        if (fnc.call(scope, this[i], i, this)) {
           return true;
+        }
       }
-
       return false;
     };
   }
-  if (!pkgDefs.filter) {
-    Array.prototype.filter = function(fun /*, thisp */) {
-      "use strict";
-
-      if (this === void 0 || this === null)
-        throw new TypeError();
-
-      var t = Object(this);
-      var len = t.length >>> 0;
-      if (typeof fun !== "function")
-        throw new TypeError();
-
-      var res = [];
-      var thisp = arguments[1];
-      for (var i = 0; i < len; i++) {
-        if (i in t) {
-          var val = t[i]; // in case fun mutates this
-          if (fun.call(thisp, val, i, t))
-            res.push(val);
+  if (!arrayPrototype.filter) {
+    arrayPrototype.filter = function(fnc, scope) {
+      var results = [],
+        i = 0,
+        j = this.length,
+        value;
+      for (; i < j; i++) {
+        value = this[i];
+        if (fnc.call(scope, value, i, this)) {
+          results.push(value);
         }
       }
-
-      return res;
+      return results;
     };
   }
-  if (!pkgDefs.forEach) {
-    Array.prototype.forEach = function(fun /*, thisp */) {
-      "use strict";
-
-      if (this === void 0 || this === null)
-        throw new TypeError();
-
-      var t = Object(this);
-      var len = t.length >>> 0;
-      if (typeof fun !== "function")
-        throw new TypeError();
-
-      var thisp = arguments[1];
-      for (var i = 0; i < len; i++) {
-        fun.call(thisp, t[i], i, t);
+  if (!arrayPrototype.forEach) {
+    arrayPrototype.forEach = function(fnc, scope) {
+      for (var i = 0, j = this.length; i < j; i++) {
+        fnc.call(scope, this[i], i, this);
       }
     };
   }
-  if (!pkgDefs.map) {
-    Array.prototype.map = function(fun /*, thisp */) {
-      "use strict";
-
-      if (this === void 0 || this === null)
-        throw new TypeError();
-
-      var t = Object(this);
-      var len = t.length >>> 0;
-      if (typeof fun !== "function")
-        throw new TypeError();
-
-      var res = new Array(len);
-      var thisp = arguments[1];
-      for (var i = 0; i < len; i++) {
-        res[i] = fun.call(thisp, t[i], i, t);
+  if (!arrayPrototype.map) {
+    arrayPrototype.map = function(fnc, scope) {
+      var i = 0,
+        j = this.length,
+        results = new Array(j);
+      for (; i < j; i++) {
+        results[i] = fnc.call(scope, this[i], i, this);
       }
-
-      return res;
+      return results;
     };
   }
+
   // define prototype base for FlowAPI instances
   function ProxyModel() {}
   // make sure it's constructor points to the public Flow(API) function (for those who care)
