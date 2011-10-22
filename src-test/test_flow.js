@@ -212,9 +212,9 @@ test('API', 47, function () {
   ok(tank.id, 'The .id member is a number greater than 0.');
   // .go()
   equal(tank.go.length, 1, 'The .go() method expects one parameter.');
-  strictEqual(tank.go(), false, 'The .go() method returns false when passed no argument.');
+  strictEqual(tank.go(), 0, 'The .go() method returns false when passed no argument.');
   badIdx.forEach(function (idx) {
-    strictEqual(tank.go(idx), false, 'The .go() method returns false when passed a "' + type(idx) + '".');
+    strictEqual(tank.go(idx), 0, 'The .go() method returns 0 when passed a "' + type(idx) + '".');
   });
   equal(typeof tank.go(0), 'number', 'The .go() method returns a number when passed a valid state index.');
   tank.go(1);
@@ -222,7 +222,7 @@ test('API', 47, function () {
   // .stop()
   equal(tank.stop.length, 0, 'The .stop() method expects no parameters.');
   badIdx.forEach(function (idx) {
-    strictEqual(tank.stop(idx), true, 'The .stop() method returns true when passed a "' + type(idx) + '".');
+    ok(!tank.stop(idx), 'The .stop() method returns falsy when passed a "' + type(idx) + '".');
   });
   // .go()
   equal(tank.post.length, 1, 'The .post() method expects one parameter.');
