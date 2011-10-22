@@ -194,47 +194,46 @@ test('State', function () {
   equal(typeof states[0].targetMethod, 'undefined', 'State methods can be deleted from the package-definition.');
 });
 
-test('API', 47, function () {
+test('Tank-API', function () {
   var pkgInst = Flow.pkg(FT.pkgName)(new Flow()),
     tank = pkgInst.tank,
     fncs = ['go', 'stop', 'post'],
     props = ['id', 'currentIndex', 'targetIndex'],
-    badIdx = [-1, 20, .5, '.99', 'foo', [], {}, null, undefined], // 9 items
+    fnc = function () {},
+    params = [NaN, 1, 'foo', [], {}, null, undefined, fnc],
     postIdx,
     stopRtn = true,
     type = FT.type;
   fncs.forEach(function (fnc,idx) {
-    equal(typeof tank[fnc], 'function', 'The .' + fnc + ' member is a function.');
-    equal(typeof tank[props[idx]], 'number', 'The .' + props[idx] + ' member is numeric.');
+    equal(typeof tank[fnc], 'function', 'tank.' + fnc + ' is a function.');
+    equal(typeof tank[props[idx]], 'number', 'tank.' + props[idx] + ' member is numeric.');
   });
-  strictEqual(tank.currentIndex, 0, 'At the _flow state by default.');
-  strictEqual(tank.targetIndex, -1, 'The .targetIndex is -1 by default.');
-  ok(tank.id, 'The .id member is a number greater than 0.');
+  equal(tank.currentIndex, 0, 'tank.currentIndex is initially 0.');
+  equal(tank.targetIndex, -1, 'tank.targetIndex is initially -1.');
   // .go()
-  equal(tank.go.length, 1, 'The .go() method expects one parameter.');
-  strictEqual(tank.go(), 0, 'The .go() method returns false when passed no argument.');
-  badIdx.forEach(function (idx) {
-    strictEqual(tank.go(idx), 0, 'The .go() method returns 0 when passed a "' + type(idx) + '".');
-  });
-  equal(typeof tank.go(0), 'number', 'The .go() method returns a number when passed a valid state index.');
-  tank.go(1);
-  equal(tank.currentIndex, 1, 'The .currentIndex method is updated after calling .go().');
+  ok(!params.some(function (param) {
+      return typeof tank.go(param) !== 'number'
+    }) && typeof tank.go() === 'number',
+    'tank.go() returns a number.'
+  );
+  equal(tank.currentIndex, 1, 'tank.currentIndex changes after passing a valid state index to tank.go().');
   // .stop()
-  equal(tank.stop.length, 0, 'The .stop() method expects no parameters.');
-  badIdx.forEach(function (idx) {
-    ok(!tank.stop(idx), 'The .stop() method returns falsy when passed a "' + type(idx) + '".');
-  });
-  // .go()
-  equal(tank.post.length, 1, 'The .post() method expects one parameter.');
-  strictEqual(tank.post(), false, 'The .post() method returns false when passed no argument.');
-  badIdx.forEach(function (idx) {
-   strictEqual(tank.post(idx), false, 'The .post() method returns false when passed a "' + type(idx) + '".');
-  });
-  strictEqual(tank.post(0), false, 'The .post() method returns false when passed an invalid index.');
-  postIdx = tank.post(function () {});
-  equal(postIdx, 0, 'The .post() method returns an index when passed a function.');
-  strictEqual(tank.post(postIdx), true, 'The .post() method returns true when passed a valid index (to remove).');
-  strictEqual(tank.post(postIdx), false, 'The .post() method returns false when given a valid index a second time.');
+  ok(!params.some(function (param) {
+      return typeof tank.stop(param) !== 'number'
+    }) && typeof tank.stop() === 'number',
+    'tank.stop() returns a number.'
+  );
+  equal(tank.stop(), 0, 'tank.stop returns 0 when the flow is idle.');
+  // .post()
+  equal(typeof (postIdx = tank.post(fnc)), 'number', 'tank.post() returns a number when passed a function.');
+  strictEqual(tank.post(postIdx), true, 'tank.post() returns true when given a valid post-function index.');
+  strictEqual(tank.post(postIdx), false, 'tank.post() returns false when given an expired post-function index.');
+  params.pop();
+  ok(!params.some(function (param) {
+      return typeof tank.post(param) !== 'boolean'
+    }) && typeof tank.post() === 'boolean',
+    'tank.stop() returns a boolean for non-function arguments and expired post-function indice.'
+  );
 });
 
 module('Custom');

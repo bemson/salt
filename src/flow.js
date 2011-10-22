@@ -277,22 +277,19 @@
         return flow.loop;
       },
       // add and remove post-loop functions
-      post: function (fnc) {
-        var idx;
+      post: function (param) {
         // based on the type
-        switch (typeof fnc) {
+        switch (typeof param) {
           case 'function':
             // return the index of the callback after adding it to this flow's post queue
-            return flow.posts.push(fnc) - 1;
+            return flow.posts.push(param) - 1;
           break;
 
           case 'number':
-            // convert to an integer
-            idx = ~~fnc;
             // if the target is a valid...
-            if (flow.posts[fnc]) {
+            if (flow.posts[param]) {
               // clear the callback at this index
-              flow.posts[fnc] = null;
+              flow.posts[param] = null;
               // return success
               return true;
             }
