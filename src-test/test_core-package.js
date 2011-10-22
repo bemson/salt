@@ -452,7 +452,7 @@ test('.target()', 22, function () {
       },
       redirect: { // 10
         _on: function () {
-          equal(this.target(1), false, 'Returns false when redirecting with valid paremeters.');
+          equal(this.target(1), true, 'Returns true when redirecting with valid paremeters.');
           this.target(11, rtnVal);
           return rtnVal;
         },
@@ -530,10 +530,8 @@ test('.go()', 18, function () {
           tic += 3;
         }
       },
-      pause: {
-        _in: function () {
-          this.wait();
-        }
+      pause: function () {
+        this.wait();
       },
       fauxPause: {
         _in: function () {
@@ -703,7 +701,7 @@ test('.map()', 12, function () {
         return a + b;
       },
       redirect: function () {
-        equal(map.rtnVal(), false, 'Returns false when invoked within a component function.');
+        equal(map.rtnVal(), true, 'Returns true when invoked within a component function.');
         return false;
       }
     },
@@ -722,6 +720,126 @@ test('.map()', 12, function () {
   equal(map.sum(2, 2), 4, 'Passes arguments to the _on function.');
   equal(map.redirect(), rtnVal, 'Returns result of the final state when redirected.');
   ok(curIndex !== coreInst.tank.currentIndex, 'Changes the current state of a Flow.');
+});
+
+test('status()', function () {
+  var pend = (
+      new Flow({
+        _on: function () {
+          this.wait();
+        },
+        reset: 1
+      })
+    ).map(),
+    flow = new Flow({
+      _in: function () {
+        var stat = this.status();
+        equal(stat.trust, true, 'status.trust is true within component functions.');
+        equal(stat.phase, 'in', 'status.phase is correct.');
+        equal(stat.depth, 1, 'status.depth is correct.');
+        equal(stat.index, 1, 'status.index is correct.');
+      },
+      _on: function () {
+        var stat = this.status();
+        equal(stat.phase, 'on', 'status.phase is correct.');
+        equal(stat.depth, 1, 'status.depth is correct.');
+        equal(stat.index, 1, 'status.index is correct.');
+      },
+      over: {
+        _over: function ()  {
+          var stat = this.status();
+          equal(stat.phase, 'over', 'status.phase is correct.');
+        }
+      },
+      bover: {
+        _bover: function () {
+          var stat = this.status();
+          equal(stat.phase, 'bover', 'status.phase is correct.');
+        }
+      },
+      journey: {
+        _on: function () {
+        },
+        start: function () {
+          this.go('//journey/one/', '//journey/two/', '//journey/end');
+        },
+        one: function () {
+          var stat = this.status();
+        },
+        two: function () {
+          var stat = this.status();
+        },
+        end: function () {
+          //console.log('end of journey',this.status());
+        }
+      },
+      looper: function () {
+        var stat = this.status();
+        if (stat.loops) {
+          ok(1, 'status.loops correctly reflects the number of times a component function is repeated during a traversal.');
+        } else {
+          equal(stat.loops, 0, 'status.loop is 0 on a first pass.');
+          this.target('//looper/');
+        }
+      },
+      pause: function () {
+        equal(this.status().paused, false, 'Not paused initially.');
+        this.wait();
+        equal(this.status().paused, true, 'status.paused is true after calling proxy.wait().');
+        this.go();
+        equal(this.status().paused, false, 'status.paused is false after calling proxy.go().');
+      },
+      pending: function () {
+        equal(this.status().pending, false, 'status.pending is false before pending.');
+        pend();
+        equal(this.status().pending, true, 'status.pending is true after executing a child flow that pauses.');
+        pend.reset();
+        equal(this.status().pending, false, 'status.pending is false after unpausing a child flow.');
+      },
+      nonpending: {
+        _pendable: 0,
+        _on: function () {
+          pend();
+          equal(this.status.pending, false, 'status.pending remains false when the _pendable component is false');
+        }
+      },
+      _out: function () {
+        var stat = this.status();
+        equal(stat.phase, 'out', 'status.phase is correct.');
+      }
+    }),
+    status = flow.status(),
+    mbrs = [
+      ['trust', false],
+      ['loops', 0],
+      ['depth', 0],
+      ['paused', false],
+      ['pending', false],
+      ['pendable', true],
+      ['targets', []],
+      ['route', []],
+      ['location', '..//'],
+      ['index', 0],
+      ['phase', ''],
+      ['state', '_flow']
+    ];
+  mbrs.forEach(function (mbrSet) {
+    var mbr = mbrSet[0],
+      type = T.type(mbrSet[1]);
+    ok(status.hasOwnProperty(mbr), 'The status contains a "' + mbr + '" member.');
+    equal(T.type(status[mbr]), type, 'The "' + mbr + '" member is a ' + type + '.');
+    if (type === 'array') {
+      equal(status[mbr].length, mbrSet[1].length, 'The "' + mbr + '" member has the expected default items.');
+    } else {
+      equal(status[mbr], mbrSet[1], 'The "' + mbr + '" member has the expected default value.');
+    }
+  });
+  flow.target(1);
+  flow.target('//journey/');
+  flow.target('//journey/start');
+  flow.target('//looper/');
+//  flow.target('//pause/');
+  flow.target(0);
 });
 
 module('Scenario')
