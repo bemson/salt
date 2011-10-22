@@ -254,29 +254,27 @@
       // index of the target program state (-1 indicates idle or at rest)
       targetIndex: -1,
       // define scoped call to direct this flow
-      go: function (tgt) {
+      go: function (tgtIndex) {
         // init vars
-        var tgtState = flow.states[tgt]; // alias the target state (if any)
-        // if the target is a valid...
+        var tgtState = flow.states[tgtIndex]; // alias the target state (if any)
+        // if a valid target state was given...
         if (tgtState) {
           // capture the targeted state
           flow.target = tgtState;
           // set target index
           flow.shared.targetIndex = tgtState.index;
-          // set internal stop flag
-          flow.stop = 0;
-          // traverse towards the target - return number of traversals
-          return flow.go();
         }
-        // otherwise, return false, to indicate that this call failed
-        return false;
+        // clear internal stop flag
+        flow.stop = 0;
+        // return number of steps traversed
+        return flow.go();
       },
       // define scoped call to stop this flow
       stop: function () {
         // set internal stop flag
         flow.stop = 1;
-        // flag success in setting the stop flag
-        return true;
+        // return truthy when this flow is in a loop, otherwise falsy
+        return flow.loop;
       },
       // add and remove post-loop functions
       post: function (fnc) {
