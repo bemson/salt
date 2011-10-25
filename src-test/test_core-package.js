@@ -723,7 +723,8 @@ test('.map()', 12, function () {
 });
 
 test('status()', function () {
-  var pend = (
+  var rand = Math.random(),
+    pend = (
       new Flow({
         _on: function () {
           this.wait();
@@ -741,6 +742,7 @@ test('status()', function () {
       },
       _on: function () {
         var stat = this.status();
+        equal(stat.state, '_root', 'The first state is named "_program".');
         equal(stat.phase, 'on', 'status.phase is correct.');
         equal(stat.depth, 1, 'status.depth is correct.');
         equal(stat.index, 1, 'status.index is correct.');
@@ -759,18 +761,53 @@ test('status()', function () {
       },
       journey: {
         _on: function () {
+          equal(this.status().state, 'journey', 'The state name matches it\'s key in the program.');
         },
         start: function () {
-          this.go('//journey/one/', '//journey/two/', '//journey/end');
-        },
-        one: function () {
           var stat = this.status();
+          deepEqual(stat.route, ['//journey/start/'], 'status.route includes the current state, at minimum.');
+          ok(!stat.targets.length, 'status.targets is empty.');
+          this.target('//journey/end/');
+          deepEqual(this.status().targets, ['//journey/end/'], 'status.targets is updated with the expected destination state after calling pkg.target()');
+          this.go('//journey/one/', '//journey/two/');
+          deepEqual(this.status().targets, ['//journey/one/','//journey/two/','//journey/end/'], 'status.targets are changed about after using pkg.target() and pkg.go()');
+        },
+        hidden: {
+          _over: function () {
+            deepEqual(this.status().route, ['//journey/start/','//journey/hidden/'], 'status.route references the current state via the _over phase.');
+          }
+        },
+        one: {
+          _in: function () {
+            deepEqual(this.status().route, ['//journey/start/','//journey/hidden/','//journey/one/'], 'status.route references the current state via the _in phase.');
+          },
+          _out: function () {
+            deepEqual(this.status().route, ['//journey/start/','//journey/hidden/','//journey/one/'], 'status.route references the current state via the _out phase.');
+            this.go('//journey/jump/hop/','//journey/jump/skip/');
+          }
+        },
+        jump: {
+          skip: 1,
+          bover: {
+            _bover: function () {
+              deepEqual(this.status().route, ['//journey/start/','//journey/hidden/','//journey/one/','//journey/jump/','//journey/jump/skip/','//journey/jump/bover/','//journey/jump/hop/','//journey/jump/bover/'], 'status.route references states with no functions, and those between the current and target state.');
+            }
+          },
+          hop: 1
         },
         two: function () {
           var stat = this.status();
+          deepEqual(stat.route, ['//journey/start/','//journey/hidden/','//journey/one/','//journey/jump/','//journey/jump/skip/','//journey/jump/bover/','//journey/jump/hop/','//journey/jump/bover/','//journey/jump/skip/','//journey/jump/','//journey/two/'], 'status.route reflects the states traversed while navigating to this state.');
         },
-        end: function () {
-          //console.log('end of journey',this.status());
+        end: {
+          _in: function () {
+            var stat = this.status();
+            deepEqual(stat.route, ['//journey/start/','//journey/hidden/','//journey/one/','//journey/jump/','//journey/jump/skip/','//journey/jump/bover/','//journey/jump/hop/','//journey/jump/bover/','//journey/jump/skip/','//journey/jump/','//journey/two/','//journey/end/'], 'status.route references the current state via the _on phase.');
+          },
+          _on: function () {
+            var stat = this.status();
+            deepEqual(stat.route, ['//journey/start/','//journey/hidden/','//journey/one/','//journey/jump/','//journey/jump/skip/','//journey/jump/bover/','//journey/jump/hop/','//journey/jump/bover/','//journey/jump/skip/','//journey/jump/','//journey/two/','//journey/end/'], 'status.route includes the current state in the _on phase.');
+          }
         }
       },
       looper: function () {
@@ -790,6 +827,7 @@ test('status()', function () {
         equal(this.status().paused, false, 'status.paused is false after calling proxy.go().');
       },
       pending: function () {
+        equal(this.status().pendable, true, 'status.pendable is true for states by default.');
         equal(this.status().pending, false, 'status.pending is false before pending.');
         pend();
         equal(this.status().pending, true, 'status.pending is true after executing a child flow that pauses.');
@@ -797,15 +835,31 @@ test('status()', function () {
         equal(this.status().pending, false, 'status.pending is false after unpausing a child flow.');
       },
       nonpending: {
+        _root: 1,
         _pendable: 0,
         _on: function () {
+          equal(this.status().pendable, false, 'status.pendable is false for states that set _pendable component to falsy.');
           pend();
-          equal(this.status.pending, false, 'status.pending remains false when the _pendable component is false');
+          equal(this.status().pending, false, 'status.pending remains false when the _pendable component is false');
+          this.go('/child');
+        },
+        child: function () {
+          var stat = this.status();
+          equal(stat.location, '//nonpending/child/', 'status.location properly reflects the location of a state, regardless of the _root component.');
+          equal(stat.pendable, false, 'status.pendable is false for children of non-pendable states.');
         }
       },
+      vars: {
+        _vars: ['foo',{bar:1}],
+        _in: function () {
+        },
+        _on: function () {
+        }
+      },
+      args: function () {
+      },
       _out: function () {
-        var stat = this.status();
-        equal(stat.phase, 'out', 'status.phase is correct.');
+        equal(this.status().phase, 'out', 'status.phase is correct.');
       }
     }),
     status = flow.status(),
@@ -838,7 +892,11 @@ test('status()', function () {
   flow.target('//journey/');
   flow.target('//journey/start');
   flow.target('//looper/');
-//  flow.target('//pause/');
+  flow.target('//pause/');
+  flow.target('//pending/');
+  flow.target('//nonpending/');
+  flow.target('//vars/');
+  flow.target('//args/', rand);
   flow.target(0);
 });
 
