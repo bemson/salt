@@ -202,6 +202,8 @@
     pkg.stateIds = {};
     // the number of child flows fired by this flow's program functions
     pkg.pending = 0;
+    // collection of parent flows which are pending
+    pkg.penders = {};
     // collect parent flow references
     pkg.parents = [];
     // collection of targeted states
@@ -465,8 +467,10 @@
     var pkg = this, // alias this package
       delayFnc = pkg.delay.callback, // capture the callback function (if any)
       parentFlow = activeFlows[0];
-    // if there is a parent flow and it's current state is pendable...
-    if (parentFlow && parentFlow.states[parentFlow.tank.currentIndex].pendable) {
+    // if there is a parent flow is pendable, and not already pending...
+    if (parentFlow && parentFlow.states[parentFlow.tank.currentIndex].pendable && !pkg.penders[parentFlow.tank.id]) {
+      // flag that this flow is being pended
+      pkg.penders[parentFlow.tank.id] = 1;
       // increment the number of child flows for the parent flow
       parentFlow.pending++;
       // if this parent is unique...
@@ -575,6 +579,8 @@
         if (pkg.parents.length) {
           // with each parent flow...
           pkg.parents.forEach(function (parentFlow) {
+            // remove flag that this parent flow is being pended
+            pkg.penders[parentFlow.tank.id] = 0;
             // remove this child from the pending parent
             parentFlow.pending--;
           });
@@ -587,7 +593,7 @@
             // with each parent flow...
             parents.forEach(function (parentFlow) {
               // if this parent has no more children and is not paused...
-              if (!(parentFlow.pending | parentFlow.paused)) {
+              if (!(parentFlow.pending | parentFlow.pause)) {
                 // tell the parent to resume it's traversal
                 parentFlow.go();
               }
