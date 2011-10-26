@@ -60,8 +60,8 @@
           state.name = parent ? name : '_root';
           // init data property - holds any attributes of this state
           state.data = {};
-          // start or extend parent location
-          state.location = parent ? parent.location + name + '/' : '//';
+          // start or extend parent path
+          state.path = parent ? parent.path + name + '/' : '//';
           // init child collection
           state.children = [];
           // if there is a parent state...
@@ -226,8 +226,8 @@
     states[0].index = 0;
     // set depth
     states[0].depth = 0;
-    // set location
-    states[0].location = '..//';
+    // set path
+    states[0].path = '..//';
     // reference the first and last child index
     states[0].firstChildIndex = states[0].lastChildIndex = 1;
     // if we haven't captured
@@ -373,7 +373,7 @@
           // if going forwards or backwards...
           if (dir) {
             // if going forward on the _flow or _root state, or the target path contains the current path...
-            if ((dir > 0 && curState.index < 2) || !flow.target.location.indexOf(curState.location)) {
+            if ((dir > 0 && curState.index < 2) || !flow.target.path.indexOf(curState.path)) {
               // if already in context...
               if (curState.inContext) {
                 // flag that we're switching states
@@ -399,7 +399,7 @@
                 curState.inContext = 0;
               } else { // otherwise, when out of this state...
                 // if the current state's parent is an ancestor of the target state...
-                if (flow.target.location.indexOf(states[curState.parentIndex].location)) {
+                if (flow.target.path.indexOf(states[curState.parentIndex].path)) {
                   // set direction to backwards
                   dir = -1;
                 }

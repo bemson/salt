@@ -164,11 +164,11 @@ test('State', function () {
   equal(statePaths.length, states.length, 'The expected number of states are present.');
   equal(typeof states[0].name, 'string', 'The "name" member is a string.');
   equal(typeof states[0].data, 'object', 'The "data" member is an object.');
-  equal(typeof states[0].location, 'string', 'The "location" member is a string.');
+  equal(typeof states[0].path, 'string', 'The "path" member is a string.');
   equal(FT.type(states[0].children), 'array', 'The "children" member is an Array.');
   equal(states[4].value, randomValue, 'The fourth state is the expected value.');
   states.forEach(function (state, idx) {
-    equal(state.location, statePaths[idx], 'The state at index ' + idx + ' has the correct location.');
+    equal(state.path, statePaths[idx], 'The state at index ' + idx + ' has the correct path.');
   });
   stateSets.forEach(function (set) {
     var idx = set[0],

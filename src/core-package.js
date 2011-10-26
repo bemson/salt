@@ -215,7 +215,7 @@
       // init vars
       var parent = idx && pkg.states[state.parentIndex]; // capture parent when available
       // index this path with this index position
-      pkg.stateIds[state.location] = idx;
+      pkg.stateIds[state.path] = idx;
       // add reference to the package-instance containing this state
       state.pkg = pkg;
       // set pendable flag, (true by default, and otherwise inherited when the parent is not pendable)
@@ -245,8 +245,8 @@
       }
       // set custom toString for passing proxy reference
       state.map.toString = function () {
-        // return this state's location
-        return state.location;
+        // return this state's path
+        return state.path;
       };
       // define array to hold traversal functions for each traversal name...
       state.fncs = core.events.map(function (name) {
@@ -401,7 +401,7 @@
                   }
                 }
                 // set index to the resolved state index or -1, append and validate with qryEnd, if present
-                idx = (qryState && (!qryLeaf || (qryState = states[stateIds[qryState.location + qryLeaf.replace(/([^\/])$/,'$1/')]]))) ? qryState.index : -1;
+                idx = (qryState && (!qryLeaf || (qryState = states[stateIds[qryState.path + qryLeaf.replace(/([^\/])$/,'$1/')]]))) ? qryState.index : -1;
                 // cache the query result (original query, plus nothing or the state index)
                 pkg.cache.indexOf[qry + (isAbsQry ? '' : state.index)] = idx;
               }
@@ -410,11 +410,11 @@
             } else { // otherwise, when there are no tokens...
               // if the first character is not a forward slash...
               if (qry.charAt(0) !== '/') {
-                // prepend current location
-                qry = state.location + qry;
+                // prepend current path
+                qry = state.path + qry;
               } else if (qry.charAt(1) !== '/') { // or, when the second character is not a forward slash...
                 // prepend the current state's root
-                qry = states[state.rootIndex].location + qry.substr(1);
+                qry = states[state.rootIndex].path + qry.substr(1);
               }
               // if the last character is not a forward slash...
               if (qry.slice(-1) !== '/') {
@@ -609,7 +609,7 @@
     // init vars
     var state = this; // alias self
     // return true if this state has no restrictions, or when the target is not this state and within it's path
-    return !state.restrict || (state !== targetState && !targetState.location.indexOf(state.location));
+    return !state.restrict || (state !== targetState && !targetState.path.indexOf(state.path));
   };
 
   // add method to de/scope variables
@@ -662,7 +662,7 @@
         // if this index if not -1...
         if (~idx) {
           // capture the absolute path for this state
-          states.push(pkg.states[idx].location);
+          states.push(pkg.states[idx].path);
           // flag that this element passed
           result = 1;
         }
@@ -794,7 +794,7 @@
       // return false
       return false;
     }
-    // return based on call location
+    // return based on call path
       // when internal (via a program-function)
         // true when there are no pending child flows (otherwise, false)
       // when external (outside a program-function)
@@ -903,11 +903,9 @@
       // init vars
       var pkgDef = Flow.pkg(pkgName), // the package-definition
         stats, key; // placeholder and loop vars for scanning the status object returned
-      // if this package-definition has a static addStatus function...
-      if (typeof pkgDef.addStatus === 'function') {
-        // pass the status object, and capture the returned object
-        stats = pkgDef.addStatus.call(pkgDef(proxy), status);
-        // with each key in the returned object (if any)...
+      // if this package-definition has a static addStatus function and it returns an object...
+      if (typeof pkgDef.addStatus === 'function' && typeof (stats = pkgDef.addStatus.call(pkgDef(proxy), status)) === 'object') {
+        // with each key of the returned object...
         for (key in stats) {
           // if not inherited...
           if (stats.hasOwnProperty(key)) {
@@ -930,8 +928,8 @@
       currentState = pkg.states[pkg.tank.currentIndex], // alias the current state
       canShowTraversalInformation = pkg.trust | pkg.pause | pkg.pending; // permit showing traversal information when paused, pending, or there are targets
 
-    function getLocationFromIndex (idx) {
-      return pkg.states[idx].location;
+    function getPathFromIndex (idx) {
+      return pkg.states[idx].path;
     }
 
     // return the collection of keys for the state object
@@ -942,9 +940,9 @@
       paused: !!pkg.pause,
       pending: !!pkg.pending,
       pendable: !!currentState.pendable,
-      targets: pkg.targets.map(getLocationFromIndex),
-      route: pkg.route.map(getLocationFromIndex),
-      location: currentState.location,
+      targets: pkg.targets.map(getPathFromIndex),
+      route: pkg.route.map(getPathFromIndex),
+      path: currentState.path,
       index: currentState.index,
       phase: canShowTraversalInformation ? core.events[pkg.phase] : '',
       state: currentState.name
