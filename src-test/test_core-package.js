@@ -249,9 +249,9 @@ test('_vars', 30, function () {
     })).states.forEach(function (state, stateIdx) {
       state.vars.forEach(function (varSet, varIdx) {
         var varCfg = stateVars[stateIdx][varIdx];
-        equal(varSet.name, varCfg.name, 'The variable ' + varIdx + ' of state ' + state.location + ', has the expected "name" value.');
-        equal(varSet.value, varCfg.value, 'The variable ' + varIdx + ' of state ' + state.location + ', has the expected "value" value.');
-        equal(varSet.use, varCfg.use, 'The variable ' + varIdx + ' of state ' + state.location + ', has the expected "use" value.');
+        equal(varSet.name, varCfg.name, 'The variable ' + varIdx + ' of state ' + state.path + ', has the expected "name" value.');
+        equal(varSet.value, varCfg.value, 'The variable ' + varIdx + ' of state ' + state.path + ', has the expected "value" value.');
+        equal(varSet.use, varCfg.use, 'The variable ' + varIdx + ' of state ' + state.path + ', has the expected "use" value.');
       });
       if (!state.vars.length) {
         ok(1, 'A _var component of "' + state.data._vars + '" does not compile into variable configurations.');
@@ -722,182 +722,347 @@ test('.map()', 12, function () {
   ok(curIndex !== coreInst.tank.currentIndex, 'Changes the current state of a Flow.');
 });
 
-test('status()', function () {
-  var rand = Math.random(),
-    pend = (
-      new Flow({
-        _on: function () {
-          this.wait();
-        },
-        reset: 1
-      })
-    ).map(),
-    flow = new Flow({
-      _in: function () {
-        var stat = this.status();
-        equal(stat.trust, true, 'status.trust is true within component functions.');
-        equal(stat.phase, 'in', 'status.phase is correct.');
-        equal(stat.depth, 1, 'status.depth is correct.');
-        equal(stat.index, 1, 'status.index is correct.');
-      },
-      _on: function () {
-        var stat = this.status();
-        equal(stat.state, '_root', 'The first state is named "_program".');
-        equal(stat.phase, 'on', 'status.phase is correct.');
-        equal(stat.depth, 1, 'status.depth is correct.');
-        equal(stat.index, 1, 'status.index is correct.');
-      },
-      over: {
-        _over: function ()  {
-          var stat = this.status();
-          equal(stat.phase, 'over', 'status.phase is correct.');
-        }
-      },
-      bover: {
-        _bover: function () {
-          var stat = this.status();
-          equal(stat.phase, 'bover', 'status.phase is correct.');
-        }
-      },
-      journey: {
-        _on: function () {
-          equal(this.status().state, 'journey', 'The state name matches it\'s key in the program.');
-        },
-        start: function () {
-          var stat = this.status();
-          deepEqual(stat.route, ['//journey/start/'], 'status.route includes the current state, at minimum.');
-          ok(!stat.targets.length, 'status.targets is empty.');
-          this.target('//journey/end/');
-          deepEqual(this.status().targets, ['//journey/end/'], 'status.targets is updated with the expected destination state after calling pkg.target()');
-          this.go('//journey/one/', '//journey/two/');
-          deepEqual(this.status().targets, ['//journey/one/','//journey/two/','//journey/end/'], 'status.targets are changed about after using pkg.target() and pkg.go()');
-        },
-        hidden: {
-          _over: function () {
-            deepEqual(this.status().route, ['//journey/start/','//journey/hidden/'], 'status.route references the current state via the _over phase.');
-          }
-        },
-        one: {
-          _in: function () {
-            deepEqual(this.status().route, ['//journey/start/','//journey/hidden/','//journey/one/'], 'status.route references the current state via the _in phase.');
-          },
-          _out: function () {
-            deepEqual(this.status().route, ['//journey/start/','//journey/hidden/','//journey/one/'], 'status.route references the current state via the _out phase.');
-            this.go('//journey/jump/hop/','//journey/jump/skip/');
-          }
-        },
-        jump: {
-          skip: 1,
-          bover: {
-            _bover: function () {
-              deepEqual(this.status().route, ['//journey/start/','//journey/hidden/','//journey/one/','//journey/jump/','//journey/jump/skip/','//journey/jump/bover/','//journey/jump/hop/','//journey/jump/bover/'], 'status.route references states with no functions, and those between the current and target state.');
-            }
-          },
-          hop: 1
-        },
-        two: function () {
-          var stat = this.status();
-          deepEqual(stat.route, ['//journey/start/','//journey/hidden/','//journey/one/','//journey/jump/','//journey/jump/skip/','//journey/jump/bover/','//journey/jump/hop/','//journey/jump/bover/','//journey/jump/skip/','//journey/jump/','//journey/two/'], 'status.route reflects the states traversed while navigating to this state.');
-        },
-        end: {
-          _in: function () {
-            var stat = this.status();
-            deepEqual(stat.route, ['//journey/start/','//journey/hidden/','//journey/one/','//journey/jump/','//journey/jump/skip/','//journey/jump/bover/','//journey/jump/hop/','//journey/jump/bover/','//journey/jump/skip/','//journey/jump/','//journey/two/','//journey/end/'], 'status.route references the current state via the _on phase.');
-          },
-          _on: function () {
-            var stat = this.status();
-            deepEqual(stat.route, ['//journey/start/','//journey/hidden/','//journey/one/','//journey/jump/','//journey/jump/skip/','//journey/jump/bover/','//journey/jump/hop/','//journey/jump/bover/','//journey/jump/skip/','//journey/jump/','//journey/two/','//journey/end/'], 'status.route includes the current state in the _on phase.');
-          }
-        }
-      },
-      looper: function () {
-        var stat = this.status();
-        if (stat.loops) {
-          ok(1, 'status.loops correctly reflects the number of times a component function is repeated during a traversal.');
-        } else {
-          equal(stat.loops, 0, 'status.loop is 0 on a first pass.');
-          this.target('//looper/');
-        }
-      },
-      pause: function () {
-        equal(this.status().paused, false, 'Not paused initially.');
-        this.wait();
-        equal(this.status().paused, true, 'status.paused is true after calling proxy.wait().');
-        this.go();
-        equal(this.status().paused, false, 'status.paused is false after calling proxy.go().');
-      },
-      pending: function () {
-        equal(this.status().pendable, true, 'status.pendable is true for states by default.');
-        equal(this.status().pending, false, 'status.pending is false before pending.');
-        pend();
-        equal(this.status().pending, true, 'status.pending is true after executing a child flow that pauses.');
-        pend.reset();
-        equal(this.status().pending, false, 'status.pending is false after unpausing a child flow.');
-      },
-      nonpending: {
-        _root: 1,
-        _pendable: 0,
-        _on: function () {
-          equal(this.status().pendable, false, 'status.pendable is false for states that set _pendable component to falsy.');
-          pend();
-          equal(this.status().pending, false, 'status.pending remains false when the _pendable component is false');
-          this.go('/child');
-        },
-        child: function () {
-          var stat = this.status();
-          equal(stat.location, '//nonpending/child/', 'status.location properly reflects the location of a state, regardless of the _root component.');
-          equal(stat.pendable, false, 'status.pendable is false for children of non-pendable states.');
-        }
-      },
-      vars: {
-        _vars: ['foo',{bar:1}],
-        _in: function () {
-        },
-        _on: function () {
-        }
-      },
-      args: function () {
-      },
-      _out: function () {
-        equal(this.status().phase, 'out', 'status.phase is correct.');
-      }
-    }),
-    status = flow.status(),
-    mbrs = [
-      ['trust', false],
-      ['loops', 0],
-      ['depth', 0],
-      ['paused', false],
-      ['pending', false],
-      ['pendable', true],
-      ['targets', []],
-      ['route', []],
-      ['location', '..//'],
-      ['index', 0],
-      ['phase', ''],
-      ['state', '_flow']
-    ];
-  mbrs.forEach(function (mbrSet) {
+test('status()', 24, function () {
+  var status = (new Flow({})).status();
+  [
+    ['trust', false],
+    ['loops', 0],
+    ['depth', 0],
+    ['paused', false],
+    ['pending', false],
+    ['pendable', true],
+    ['targets', []],
+    ['route', []],
+    ['path', '..//'],
+    ['index', 0],
+    ['phase', ''],
+    ['state', '_flow']
+  ].forEach(function (mbrSet) {
     var mbr = mbrSet[0],
       type = T.type(mbrSet[1]);
     ok(status.hasOwnProperty(mbr), 'The status contains a "' + mbr + '" member.');
     equal(T.type(status[mbr]), type, 'The "' + mbr + '" member is a ' + type + '.');
-    if (type === 'array') {
-      equal(status[mbr].length, mbrSet[1].length, 'The "' + mbr + '" member has the expected default items.');
-    } else {
-      equal(status[mbr], mbrSet[1], 'The "' + mbr + '" member has the expected default value.');
-    }
   });
+});
+
+module('pkg.status()');
+
+test('PackageDefinition.addStatus Framework', function () {
+  var corePkgDef = Flow.pkg('core'),
+    addStatus = corePkgDef.addStatus,
+    flow = new Flow(),
+    params = [0, 1, NaN, undefined, null, {}, [], 'foo'];
+  corePkgDef.addStatus = function (existingObject) {
+    ok(this === corePkgDef(flow), 'Scope of PkgDef.addStatus() is the package instance.');
+    equal(typeof existingObject, 'object', 'An existing object is passed to PkgDef.addStatus().');
+    existingObject.foo = 'bar';
+  };
+  deepEqual(flow.status(), {foo:'bar'}, 'Editing keys of the addStatus argument, impacts the status object.');
+  [[1,2,3], {0:1, 1:2, 2:3}].forEach(function (val) {
+    corePkgDef.addStatus = function () {
+      return val;
+    };
+    deepEqual(flow.status(), {0:1, 1:2, 2:3}, 'When PkgDef.addStatus() returns a ' + T.type(val) + ', it\'s members are added to the status object.');
+  });
+  params.forEach(function (val) {
+    corePkgDef.addStatus = val;
+    deepEqual(flow.status(),{},'Setting PkgDef.addStatus to "' + val + '" (' + T.type(val) + ') does not impact the status object.');
+  });
+  params.forEach(function (val) {
+    corePkgDef.addStatus = function () {
+      return val;
+    };
+    deepEqual(flow.status(),{},'When PkgDef.addStatus is a function that returns (an empty) "' + val + '" (' + T.type(val) + ') it does not impact the status object.');
+  });
+  corePkgDef.addStatus = addStatus;
+});
+
+test('.trust', 6, function () {
+  var flow = new Flow({
+      _on: function () {
+        equal(this.status().trust, true, 'status.trust is true when called internally.');
+      },
+      wait: function () {
+        this.wait(function () {
+          equal(this.status().paused, false, 'The flow is no longer paused.');
+          equal(this.status().trust, true, 'status.trust is true when called internally from a delayed function.');
+          start();
+        },10);
+        equal(this.status().paused, true, 'The flow is paused.');
+      }
+    });
+  equal(flow.status().trust, false, 'status.trust is false when called externally.');
   flow.target(1);
-  flow.target('//journey/');
-  flow.target('//journey/start');
-  flow.target('//looper/');
-  flow.target('//pause/');
-  flow.target('//pending/');
-  flow.target('//nonpending/');
-  flow.target('//vars/');
-  flow.target('//args/', rand);
+  flow.target('//wait/');
+  equal(flow.status().trust, false, 'status.trust is false when called externally and the flow is idle.');
+  stop();
+});
+
+test('.loops', 6, function () {
+  var tic = 0,
+    tgtLoops = 3,
+    pend = (new Flow({
+      _on: function () {
+        this.wait();
+      },
+      reset: 1
+    })).map(),
+    flow = new Flow({
+      _on: function () {
+        var loops = this.status().loops;
+        tic++;
+        if (loops === tgtLoops) {
+          equal(tic - 1, loops, 'status.loops reflects one less-than the number of times a program function executes, during a single traversal.');
+          this.wait();
+          equal(this.status().paused, true, 'The flow is now paused.');
+        } else {
+          this.target(1);
+        }
+      },
+      pend: function () {
+        if (this.status().loops) {
+          pend();
+          equal(this.status().pending, true, 'The flow is now pending.');
+        } else {
+          this.go(2);
+        }
+      }
+    });
+  equal(flow.status().loops, 0, 'status.loops is 0 when the flow is idle.');
+  flow.target(1);
+  equal(flow.status().loops, tgtLoops, 'status.loops is preserved when the flow is paused.');
+  flow.target('//pend/');
+  equal(flow.status().loops, 1, 'status.loops is preserved when the flow is pending.');
+});
+
+test('.depth', 7, function () {
+  var depthTest = function (depth) {
+      return function () {
+        equal(this.status().depth, depth, 'The depth is accurate.');
+      }
+    },
+    flow = new Flow({
+      _in: depthTest(1),
+      _out: depthTest(1),
+      deep: {
+        _in: depthTest(2),
+        deeper: {
+          _in: depthTest(3),
+          deepest: depthTest(4)
+        }
+      }
+    });
+  equal(flow.status().depth, 0, 'status.depth starts at 0.');
+  flow.target('//deep/deeper/deepest/');
+  equal(flow.status().depth, 4, 'status.depth is the same whether called internally or externally.');
   flow.target(0);
+});
+
+test('.paused', 6, function () {
+  var flow = new Flow({
+      pause: function () {
+        this.wait();
+        equal(this.status().paused, true, 'status.paused is true after calling pkg.wait().');
+      },
+      delay: {
+        _in: function () {
+          equal(this.status().paused, false, 'status.paused is false at the start of any program function.');
+          this.wait(function () {
+            equal(this.status().paused, false, 'status.paused is false before executing delayed functions, via pkg.wait().');
+          }, 10);
+        },
+        _on: function () {
+          start();
+        }
+      }
+    });
+  equal(flow.status().paused, false, 'status.paused is false by default.');
+  flow.target('//pause/');
+  equal(flow.status().paused, true, 'status.paused returns the same boolean, whether called internally or externally.');
+  flow.target('//delay/');
+  equal(flow.status().paused, true, 'status.paused is true after a flow is delayed.');
+  stop();
+});
+
+test('.pending', 10, function () {
+  var pend = (new Flow({
+      _on: function () {
+        this.wait();
+      },
+      reset: 1
+    })).map(),
+    nestedPender = (new Flow({
+      _on: function () {
+        pend();
+      },
+      reset: 1
+    })).map(),
+    doublePender = (new Flow({
+      _on: function () {
+        pend();
+        this.wait();
+      },
+      reset: 1
+    })).map(),
+    flow = new Flow({
+      _on: function () {
+        pend();
+        equal(flow.status().pending, true, 'status.pending is true when a child flow is paused.');
+      },
+      nestedPending: function () {
+        equal(flow.status().pending, false, 'status.pending is false at the start of any program function.');
+        nestedPender();
+      },
+      doublePending: function () {
+        doublePender();
+      }
+    });
+  equal(flow.status().pending, false, 'status.pending is false by default.');
+  flow.target(1);
+  equal(flow.status().pending, true, 'status.pending returns the same boolean, whether called internally or externally.');
+  pend.reset();
+  equal(flow.status().pending, false, 'status.pending is false when the paused child flow is resumed.');
+  flow.target('//nestedPending/');
+  equal(flow.status().pending, true, 'status.pending is true when a descendant flow is paused.');
+  pend.reset();
+  equal(flow.status().pending, false, 'status.pending is false when a descendent flow is resumed.');
+  flow.target('//doublePending/');
+  equal(flow.status().pending, true, 'status.pending is true when a descendant flow is paused.');
+  doublePender.reset();
+  equal(flow.status().pending, true, 'status.pending is true while any descendent flows are paused.');
+  pend.reset();
+  equal(flow.status().pending, false, 'status.pending is false when all descendant flows are resumed.');
+});
+
+test('.pendable', 5, function () {
+  var flow = new Flow({
+    a: {
+      _pendable: 0,
+      b: {
+        _pendable: 1
+      }
+    },
+    c: 2
+  });
+  equal(flow.status().pendable, true, 'status.pendable is true for the _flow state.');
+  flow.go(1);
+  equal(flow.status().pendable, true, 'status.pendable is true by default.');
+  flow.go(2);
+  equal(flow.status().pendable, false, 'status.pendable reflects the _pendable component.');
+  flow.go(3);
+  equal(flow.status().pendable, false, 'status.pendable is false when an ancestor state\'s _pendable component is set to a falsy value.');
+  flow.go(4);
+  equal(flow.status().pendable, true, 'status.pendable reflects the current state.');
+});
+
+test('.targets', function () {
+
+});
+
+test('.route', function () {
+
+});
+
+test('.path', 5, function () {
+  var flow = new Flow({
+    a: {
+      b: 1
+    },
+    c: 2
+  });
+  equal(flow.status().path, '..//', 'status.path is "..//" by default.');
+  flow.go(1);
+  equal(flow.status().path, '//', 'status.path is "//" when on the program state.');
+  flow.go(2);
+  equal(flow.status().path, '//a/', 'status.path reflects the current state.');
+  flow.go(3);
+  equal(flow.status().path, '//a/b/', 'status.path reflects the current state.');
+  flow.go(4);
+  equal(flow.status().path, '//c/', 'status.path reflects the current state.');
+});
+
+test('.index', 5, function () {
+  var flow = new Flow({
+    a: {
+      b: 1
+    },
+    c: 2
+  });
+  equal(flow.status().index, 0, 'status.index is 0 by default.');
+  flow.go(1);
+  equal(flow.status().index, 1, 'status.index is 1 for the program state.');
+  flow.go(2);
+  equal(flow.status().index, 2, 'status.index reflects the current state.');
+  flow.go(3);
+  equal(flow.status().index, 3, 'status.index reflects the current state.');
+  flow.go(4);
+  equal(flow.status().index, 4, 'status.index reflects the current state.');
+});
+
+test('.phase', 13, function () {
+  var corePkgDef = Flow.pkg('core'),
+    oldOnName = corePkgDef.events[0],
+    newOnName = 'foo',
+    pend = (new Flow({
+      _on: function () {
+        this.wait();
+      },
+      reset: 1
+    })).map(),
+    testPhase = function (phase) {
+      return function () {
+        equal(this.status().phase, phase, 'status.phase is "' + phase + '" as expected.');
+      };
+    },
+    flow = new Flow({
+      _in: testPhase('in'),
+      _out: testPhase('out'),
+      pend: function () {
+        pend();
+      },
+      over: {
+        _over: testPhase('over')
+      },
+      bover: {
+        _bover: testPhase('bover')
+      },
+      hold: function () {
+        equal(flow.status().phase, 'on', 'status.phase is "on" as expected.');
+        this.wait();
+      }
+    });
+  equal(flow.status().phase, '', 'status.phase is an empty string by default.');
+  flow.target('//hold/');
+  ok(flow.status().phase, 'status.phase is available when the flow is paused.');
+  corePkgDef.events[0] = newOnName;
+  equal(flow.status().phase, newOnName, 'status.phase reflects the indice from the PkgDef.events array.');
+  corePkgDef.events[0] = oldOnName;
+  flow.target('//pend/');
+  equal(flow.status().paused, false, 'The flow is no longer paused.');
+  equal(flow.status().pending, true, 'The flow is pending.');
+  equal(flow.status().phase, 'on', 'status.phase is available hwen the flow is pending.');
+  pend.reset();
+  equal(flow.status().pending, false, 'The flow is no longer pending.');
+  flow.target(0);
+  ok(!flow.status().phase, 'status.phase is an empty string when idle.');
+});
+
+test('.state', 5, function () {
+  var flow = new Flow({
+    a: {
+      b: 1
+    },
+    c: 2
+  });
+  equal(flow.status().state, '_flow', 'status.state is "_flow" by default.');
+  flow.go(1);
+  equal(flow.status().state, '_root', 'status.state is "_root" when on the program state.');
+  flow.go(2);
+  equal(flow.status().state, 'a', 'status.state reflects the current state.');
+  flow.go(3);
+  equal(flow.status().state, 'b', 'status.state reflects the current state.');
+  flow.go(4);
+  equal(flow.status().state, 'c', 'status.state reflects the current state.');
 });
 
 module('Scenario')
