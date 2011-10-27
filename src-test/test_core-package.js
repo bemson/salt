@@ -380,7 +380,7 @@ test('presence', function () {
 
 });
 
-test('.lock()', 17, function  () {
+test('.lock()', 16, function  () {
   var flow = new Flow(function () {
       var scope = this;
       [null, undefined, false, true].forEach(function (arg) {
@@ -400,7 +400,6 @@ test('.lock()', 17, function  () {
   });
   equal(flow.target(1), true, 'An unlocked flow may be directed.');
   equal(flow.lock(), true, 'Returns true when called from outside and the Flow is locked.');
-  equal(flow.target(0), true, '.target() returns false for a locked Flow');
   equal(flow.lock(0), false, 'A flow can not be unlocked by an untrusted routine.');
 });
 
@@ -722,27 +721,15 @@ test('.map()', 12, function () {
   ok(curIndex !== coreInst.tank.currentIndex, 'Changes the current state of a Flow.');
 });
 
-test('status()', 24, function () {
+test('status()', 12, function () {
   var status = (new Flow({})).status();
-  [
-    ['trust', false],
-    ['loops', 0],
-    ['depth', 0],
-    ['paused', false],
-    ['pending', false],
-    ['pendable', true],
-    ['targets', []],
-    ['route', []],
-    ['path', '..//'],
-    ['index', 0],
-    ['phase', ''],
-    ['state', '_flow']
-  ].forEach(function (mbrSet) {
-    var mbr = mbrSet[0],
-      type = T.type(mbrSet[1]);
-    ok(status.hasOwnProperty(mbr), 'The status contains a "' + mbr + '" member.');
-    equal(T.type(status[mbr]), type, 'The "' + mbr + '" member is a ' + type + '.');
-  });
+  'trust|loops|depth|paused|pending|pendable|targets|route|path|index|phase|state'
+    .split('|')
+    .forEach(
+      function (mbr) {
+        ok(status.hasOwnProperty(mbr), 'The status object contains a "' + mbr + '" member.');
+      }
+    );
 });
 
 module('pkg.status()');
@@ -955,12 +942,160 @@ test('.pendable', 5, function () {
   equal(flow.status().pendable, true, 'status.pendable reflects the current state.');
 });
 
-test('.targets', function () {
-
+test('.targets', 17, function () {
+  var pend = (new Flow({
+      _on: function () {
+        this.wait();
+      },
+      reset: 1
+    })).map(),
+    flow = new Flow({
+      _in: function () {
+        ok(this.status().targets.length, 'status.targets is not empty for the _in component function.');
+      },
+      _out: function () {
+        ok(this.status().targets.length, 'status.targets is not empty for the _out component function.');
+      },
+      over: {
+        _over: function () {
+          ok(this.status().targets.length, 'status.targets is not empty for the _over component function.');
+        }
+      },
+      bover: {
+        _bover: function () {
+          ok(this.status().targets.length, 'status.targets is not empty for the _bover component function.');
+        }
+      },
+      traverse: {
+        _on: function () {
+          this.target('end');
+          deepEqual(this.status().targets, ['//traverse/end/'], 'status.targets reflects single state added via pkg.target().');
+          this.go('one','two');
+          deepEqual(this.status().targets, ['//traverse/one/', '//traverse/two/','//traverse/end/'], 'status.targets reflects states added via pkg.go().');
+        },
+        one: function () {
+          deepEqual(this.status().targets, ['//traverse/two/','//traverse/end/'], 'status.targets accurately reflects the states awaiting traversal.');
+        },
+        two: function () {
+          deepEqual(this.status().targets, ['//traverse/end/'], 'status.targets reflects the states awaiting traversal.');
+        },
+        end: {
+          _in: function () {
+            deepEqual(this.status().targets, ['//traverse/end/'], 'status.targets preserves a target until it\'s _on component is traversed.');
+          },
+          _on: function () {
+            ok(!this.status().targets.length, 'status.targets is empty on the _on component of the destination state.');
+          }
+        }
+      },
+      pause: {
+        _in: function () {
+          this.wait();
+        }
+      },
+      pend: {
+        _in: function () {
+          pend();
+        }
+      }
+    });
+  ok(!flow.status().targets.length, 'status.targets is empty by default.');
+  ok(flow.status().targets !== flow.status().targets, 'status.targets is a new array everytime.');
+  flow.target('//traverse');
+  flow.target('//pause/');
+  equal(flow.status().paused, true, 'The flow is paused.');
+  deepEqual(flow.status().targets, ['//pause/'], 'status.targets is preserved when the flow is paused.');
+  flow.target('//pend/');
+  equal(flow.status().pending, true, 'The flow is pending.');
+  deepEqual(flow.status().targets, ['//pend/'], 'status.targets is preserved when the flow is pending.');
+  pend.reset();
+  flow.target(0);
+  ok(!flow.status().targets.length, 'status.targets is empty when the flow is idle.');
 });
 
-test('.route', function () {
-
+test('.route', 20, function () {
+  var pend = (new Flow({
+      _on: function () {
+        this.wait();
+      },
+      reset: 1
+    })).map(),
+    flow = new Flow({
+      _in: function () {
+        var stat = this.status();
+        deepEqual(stat.route, ['..//', '//'], 'status.route reflects states traversed to reach this state.');
+        equal(stat.route.slice(-1)[0], stat.path, 'The last state in status.route is the state containing the _over component function.');
+      },
+      _out: function () {
+          var stat = this.status();
+          equal(stat.route.slice(-1)[0], stat.path, 'The last state in status.route is the state containing the _out component function.');
+      },
+      over: {
+        _over: function () {
+          var stat = this.status();
+          equal(stat.route.slice(-1)[0], stat.path, 'The last state in status.route is the state containing the _over component function.');
+        }
+      },
+      bover: {
+        _bover: function () {
+          var stat = this.status();
+          equal(stat.route.slice(-1)[0], stat.path, 'The last state in status.route is the state containing the _bover component function.');
+        }
+      },
+      hidden: 1,
+      hop: {
+        _over: function () {
+          this.go('//hop/skip/','//hop/');
+        },
+        skip: 1
+      },
+      traverse: {
+        _on: function () {
+          var stat = this.status();
+          deepEqual(stat.route, ['..//', '//', '//over/', '//bover/', '//hidden/', '//hop/', '//hop/skip/', '//hop/', '//traverse/'], 'status.route references all states, whether they have component functions or are traversed twice.');
+          equal(stat.route.slice(-1)[0], stat.path, 'The last state in status.route is the state containing the _on component function.');
+        },
+        start: function () {
+          var stat = this.status();
+          ok(stat.route.length, 'status.route is always populated when called internally.');
+          deepEqual(stat.route, ['//traverse/start/'], 'status.route always begins with the current state.');
+          this.go('../one', '../two', '../end');
+        },
+        one: function () {
+          deepEqual(this.status().route, ['//traverse/start/','//traverse/one/'], 'status.route accurately reflects the states traversed.');
+        },
+        two: function () {
+          deepEqual(this.status().route, ['//traverse/start/','//traverse/one/', '//traverse/two/'], 'status.route accurately reflects the states traversed.');
+        },
+        end: function () {
+          deepEqual(this.status().route, ['//traverse/start/','//traverse/one/', '//traverse/two/', '//traverse/end/'], 'status.route accurately reflects the states traversed.');
+        }
+      },
+      pause: {
+        _in: function () {
+          this.wait();
+        }
+      },
+      pend: {
+        _in: function () {
+          pend();
+        }
+      }
+    });
+  ok(!flow.status().route.length, 'status.route is empty by default.');
+  ok(flow.status().route !== flow.status().route, 'status.route is a new array everytime.');
+  flow.target('//traverse/');
+  flow.target('//traverse/start/');
+  flow.target('//pause/');
+  equal(flow.status().paused, true, 'The flow is paused.');
+  equal(flow.status().route[0], '//traverse/end/', 'status.route captures states exited, when navigating towards a target.');
+  deepEqual(flow.status().route, ['//traverse/end/', '//traverse/two/', '//traverse/one/', '//traverse/start/', '//traverse/', '//pause/'], 'status.targets is preserved when the flow is paused.');
+  flow.target('//pend/');
+  equal(flow.status().pending, true, 'The flow is pending.');
+  deepEqual(flow.status().route, ['//traverse/end/', '//traverse/two/', '//traverse/one/', '//traverse/start/', '//traverse/', '//pause/', '//pend/'], 'status.targets is preserved when the flow is pending.');
+  pend.reset();
+  flow.target(0);
+  ok(!flow.status().route.length, 'status.routeis empty when the flow is idle.');
 });
 
 test('.path', 5, function () {
@@ -1067,18 +1202,36 @@ test('.state', 5, function () {
 
 module('Scenario')
 
-test('A locked flow denies external changes via proxy.args().', function () {
-  
+test('Proxy methods when the flow is locked.', 16, function () {
+  var flow = new Flow(function () {
+    this.lock(1);
+    equal(this.lock(), true, 'The flow is now locked.');
+    equal(this.args(0, 'bacon'), true, 'pkg.args() can set arguments internally.');
+    equal(this.go(0), true, 'pkg.go() works internally.');
+    equal(this.target(0, 'foo'), true, 'pkg.target() works internally.');
+    equal(this.args(0), 'foo', 'Using pkg.target() internally does change arguments.');
+    equal(this.vars('hello', 'chicken'), true, 'pkg.vars() works internally.');
+    this.wait(function () {
+        this.lock(0);
+        equal(this.lock(), false, 'The flow is now unlocked.');
+        start();
+      },
+      10
+    );
+    equal(this.status().paused, true, 'The locked flow is now paused.');
+  });
+  flow.target(1);
+  equal(flow.lock(), true, 'Externally, after pausing navigation, pkg.lock() returns true.');
+  equal(flow.args(0), 'foo', 'pkg.args() can get arguments externally.');
+  equal(flow.args(0, 'bar'), false, 'pkg.args() will not set arguments externally.');
+  equal(flow.vars('hello'), 'chicken', 'pkg.vars() can get variables externally.');
+  equal(flow.vars('hello', 'world'), true, 'pkg.vars() can set variables externally.');
+  equal(flow.go(0), false, 'pkg.go() does not work externally.');
+  equal(flow.target(0, 'bar'), false, 'pkg.target() does not work externally.');
+  equal(flow.args(0), 'foo', 'Using pkg.target() externally does not change arguments.');
+  stop();
 });
 
 test('proxy.go() does not clear flow arguments.', function () {
-  
-});
-
-test('proxy.go() resumes paused flows', function () {
-  
-});
-
-test('proxy.status() is accurate during navigation.', function () {
   
 });
