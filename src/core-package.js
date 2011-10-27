@@ -456,8 +456,8 @@
       var pkg = this; // alias self
       // unpause this flow
       pkg.pause = 0;
-      // exit when pending, untrusted and locked, or direct tank to the first target - returns the number of steps completed (or false when there is no target)
-      return pkg.pending || (pkg.locked && !pkg.trust) ? 0 : pkg.tank.go(pkg.targets[0]);
+      // exit when pending, or direct tank to the first target - returns the number of steps completed (or false when there is no target)
+      return pkg.pending ? 0 : pkg.tank.go(pkg.targets[0]);
     }
   };
 
@@ -675,8 +675,7 @@
   // access and edit the locked status of a flow
   core.proxy.lock = function (set) {
     // init vars
-    var pkg = core(this), // alias self
-      result = false; // call status
+    var pkg = core(this); // alias package instance
     // if arguments were passed...
     if (arguments.length) {
       // if allowed to change the lock status...
@@ -684,14 +683,13 @@
         // set new lock state
         pkg.locked = !!set;
         // flag success in changing the locked property of this flow
-        result = true;
+        return true;
       }
-    } else {
-      // return current locked status
-      result = !!pkg.locked;
+      // (otherwise) flag failure to change lock status
+      return false;
     }
-    // return call status
-    return result;
+    // (otherwise) return current locked status
+    return !!pkg.locked;
   };
 
   // access and edit scoped variables for a state
@@ -742,15 +740,16 @@
     var pkg = core(this), // get package
       pkgArgs = pkg.args, // alias arguments from this package
       argCnt = arguments.length, // get number of arguments passed
-      idxType = typeOf(idx), // get type of first argument
-      rtn = true; // value to return (default is true)
-    // if passed arguments and this flow is unlocked...
-    if (argCnt && !pkg.locked) {
+      idxType = typeOf(idx); // get type of first argument
+    // if getting a single value, or setting arguments on a trusted or unlocked flow...
+    if (argCnt === 1 || (argCnt && (pkg.trust || !pkg.locked))) {
       // if idx is an array...
       if (idxType === 'array') {
         // replace args with a copy of the idx array
         pkg.args = [].concat(idx);
-      } else if (idxType === 'number' && !isNaN(idx) && (idx = ~~idx) > -1) { // or, when idx is a number...
+        // flag success with setting new argument values
+        return true;
+      } else if (idxType === 'number' && !isNaN(idx) && idx >= 0) { // or, when idx is a valid index...
         // if a value was passed...
         if (argCnt > 1) {
           // if the value is undefined and the last index was targeted...
@@ -761,27 +760,25 @@
             // set the value of the target index
             pkgArgs[idx] = value;
           }
-        } else { // otherwise, when a second parameter was not passed...
-          // return the value of the targeted index (could be undefined)
-          rtn = pkgArgs[idx];
+          // (finally) flag success with setting or removing the index
+          return true;
         }
-      } else { // otherwise, when idx is invalid (wrong type or a negative number)...
-        // flag failure to return anything because idx is unrecognized
-        rtn = false;
+        // (otherwise) return the value of the targeted index (could be undefined)
+        return pkgArgs[idx];
       }
     } else if (!argCnt) { // otherwise, when given no arguments...
       // return a copy of the arguments array (available to locked flows)
-      rtn = [].concat(pkgArgs);
+      return [].concat(pkgArgs);
     }
-    // send return value
-    return rtn;
+    // send false when sent arguments are invalid or setting is prohibited (i.e., the flow is locked)
+    return false;
   };
 
   // add method to program api
   core.proxy.target = function (qry) {
     // init vars
     var pkg = core(this), // alias this package
-      tgtIdx = pkg.vetIndexOf(qry); // resolve a state index from qry
+      tgtIdx = (pkg.trust || !pkg.locked) ? pkg.vetIndexOf(qry) : -1; // resolve a state index from qry, or nothing if trusted or unlocked
     // if the destination state is valid, and the flow can move...
     if (~tgtIdx) {
       // capture arguments after the tgt
@@ -817,8 +814,9 @@
       wasPaused = pkg.pause, // capture current paused status
       waypoints = [], // collection of targets to add to targets
       result = 0; // success status for this call
-    // if any and all state references are valid...
+    // if trusted or unlocked, and any and all state references are valid...
     if (
+      (pkg.trust || !pkg.locked) &&
       [].slice.call(arguments).every(function (stateRef) {
         // init vars
         var idx = pkg.vetIndexOf(stateRef); // resolve index of this reference
