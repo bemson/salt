@@ -259,7 +259,7 @@ test('_vars', 30, function () {
   });
 });
 
-module('Instance');
+module('Package Instance');
 
 test('.getVar()', 15, function () {
   var corePkg = Flow.pkg('core'),
@@ -302,7 +302,27 @@ test('.getVar()', 15, function () {
   equal(vto.values[0], value, 'The second vto has the expected initial value.');
 });
 
-test('.go()', function () {
+test('.go()', 10, function () {
+  var flow = new Flow(),
+    pkg = Flow.pkg('core')(flow),
+    tank = pkg.tank;
+  equal(tank.currentIndex, 0, 'The flow is currently on state 0.');
+  equal(pkg.go.length, 0, 'pkg.go() expects no arguments.');
+  equal(pkg.go(), 0, 'pkg.go() returns 0 when there are no indice in the pkg.targets array.');
+  pkg.targets = [0];
+  equal(pkg.go(), 2, 'The flow starts outside the 0 state, even though it is the currentIndex.');
+  equal(tank.currentIndex, 0, 'The flow is now "on" the 0 state.');
+  pkg.targets = [tank.currentIndex];
+  equal(pkg.go(), 1, 'pkg.go() returns 1 when the pkg.targets index is the current state.');
+  pkg.targets = [0, 1];
+  equal(pkg.go(), 3, 'pkg.go() returns the number of steps (per state) traversed in order to navigate the pkg.target states.');
+  equal(tank.currentIndex, 1, 'The flow is now at state 1.');
+  pkg.pause = 1;
+  pkg.go();
+  equal(pkg.pause, 0, 'pkg.go() sets pkg.pause to 0, irregardless of pkg.targets.');
+  pkg.pending = 1;
+  pkg.targets = [0];
+  equal(pkg.go(), 0, 'pkg.go() returns 0 when pkg.pending is truthy.');
 });
 
 test('.indexOf()', 8, function () {
@@ -333,7 +353,7 @@ test('.indexOf()', 8, function () {
   equal(coreInst.indexOf(randIdx), randIdx, 'Returns the same index when the query is an in-range number.');
 });
 
-test('.vetIndexOf()', function () {
+test('.vetIndexOf()', 3, function () {
   var coreDef = Flow.pkg('core'),
     coreInst = coreDef(new Flow(
       {
@@ -375,10 +395,6 @@ test('.canTgt()', function () {
 });
 
 module('Proxy');
-
-test('presence', function () {
-
-});
 
 test('.lock()', 16, function  () {
   var flow = new Flow(function () {
@@ -734,9 +750,9 @@ test('status()', 12, function () {
 
 module('pkg.status()');
 
-test('PackageDefinition.addStatus Framework', function () {
+test('PackageDefinition.addStatus Framework', 21, function () {
   var corePkgDef = Flow.pkg('core'),
-    addStatus = corePkgDef.addStatus,
+    oldAddStatus = corePkgDef.addStatus,
     flow = new Flow(),
     params = [0, 1, NaN, undefined, null, {}, [], 'foo'];
   corePkgDef.addStatus = function (existingObject) {
@@ -761,7 +777,7 @@ test('PackageDefinition.addStatus Framework', function () {
     };
     deepEqual(flow.status(),{},'When PkgDef.addStatus is a function that returns (an empty) "' + val + '" (' + T.type(val) + ') it does not impact the status object.');
   });
-  corePkgDef.addStatus = addStatus;
+  corePkgDef.addStatus = oldAddStatus;
 });
 
 test('.trust', 6, function () {
@@ -1202,7 +1218,7 @@ test('.state', 5, function () {
 
 module('Scenario')
 
-test('Proxy methods when the flow is locked.', 16, function () {
+test('Proxy methods on a locked flow.', 16, function () {
   var flow = new Flow(function () {
     this.lock(1);
     equal(this.lock(), true, 'The flow is now locked.');
@@ -1232,6 +1248,103 @@ test('Proxy methods when the flow is locked.', 16, function () {
   stop();
 });
 
-test('proxy.go() does not clear flow arguments.', function () {
-  
+test('Arguments are passed to destination states.', 7, function () {
+  var argValue = {},
+    plannedRoute = new Flow({
+      waypoint: function () {
+        ok(this.status().targets.length, 'Traversing a state with more targets to go.');
+        ok(!arguments.length, 'No arguments passed to this waypoint state.');
+      },
+      destination: function (arg) {
+        strictEqual(arg, argValue, 'Arguments passed to the destination state.');
+      }
+    }),
+    dynamicStateFnc = function (arg) {
+      var status = this.status();
+      strictEqual(arg, argValue, 'Arguments pushed to "' + status.path + '" after visiting ' + (status.route.length - 1) + ' states, the current last/destination state.');
+      this.go('@next');
+    },
+    dynamicRoute = new Flow({
+      a: dynamicStateFnc,
+      b: dynamicStateFnc,
+      c: dynamicStateFnc
+    });
+
+  plannedRoute.args(0, argValue);
+  strictEqual(plannedRoute.args(0), argValue, 'Arguments have been preloaded.');
+  plannedRoute.go('//waypoint/', '//destination/');
+  dynamicRoute.target(1);
+  dynamicRoute.args(0, argValue);
+  dynamicRoute.target('//a/', argValue);
+});
+
+test('No overflow when calculating the fibonacci number of 1000.', 1, function () {
+  var fibonacci = (new Flow(function (number, previousNumber, currentNumber) {
+    if (arguments.length === 1) {
+      previousNumber = 0;
+      currentNumber = 1;
+    }
+    if (number--) {
+      this.target('//', number, currentNumber, previousNumber + currentNumber);
+    } else {
+      return currentNumber;
+    }
+  })).map();
+  equal(fibonacci(10), 89,'The "fibonacci" flow works as expected.');
+  fibonacci(1000);
+});
+
+test('Prevent consecutive execution.', 1, function () {
+  var tic = 0,
+    doImportantThing = (new Flow({
+      _in: function () {
+        tic++;
+      }
+    })).map();
+  doImportantThing();
+  doImportantThing();
+  equal(tic, 1, 'Function executed once!');
+});
+
+test('Reversing direction from an _over or _bover step does not trigger the other step.', function () {
+  var bounce = 1,
+    pause = 0,
+    flow = new Flow({
+      hump: {
+        _over: function () {
+          ok(1, 'Processing _over step.');
+          if (bounce) {
+            this.target(1);
+          }
+          if (pause) {
+            this.wait();
+          }
+        },
+        _bover: function () {
+          ok(1, 'Processing _bover step.');
+          if (bounce) {
+            this.target('@next');
+          }
+          if (pause) {
+            this.wait();
+          }
+        }
+      },
+      point: 1
+    });
+  flow.target('//point/');
+  equal(flow.status().index, 1, 'Successfully bounced via _over state');
+  pause = 1;
+  flow.target('//point/');
+  flow.go();
+  equal(flow.status().index, 1, 'Successfully bounced after pausing, via _over state.');
+  pause = bounce = 0;
+  flow.target('//point/');
+  bounce = 1;
+  flow.target(0);
+  equal(flow.status().state, 'point', 'Successfully bounced via _bover state.');
+  pause = 1;
+  flow.target(0);
+  flow.go();
+  equal(flow.status().state, 'point', 'Successfully bounced after pausing, via _bover state.');
 });
