@@ -405,8 +405,8 @@
                 }
                 // predict next event based on the direction
                 nextInt = dir < 0 ? 4 : 3;
-                // if the last event was out, or matches the calculated one...
-                if (curState.lastEvent === 2 || curState.lastEvent === nextInt) {
+                // if the last event was out, matches the calculated one, or shows an over occurring after bover (or vice versa)...
+                if (curState.lastEvent === 2 || curState.lastEvent === nextInt || curState.lastEvent + nextInt === 7) {
                   // flag that we're changing states
                   nextIsEvent = 0;
                   // go forward, backward, or up based on direction
