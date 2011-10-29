@@ -829,7 +829,7 @@
       // if there are waypoints...
       if (waypoints.length) {
         // if the last waypoint matches the first target...
-        if (waypoints.slice(-1) === pkg.targets[0]) {
+        if (waypoints.slice(-1)[0] === pkg.targets[0]) {
           // remove the last waypoint
           waypoints.pop();
         }
@@ -853,10 +853,10 @@
       delayFnc = noAction ? 0 : args[0], // capture first argument as action to take after the delay, when more than one argument is passed
       isFnc = typeof delayFnc === 'function', // flag when the delay is a function
       delayStateIdx = pkg.indexOf(delayFnc), // get state referenced by delayFnc (the first argument) - no vet check, since this would be a priviledged call
-      time = ~~args[argLn - 1], // use last argument as time parameter
+      time = args[argLn - 1], // use last argument as a time
       result = 0; // indicates result of call
     // if trusted and the the argument's are valid...
-    if (pkg.trust && (!argLn || (time > -1 && (noAction || ~delayStateIdx || isFnc)))) {
+    if (pkg.trust && (!argLn || (time >= 0 && typeof time === 'number' && (noAction || ~delayStateIdx || isFnc)))) {
       // flag that we've paused this flow
       pkg.pause = 1;
       // stop the tank
@@ -881,7 +881,7 @@
               pkg.go();
             }
           },
-          time // number of milliseconds to wait
+          ~~time // number of milliseconds to wait (converted to an integer)
         ) :
         1; // set to 1 to pause indefinitely
       // indicate that this flow has been delayed
