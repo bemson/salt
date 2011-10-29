@@ -694,7 +694,7 @@ test('.vars()', 12, function () {
   equal(flow.vars(vName), vValue, 'Returns the value previously set.');
 });
 
-test('.args()', 18, function () {
+test('.args()', 19, function () {
   var val1 = {},
     val2 = {},
     valAry = [val1, val2],
@@ -717,6 +717,7 @@ test('.args()', 18, function () {
     }),
     map = flow.map();
   equal(T.type(flow.args()), 'array', 'Returns an array when passed no parameters.');
+  ok(flow.args() !== flow.args(), 'The array returned is unique.');
   equal(flow.args(1), undefined, 'Returns "undefined" when passed a valid index.');
   [NaN, -1, function () {}, {}, true].forEach(function (arg) {
     equal(flow.args(arg), false, 'Returns false when the first index is "' + arg + '".');
@@ -1296,7 +1297,7 @@ test('Control executions during asynchrounous actions.', 8, function () {
   stop();
 });
 
-test('How proxy methods behave when a flow is locked.', 16, function () {
+test('Traversal method behavior on a locked flow.', 16, function () {
   var flow = new Flow(function () {
     this.lock(1);
     equal(this.lock(), true, 'The flow is now locked.');
@@ -1323,6 +1324,29 @@ test('How proxy methods behave when a flow is locked.', 16, function () {
   equal(flow.go(0), false, 'pkg.go() does not work externally.');
   equal(flow.target(0, 'bar'), false, 'pkg.target() does not work externally.');
   equal(flow.args(0), 'foo', 'Using pkg.target() externally does not change arguments.');
+  stop();
+});
+
+test('Buffered execution, after numerous calls.', 2, function () {
+  var i = 0, callCnt = 100,
+    arbitraryEventData = {},
+    eventHandlerFlow = new Flow({
+      _vars: {bufferCount: 0},
+      _on: function (evtData) {
+        this.vars('bufferCount', this.vars('bufferCount') + 1);
+        this.go('//handleEvent/');
+        this.wait(0);
+      },
+      handleEvent: function (eventData) {
+        equal(this.vars('bufferCount'), callCnt, 'The flow was called ' + callCnt + ' times, and the target behavior executed once.');
+        strictEqual(eventData, arbitraryEventData, 'The execution recieved the original arguments.');
+        start();
+      }
+    }),
+    eventHandlerCallBack = eventHandlerFlow.map();
+  for (; i < callCnt; i++) {
+    eventHandlerCallBack(arbitraryEventData);
+  }
   stop();
 });
 
@@ -1384,7 +1408,7 @@ test('Prevent consecutive execution for the same state.', 1, function () {
   equal(tic, 1, 'Function executed once!');
 });
 
-test('Bouncing a flow during the _over and _bover steps will not trigger the opposite step.', 10, function () {
+test('Reversing the flow\'s direction during an _over and _bover step does not trigger the other step.', 10, function () {
   var tic = 0,
     pause = 0,
     overBounce = new Flow({
@@ -1437,4 +1461,43 @@ test('Bouncing a flow during the _over and _bover steps will not trigger the opp
   boverBounce.go();
   equal(boverBounce.status().paused, false, 'The flow was resumed.');
   equal(tic, 2, 'Bouncing the flow from the _bover step, after pausing, does not trigger the _over step.');
+});
+
+test('Automatic execution of prerequisite functions.', 1, function () {
+  var prereqs = 0,
+    modelPrereq = {
+      _over: function () {
+        this.go('@self');
+      },
+      _on: function () {
+        prereqs++;
+      }
+    },
+    appFlow = new Flow({
+      bootstrap: modelPrereq,
+      preload: modelPrereq,
+      initialize: modelPrereq,
+      register: modelPrereq,
+      start: function () {
+        equal(prereqs, 4, 'Earlier states self-executed using the _over component.');
+      }
+    }),
+    app = appFlow.map();
+  app.start();
+});
+
+test('Alter arguments before executing a function.', function () {
+  var echo = function (arg) {
+      return arg;
+    },
+    invertEcho = (new Flow({
+      _in: function () {
+        this.args(0, this.args(0).split('').reverse().join(''));
+      },
+      _on: echo
+    })).map(),
+    input = 'hello',
+    invertEchoOutput = input.split('').reverse().join('');
+  equal(echo(input), input, 'The raw function works as expected.');
+  equal(invertEcho(input), invertEchoOutput, 'The flow alters the original arguments as expected.');
 });
