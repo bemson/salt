@@ -47,9 +47,9 @@ test('Proxy', 9, function () {
   });
 });
 
-module('Parsing');
+module('State Components');
 
-test('program keys', 3, function () {
+test('parsing keys', 3, function () {
   var corePkg = Flow.pkg('core'),
     defCnt = corePkg(new Flow()).states.length,
     data = {
@@ -259,7 +259,7 @@ test('_vars', 30, function () {
   });
 });
 
-module('Package Instance');
+module('Package');
 
 test('.getVar()', 15, function () {
   var corePkg = Flow.pkg('core'),
@@ -391,7 +391,38 @@ test('.scopeVars()', 5, function () {
   ok(!coreInst.vars.hasOwnProperty('foo'), 'When the vto has no more values, descoping removes the vto from the package-instance.');
 });
 
-test('.canTgt()', function () {
+test('.canTgt()', 16, function () {
+  var
+    pkg = Flow.pkg('core')(
+      new Flow({ // 1
+        a: { // 2
+          a: 1 // 3
+        },
+        restrict: { // 4
+          _restrict: 1,
+          a: 1 // 5
+        }
+      })
+    ),
+    states = pkg.states;
+  equal(states[0].canTgt.length, 1, 'state.canTgt() expects one argument.');
+  equal(typeof states[0].canTgt(states[1]), 'boolean', 'Returns a boolean, when passed a state object.');
+  equal(states[0].canTgt(states[1]), true, 'state.canTgt() permits targeting child states.');
+  equal(states[0].canTgt(states[states.length - 1]), true, 'state.canTgt() permits targeting descendent states.');
+  equal(states[3].canTgt(states[2]), true, 'state.canTgt() permits targeting the parent state.');
+  equal(states[3].canTgt(states[0]), true, 'state.canTgt() permits targeting ancestor states.');
+  equal(states[4].restrict, true, 'There is a restricted state.');
+  equal(states[4].canTgt(states[5]), true, 'Restricted states can target descendant states.');
+  equal(states[4].canTgt(states[3]), false, 'Restricted states can not target ancestor states.');
+  equal(states[4].canTgt(states[4]), false, 'Restricted states can not target themselves.');
+  raises(function () {
+    states[4].canTgt();
+  }, 'state.canTgt() throws an error on restricted states, when called with no arguments.');
+  ['foo', 1, {}, [], function () {}].forEach(function (param) {
+    raises(function () {
+      states[4].canTgt(param);
+    }, 'state.canTgt() throws an error on resricted states, when passed a "' + typeof param + '".');
+  });
 });
 
 module('Proxy');
@@ -595,51 +626,58 @@ test('.go()', 18, function () {
   equal(pendTic, 1, 'Did not fire the _on function of a pending state!');
 });
 
-test('.wait()', 10, function () {
-  var tic = -3,
+test('.wait()', 20, function () {
+  var tic = 0,
+    tgtTics = 9;
     flow = new Flow({
       _in: function () {
-        equal(this.wait(100), true, 'Returns true from a trusted routine with valid arguments.');
+        var scope = this;
+        equal(this.wait(), true, 'Returns true when called internally, with no arguments.');
+        equal(this.wait(0), true, 'Returns true when passed an integer greater-than-or-equal-to zero.');
+        equal(this.wait(.1), true, 'Returns true when passed a decimal greater-than-or-equal-to zero.');
+        equal(this.wait(2, 0), true, 'Returns true when passed a state index and valid integer.');
+        equal(this.wait('//', 0), true, 'Returns true when passed a state query and valid integer.');
+        equal(this.wait(function () {ok(1, 'THIS CALLBACK SHOULD NOT FIRE.')}, 0), true, 'Returns true when passed a function and valid integer.');
+        [NaN, -1, null, {}, [], undefined, function () {}].forEach(function (param) {
+          equal(scope.wait(param), false, 'Returns false when passed a single "' + param + '" (' + T.type(param) + ').');
+        });
+        this.wait();
+        equal(this.status().paused, true, 'The flow is paused after a successful proxy.wait() call.');
+        this.go();
+        equal(this.status().paused, false, 'The flow is not paused after calling proxy.go() or proxy.target().');
       },
       _on: function () {
-        this.target(0);
-        equal(this.wait(NaN, 100), false, 'Returns false when passed invalid arguments.');
-        this.wait(2, 100);
+        this.target('delay');
       },
-      redir: function () {
+      delay: function () {
         var scope = this;
-        ok(1, 'Assumes the first parameter is a query, when passed two arguments.');
         this.wait(function () {
-          ok(this === scope, 'Scope of callback is the same as that of a component function.');
-          equal(this.wait(3, 100), true, 'Can be called within the _on component function.');
-        }, 100);
+          ok(this === scope, 'Scope of proxy.wait()-callback is the flow proxy.');
+          equal(this.wait('//perpetual/', 0), true, 'proxy.wait() can be called from within a proxy.wait()-callback.');
+        }, 0);
       },
-      perpetual: function () {
-        if (tic++) {
-          this.wait(3, 100);
-        } else {
-          equal(tic, 1, 'Reinvokes the _on function when called perpetually.');
-          this.target(4);
+      perpetual: {
+        _in: function () {
+          this.wait(function () {
+            if (tic++ < tgtTics) {
+              this.wait(arguments.callee, 0);
+            }
+          }, 0);
+        },
+        _on: function () {
+          equal(tic, tgtTics + 1, 'proxy.wait() can perpetually delay a flow from navigating towards a target state.');
+          this.target('//endtests/');
         }
       },
-      done: function () {
-        equal(this.wait(), true, 'Returns true from a trusted routine with no arguments.');
-      },
-      complete: function () {
-        ok(1, 'Pauses indefinitely when passed no arguments.');
+      endtests: function () {
         start();
       }
     });
-  equal(flow.wait(), false, 'Returns false when called from an untrusted routine.');
-  equal(flow.wait(100), false, 'Returns false when called from an untrusted routine, and given an argument.');
-
+  equal(flow.wait(), false, 'Returns false when called externally.');
   flow.target(1);
-  setTimeout(function () {
-    flow.target(5);
-  }, 1000);
+  equal(flow.status().paused, true, 'proxy.wait() interrupts the execution flow, the same as window.setTimeout().');
   stop();
 });
-
 
 test('.vars()', 12, function () {
   var flow = new Flow(),
@@ -1216,9 +1254,49 @@ test('.state', 5, function () {
   equal(flow.status().state, 'c', 'status.state reflects the current state.');
 });
 
-module('Scenario')
+module('Scenario');
 
-test('Proxy methods on a locked flow.', 16, function () {
+test('Control executions during asynchrounous actions.', 8, function () {
+  var scenario = new Flow({
+    restrict: function () {
+      var async = new Flow({
+          _restrict: 1,
+          _on: function () {
+            this.target('//done/');
+            this.wait(0);
+          },
+          done: function () {
+            ok(1, 'The restricted async action has completed.');
+          }
+        });
+      equal(async.go(1), true, 'Started a restricted async action.');
+      ok(!async.query(0, 1), 'Cannot re-execute the restricted async action nor ancestor states.');
+      deepEqual(async.query('//done/'), ['//done/'], 'Can navigate to descendants of the restricted async action.');
+    },
+    lock: function () {
+      var async = new Flow({
+        _on: function () {
+          this.lock(1);
+          equal(this.lock(), true, 'The async flow is now locked.');
+          this.target('//done/');
+          this.wait(0);
+        },
+        done: function () {
+          ok(1, 'The locked async flow has completed.');
+        }
+      });
+      equal(async.go(1), true, 'Started a locked async action.');
+      ok(!async.query(0, 1, '//done/'), 'Cannot navigate to any state of the locked flow.');
+    },
+    done: function () {
+      start();
+    }
+  });
+  scenario.go('//restrict', '//lock', '//done');
+  stop();
+});
+
+test('How proxy methods behave when a flow is locked.', 16, function () {
   var flow = new Flow(function () {
     this.lock(1);
     equal(this.lock(), true, 'The flow is now locked.');
@@ -1248,7 +1326,7 @@ test('Proxy methods on a locked flow.', 16, function () {
   stop();
 });
 
-test('Arguments are passed to destination states.', 7, function () {
+test('Flow arguments are passed to the _on function of the last/destination state.', 7, function () {
   var argValue = {},
     plannedRoute = new Flow({
       waypoint: function () {
@@ -1278,7 +1356,7 @@ test('Arguments are passed to destination states.', 7, function () {
   dynamicRoute.target('//a/', argValue);
 });
 
-test('No overflow when calculating the fibonacci number of 1000.', 1, function () {
+test('Calculate the fibonacci number of 1000 without causing a stack-overflow.', 1, function () {
   var fibonacci = (new Flow(function (number, previousNumber, currentNumber) {
     if (arguments.length === 1) {
       previousNumber = 0;
@@ -1294,7 +1372,7 @@ test('No overflow when calculating the fibonacci number of 1000.', 1, function (
   fibonacci(1000);
 });
 
-test('Prevent consecutive execution.', 1, function () {
+test('Prevent consecutive execution for the same state.', 1, function () {
   var tic = 0,
     doImportantThing = (new Flow({
       _in: function () {
@@ -1306,45 +1384,57 @@ test('Prevent consecutive execution.', 1, function () {
   equal(tic, 1, 'Function executed once!');
 });
 
-test('Reversing direction from an _over or _bover step does not trigger the other step.', function () {
-  var bounce = 1,
+test('Bouncing a flow during the _over and _bover steps will not trigger the opposite step.', 10, function () {
+  var tic = 0,
     pause = 0,
-    flow = new Flow({
+    overBounce = new Flow({
       hump: {
         _over: function () {
-          ok(1, 'Processing _over step.');
-          if (bounce) {
-            this.target(1);
-          }
+          tic++;
+          this.target(1);
           if (pause) {
             this.wait();
           }
         },
         _bover: function () {
-          ok(1, 'Processing _bover step.');
-          if (bounce) {
-            this.target('@next');
-          }
+          tic++;
+        }
+      },
+      point: 1
+    }),
+    boverBounce = new Flow({
+      hump: {
+        _bover: function () {
+          tic++;
+          this.target('//point/');
           if (pause) {
             this.wait();
           }
+        },
+        _over: function () {
+          tic++;
         }
       },
       point: 1
     });
-  flow.target('//point/');
-  equal(flow.status().index, 1, 'Successfully bounced via _over state');
+  overBounce.target('//point/');
+  equal(tic, 1, 'Bouncing the flow from the _over step does not trigger the _bover step.');
   pause = 1;
-  flow.target('//point/');
-  flow.go();
-  equal(flow.status().index, 1, 'Successfully bounced after pausing, via _over state.');
-  pause = bounce = 0;
-  flow.target('//point/');
-  bounce = 1;
-  flow.target(0);
-  equal(flow.status().state, 'point', 'Successfully bounced via _bover state.');
+  overBounce.target('//point/');
+  equal(overBounce.status().paused, true, 'The flow is paused...');
+  equal(overBounce.status().phase, 'over', '...at the _over step.');
+  overBounce.go();
+  equal(overBounce.status().paused, false, 'The flow was resumed.');
+  equal(tic, 2, 'Bouncing the flow from the _over step, after pausing, does not trigger the _bover step.');
+  boverBounce.target('//point/');
+  pause = tic = 0;
+  boverBounce.target(0);
+  equal(tic, 1, 'Bouncing the flow from the _bover step does not trigger the _over step.');
   pause = 1;
-  flow.target(0);
-  flow.go();
-  equal(flow.status().state, 'point', 'Successfully bounced after pausing, via _bover state.');
+  boverBounce.target(0);
+  equal(boverBounce.status().paused, true, 'The flow is paused...');
+  equal(boverBounce.status().phase, 'bover', '...at the _bover step.');
+  boverBounce.go();
+  equal(boverBounce.status().paused, false, 'The flow was resumed.');
+  equal(tic, 2, 'Bouncing the flow from the _bover step, after pausing, does not trigger the _over step.');
 });
