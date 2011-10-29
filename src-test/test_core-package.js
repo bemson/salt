@@ -1501,3 +1501,23 @@ test('Alter arguments before executing a function.', function () {
   equal(echo(input), input, 'The raw function works as expected.');
   equal(invertEcho(input), invertEchoOutput, 'The flow alters the original arguments as expected.');
 });
+
+test('Execute a function sequence.', 1, function () {
+  var strings = [],
+    phrase = 'hello foo bar',
+    modelFnc = function () {
+      strings.push(this.status().state);
+      this.wait(Math.random() * 100);
+    },
+    sequence = new Flow({
+      bar: modelFnc,
+      hello: modelFnc,
+      foo: modelFnc,
+      done: function () {
+        equal(strings.join(' '), phrase, 'The randomly delayed functions executed in their given sequence.');
+        start();
+      }
+    });
+  sequence.go('//hello/', '//foo/', '//bar/', '//done/');
+  stop();
+});
