@@ -64,12 +64,12 @@ module('Package');
 test('Members', 15, function () {
   var flowBefore = new Flow(),
     pkgDef = Flow.pkg(FT.pkgName),
-    defMbrs = 'init|dataKey|invalidKey|onBegin|onEnd|onTraverse'.split('|'),
+    defMbrs = 'init|attributeKey|invalidKey|onBegin|onEnd|onTraverse'.split('|'),
     defProtos = 'proxy|state'.split('|'),
     flow = new Flow();
   equal(1, Flow.pkg().length, 'Added the "' + FT.pkgName + '" package.');
   equal(FT.pkgName, Flow.pkg()[0], 'The only package is "' + FT.pkgName + '".');
-  equal(pkgDef, Flow.pkg(FT.pkgName), 'A package definition is a singleton.');
+  strictEqual(pkgDef, Flow.pkg(FT.pkgName), 'A package definition is a singleton.');
   equal(typeof pkgDef, 'function', 'A package definition is a function.');
   ok(flow.pkgs.hasOwnProperty(FT.pkgName), 'The "' + FT.pkgName + '" package is now available to instances.');
   defMbrs.forEach(function (mbr) {
@@ -99,7 +99,7 @@ test('Proxy', 8, function () {
   equal(typeof flow.pkgs[pkgName].targetMethod, 'undefined', 'Deleted proxy methods are also removed from the package-proxy (of the same name) in the "pkgs" member of the flow instance.');
 });
 
-test('Instance', function () {
+test('Instance', 9, function () {
   var flow = new Flow(),
     pkgDef = Flow.pkg(FT.pkgName),
     pkgInst = pkgDef(flow),
@@ -109,8 +109,6 @@ test('Instance', function () {
   equal(typeof pkgInst.tank, 'object', 'The .tank member is an object.');
   equal(pkgInst.states.constructor, Array, 'The .states member is an Array.');
   ok(pkgInst.states.length > 1, 'There is more than one state in an instance.');
-  ok(pkgInst.inState, 'The .inState member exists');
-  equal(typeof pkgInst.inState, 'function', 'The inState member is a function.');
   for (mbr in pkgInst) {
     if (pkgInst.hasOwnProperty(mbr)) {
       mbrCnt++;
@@ -163,7 +161,7 @@ test('State', function () {
     ];
   equal(statePaths.length, states.length, 'The expected number of states are present.');
   equal(typeof states[0].name, 'string', 'The "name" member is a string.');
-  equal(typeof states[0].data, 'object', 'The "data" member is an object.');
+  equal(typeof states[0].attributes, 'object', 'The "attributes" member is an object.');
   equal(typeof states[0].path, 'string', 'The "path" member is a string.');
   equal(FT.type(states[0].children), 'array', 'The "children" member is an Array.');
   equal(states[4].value, randomValue, 'The fourth state is the expected value.');
@@ -194,7 +192,7 @@ test('State', function () {
   equal(typeof states[0].targetMethod, 'undefined', 'State methods can be deleted from the package-definition.');
 });
 
-test('Tank-API', function () {
+test('Tank-API', 16, function () {
   var pkgInst = Flow.pkg(FT.pkgName)(new Flow()),
     tank = pkgInst.tank,
     fncs = ['go', 'stop', 'post'],
@@ -265,7 +263,8 @@ test('.init', function () {
   checkProps(pkgInst);
   ok(!hasAllProps, 'The .init property does nothing when truthy and not a function.');
   pkgDef.init = function () {
-    ok(this instanceof pkgDef, 'Scope of .init function is the package-definition.');
+    ok(this instanceof pkgDef, 'Scope of .init function is the package-instance.');
+    ok(!this.tank.hasOwnProperty('go'), 'The .go() method is not available when initializing a package instance.');
     for (var i in  obj) {
       if (obj.hasOwnProperty(i)) {
         this[i] = obj[i];
@@ -296,7 +295,7 @@ test('.init', function () {
   ok(!pkgDef.init, 'The .init property was reset.');
 });
 
-test('.dataKey', function () {
+test('.attributeKey', function () {
   var program = {
       '0': 0,
       one: 1,
@@ -308,60 +307,60 @@ test('.dataKey', function () {
     pkgDef = Flow.pkg(FT.pkgName),
     pkgInst,
     defStateCnt = pkgDef(new Flow(program)).states.length,
-    badDataKeys = [0, 1, 'foo', [], {}],
-    checkAllDataKeys = function (inst) {
+    badAttrKeys = [0, 1, 'foo', [], {}],
+    checkAllAttributes = function (inst) {
       var keys = '0|one|two'.split('|'),
         hasAll = 0,
         i = 0, j = keys.length;
-      equal(inst.states.length, 2, '2 states exist when the .dataKey member flags everything.');
+      equal(inst.states.length, 2, '2 states exist when the .attributeKey member flags everything.');
       for (; i < j; i++) {
-        hasAll = inst.states[1].data.hasOwnProperty(keys[i]);
+        hasAll = inst.states[1].attributes.hasOwnProperty(keys[i]);
         if (!hasAll) {
           break;
         }
       }
-      ok(hasAll, 'The _program state has all expected data keys when the .dataKey member flags nothing.');
+      ok(hasAll, 'The _program state has all expected attributes when the .attributeKey member flags nothing.');
     },
     runCnt = 0,
     type = FT.type;
-  badDataKeys.forEach(function (key) {
-    pkgDef.dataKey = key;
-    equal(pkgDef(new Flow(program)).states.length, defStateCnt, 'The .dataKey member is ignored when a "' + type(key) + '".');
+  badAttrKeys.forEach(function (key) {
+    pkgDef.attributeKey = key;
+    equal(pkgDef(new Flow(program)).states.length, defStateCnt, 'The .attributeKey member is ignored when a "' + type(key) + '".');
   });
-  pkgDef.dataKey = function (name, value) {
+  pkgDef.attributeKey = function (name, value) {
     runCnt += 1;
-    equal(this, window, 'The scope of the .dataKey function is the window.');
-    equal(arguments.length, 2, 'The .dataKey function is passed two arguments.');
+    equal(this, window, 'The scope of the .attributeKey function is the window.');
+    equal(arguments.length, 2, 'The .attributeKey function is passed two arguments.');
     equal(typeof name, 'string', 'The first parameter (name) is a string.');
   };
-  equal(typeof pkgDef.dataKey, 'function', 'The .dataKey member is a function.');
-  badDataKeys.forEach(function (key) {
+  equal(typeof pkgDef.attributeKey, 'function', 'The .attributeKey member is a function.');
+  badAttrKeys.forEach(function (key) {
     new Flow(key);
-    equal(runCnt, 0, 'The .dataKey function is not called when the program parameter is a "' + type(key) + '" (i.e., has no members.)');
+    equal(runCnt, 0, 'The .attributeKey function is not called when the program parameter is a "' + type(key) + '" (i.e., has no members.)');
   });
   new Flow([1]);
-  equal(runCnt, 1, 'The .dataKey function executes when the program parameter has non-inherited members.');
-  pkgDef.dataKey = function () {};
-  equal(pkgDef(new Flow(program)).states.length, defStateCnt, 'All states exist when the .dataKey function flags nothing.');
-  pkgDef.dataKey = function () {return 1;};
-  checkAllDataKeys(pkgDef(new Flow(program)));
-  pkgDef.dataKey = /^$/;
-  equal(pkgDef.dataKey.constructor, RegExp, 'The .dataKey member is a regular expression.');
-  equal(pkgDef(new Flow(program)).states.length, defStateCnt, 'All states exist when the .dataKey expression flags nothing.');
-  pkgDef.dataKey = /\d/;
+  equal(runCnt, 1, 'The .attributeKey function executes when the program parameter has non-inherited members.');
+  pkgDef.attributeKey = function () {};
+  equal(pkgDef(new Flow(program)).states.length, defStateCnt, 'All states exist when the .attributeKey function flags nothing.');
+  pkgDef.attributeKey = function () {return 1;};
+  checkAllAttributes(pkgDef(new Flow(program)));
+  pkgDef.attributeKey = /^$/;
+  equal(pkgDef.attributeKey.constructor, RegExp, 'The .attributeKey member is a regular expression.');
+  equal(pkgDef(new Flow(program)).states.length, defStateCnt, 'All states exist when the .attributeKey expression flags nothing.');
+  pkgDef.attributeKey = /\d/;
   pkgInst = pkgDef(new Flow(program));
-  equal(pkgInst.states.length, defStateCnt - 2, 'The expected number of states exist when the .dataKey expression flags keys with numbers.');
-  ok(pkgInst.states[1].data.hasOwnProperty('0'), 'The numeric key "0" is a data attribute of the _root state.');
-  ok(pkgInst.states[3].data.hasOwnProperty('three_3'), 'The numeric key "three_3" is a data attribute of the fourth state.');
-  pkgDef.dataKey = /_/;
+  equal(pkgInst.states.length, defStateCnt - 2, 'The expected number of states exist when the .attributeKey expression flags keys with numbers.');
+  ok(pkgInst.states[1].attributes.hasOwnProperty('0'), 'The numeric key "0" is an attribute of the _root state.');
+  ok(pkgInst.states[3].attributes.hasOwnProperty('three_3'), 'The numeric key "three_3" is an attribute of the fourth state.');
+  pkgDef.attributeKey = /_/;
   pkgInst = pkgDef(new Flow(program));
-  equal(pkgInst.states.length, defStateCnt - 2, 'The expected number of states exist when the .dataKey expression falgs keys with underscores.');
-  ok(pkgInst.states[4].data.hasOwnProperty('three_3'), 'The "three_3" is a data attribute.');
-  ok(pkgInst.states[4].data.hasOwnProperty('_four'), 'The "_four" is a data attribute.');
-  pkgDef.dataKey = /./;
-  checkAllDataKeys(pkgDef(new Flow(program)));
-  pkgDef.dataKey = 0;
-  equal(pkgDef.dataKey, 0, 'The .dataKey member is reset.');
+  equal(pkgInst.states.length, defStateCnt - 2, 'The expected number of states exist when the .attributeKey expression falgs keys with underscores.');
+  ok(pkgInst.states[4].attributes.hasOwnProperty('three_3'), 'The "three_3" is an attribute.');
+  ok(pkgInst.states[4].attributes.hasOwnProperty('_four'), 'The "_four" is an attribute.');
+  pkgDef.attributeKey = /./;
+  checkAllAttributes(pkgDef(new Flow(program)));
+  pkgDef.attributeKey = 0;
+  equal(pkgDef.attributeKey, 0, 'The .attributeKey member is reset.');
 });
 
 test('.invalidKey', function () {
@@ -513,10 +512,10 @@ test('postBacks', 9, function () {
 
 module('Scenario');
 
-test('Newer packages override same-name proxy methods.', function () {
+test('Newer packages override same-name proxy methods.', 2, function () {
   var firstPkgDef = Flow.pkg(FT.pkgName),
     secondPkgDef = Flow.pkg('override'),
-    value = 'hello world!';
+    value = 'hello world!',
     flow = new Flow(value);
   firstPkgDef.proxy.greet = function () {
     return firstPkgDef(this).states[1].value;
@@ -526,4 +525,16 @@ test('Newer packages override same-name proxy methods.', function () {
   };
   strictEqual(flow.greet, secondPkgDef.proxy.greet, 'The last defined package overrides methods defined by earlier packages.');
   equal(flow.greet(), value, 'Newer packages can invoke older package methods.');
+});
+
+test('Existing instances can be used as the "program" parameter.', 2, function () {
+  var key = {unique:'object'},
+    pkgDef = Flow.pkg(FT.pkgName),
+    flow = new Flow(key),
+    pkgInst = pkgDef(flow),
+    comparisonState = pkgInst.states[1],
+    flowFromFlow = new Flow(flow),
+    flowFromProgram = new Flow(pkgInst);
+  deepEqual(pkgDef(flowFromFlow).states[1], comparisonState, 'Can pass a (public) flow instance to create a new Flow with the same program.');
+  deepEqual(pkgDef(flowFromProgram).states[1], comparisonState, 'Can pass a (privileged) package instance to create a new Flow with the same program.');
 });

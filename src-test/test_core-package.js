@@ -16,33 +16,33 @@ test('Dependencies', 3, function () {
 
 test('Definition', 8, function () {
   var corePkgDef = Flow.pkg('core');
-  'addStatus|events|dataKey|invalidKey|init|onBegin|onTraverse|onEnd'.split('|').forEach(function (mbr) {
+  'addStatus|events|attributeKey|invalidKey|init|onBegin|onTraverse|onEnd'.split('|').forEach(function (mbr) {
     ok(corePkgDef.hasOwnProperty(mbr), 'The package-definition has a "' + mbr + '" member.');
   });
 });
 
 test('Instance', 17, function () {
   var coreInst = Flow.pkg('core')(new Flow());
-  'indexOf|vetIndexOf|getVar|go'.split('|').forEach(function (mbr) {
+  'indexOf|vetIndexOf|getData|go'.split('|').forEach(function (mbr) {
     equal(typeof coreInst[mbr], 'function', 'The package-instance method "' + mbr + '" is present.');
   });
-  'trust|args|calls|route|vars|delay|cache|locked|stateIds|pending|parents|targets|phase'.split('|').forEach(function (mbr) {
+  'trust|args|calls|route|data|delay|cache|locked|stateIds|pending|parents|targets|phase'.split('|').forEach(function (mbr) {
     ok(typeof coreInst[mbr] !== 'undefined', 'The package-instance property "' + mbr + '" is present.');
   });
 });
 
 test('State', 9, function () {
   var state = Flow.pkg('core')(new Flow()).states[0];
-  'pendable|isRoot|rootIndex|restrict|map|vars|fncs'.split('|').forEach(function (mbr) {
+  'pendable|isRoot|rootIndex|restrict|map|data|fncs'.split('|').forEach(function (mbr) {
     ok(state.hasOwnProperty(mbr), 'Has the "' + mbr + '" member-property.');
   });
-  equal(typeof state.scopeVars, 'function', 'Has the "scopeVars" member-function.');
+  equal(typeof state.scopeData, 'function', 'Has the "scopeData" member-function.');
   equal(typeof state.canTgt, 'function', 'Has the "canTgt" member-function.');
 });
 
 test('Proxy', 9, function () {
   var flow = new Flow();
-  'map|query|lock|vars|args|target|go|wait|status'.split('|').forEach(function (mbr) {
+  'map|query|lock|data|args|target|go|wait|status'.split('|').forEach(function (mbr) {
     equal(typeof flow[mbr], 'function', 'The proxy method "' + mbr + '" is present.');
   });
 });
@@ -50,16 +50,17 @@ test('Proxy', 9, function () {
 module('State Components');
 
 test('parsing keys', 3, function () {
-  var corePkg = Flow.pkg('core'),
+  var
+    corePkg = Flow.pkg('core'),
     defCnt = corePkg(new Flow()).states.length,
-    data = {
+    attrs = {
       _junk: {},
       '_': {},
       _in: {}
     },
+    stateAttrs = corePkg(new Flow(attrs)).states[1].attributes,
     attr,
-    stateData = corePkg(new Flow(data)).states[1].data,
-    hasAllData = false;
+    hasAllAttrs = false;
   equal(corePkg(new Flow({
       '!@#$%^&*().,;:\'"]{}-+~`\\<>': 1, // no alphanumerics
       'a|': 1, // has pipe
@@ -79,12 +80,12 @@ test('parsing keys', 3, function () {
     })).states.length, defCnt + 4,
     'A program with valid keys has the expected number of states.'
   );
-  for (attr in stateData) {
-    if (stateData.hasOwnProperty(attr) && (hasAllData = stateData[attr] === data[attr])) {
+  for (attr in stateAttrs) {
+    if (stateAttrs.hasOwnProperty(attr) && (hasAllAttrs = stateAttrs[attr] === attrs[attr])) {
       break;
     }
   }
-  ok(hasAllData, 'A state, defined with underscore prefixed keys, has the expected data properties.');
+  ok(hasAllAttrs, 'A state, defined with underscore-prefixed keys, has the expected attributes.');
 });
 
 test('_on', 3, function () {
@@ -183,10 +184,10 @@ test('_restrict', 6, function () {
   });
 });
 
-test('_vars', 30, function () {
+test('_data', 30, function () {
   var obj = {},
     rand = Math.random(),
-    stateVars = [
+    stateData = [
       [], // _flow
       [ // _program
         {name: '1', value: undefined, use: 0}
@@ -206,100 +207,100 @@ test('_vars', 30, function () {
       [ // a/d
         {name: '0', value: undefined, use: 0}
       ],
-      [ // /failedVars/c
+      [ // /failedData/c
       ],
-      [ // /failedVars/d
+      [ // /failedData/d
       ],
-      [ // /failedVars/e
+      [ // /failedData/e
       ],
-      [ // /failedVars/f
+      [ // /failedData/f
       ],
-      [ // /failedVars/g
+      [ // /failedData/g
       ]
     ];
     Flow.pkg('core')(new Flow({
-      _vars: 1,
+      _data: 1,
       a: {
-        _vars: ['a', ['b', {c: obj, d: rand}]],
+        _data: ['a', ['b', {c: obj, d: rand}]],
         b: {
-          _vars: 'a',
+          _data: 'a',
           c: {
-            _vars: {a:obj}
+            _data: {a:obj}
           }
         },
         d: {
-          _vars: 0
+          _data: 0
         }
       },
-      failedVars: {
-        _vars: undefined,
+      failedData: {
+        _data: undefined,
         b: {
-          _vars: null
+          _data: null
         },
         c: {
-          _vars: /s/
+          _data: /s/
         },
         d: {
-          _vars: []
+          _data: []
         },
         e: {
-          _vars: {}
+          _data: {}
         }
       }
     })).states.forEach(function (state, stateIdx) {
-      state.vars.forEach(function (varSet, varIdx) {
-        var varCfg = stateVars[stateIdx][varIdx];
-        equal(varSet.name, varCfg.name, 'The variable ' + varIdx + ' of state ' + state.path + ', has the expected "name" value.');
-        equal(varSet.value, varCfg.value, 'The variable ' + varIdx + ' of state ' + state.path + ', has the expected "value" value.');
-        equal(varSet.use, varCfg.use, 'The variable ' + varIdx + ' of state ' + state.path + ', has the expected "use" value.');
+      state.data.forEach(function (dataSet, varIdx) {
+        var varCfg = stateData[stateIdx][varIdx];
+        equal(dataSet.name, varCfg.name, 'The variable ' + varIdx + ' of state ' + state.path + ', has the expected "name" value.');
+        equal(dataSet.value, varCfg.value, 'The variable ' + varIdx + ' of state ' + state.path + ', has the expected "value" value.');
+        equal(dataSet.use, varCfg.use, 'The variable ' + varIdx + ' of state ' + state.path + ', has the expected "use" value.');
       });
-      if (!state.vars.length) {
-        ok(1, 'A _var component of "' + state.data._vars + '" does not compile into variable configurations.');
+      if (!state.data.length) {
+        ok(1, 'A _data component of "' + state.attributes._data + '" does not compile into variable configurations.');
       }
   });
 });
 
 module('Package');
 
-test('.getVar()', 15, function () {
+test('.getData()', 15, function () {
   var corePkg = Flow.pkg('core'),
     pkgInst = corePkg(new Flow()),
-    vars,
+    data,
     value = {},
     name = 'foo',
     name2 = 'bar',
-    vto;
-  function getVariables() {
-    vars = [];
-    for (var varName in pkgInst.vars) {
-      if (pkgInst.vars.hasOwnProperty(varName)) {
-        vars.push(varName);
+    dto;
+  function getData() {
+    data = [];
+    for (var varName in pkgInst.data) {
+      if (pkgInst.data.hasOwnProperty(varName)) {
+        data.push(varName);
       }
     }
   }
 
-  getVariables();
-  ok(!vars.length, 'There are no active variables by default.');
+  getData();
+  ok(!data.length, 'There are no active variables by default.');
   [null, undefined].forEach(function (arg) {
-    equal(pkgInst.getVar(arg), false, 'Passing "' + arg + '" returns false.');
+    equal(pkgInst.getData(arg), false, 'Passing "' + arg + '" returns false.');
   });
-  vto = pkgInst.getVar(name);
-  equal(typeof vto, 'object', 'Passing a name argument returns an object.');
-  getVariables();
-  equal(vars.length, 1, 'One variable tracking object exists.');
-  ok(pkgInst.vars.hasOwnProperty(name), 'The vto name is a key in the "vars" member of the package-instance.');
-  equal(vto.name, name, 'The vto\'s "name" member is the expected string.');
-  equal(T.type(vto.values), 'array', 'The vto\'s "values" member is an array.');
-  equal(vto.values.length, 0, 'The "values" array is empty.');
-  equal(pkgInst.getVar(name), vto, 'A vto is a singleton, representing a variable of the state.');
-  pkgInst.getVar(name, value);
-  equal(vto.values.length, 0, 'Passing a values argument to an existing vto does not add values.');
-  vto = pkgInst.getVar(name2, value);
-  equal(typeof vto, 'object', 'Passing two arguments returns a vto.');
-  getVariables();
-  equal(vars.length, 2, 'Two vto\'s exist.');
-  equal(vto.values.length, 1, 'The second vto has an initial value.');
-  equal(vto.values[0], value, 'The second vto has the expected initial value.');
+  dto = pkgInst.getData(name);
+  equal(typeof dto, 'object', 'Passing a name argument returns an object.');
+  getData();
+  equal(data.length, 1, 'One variable tracking object exists.');
+  ok(pkgInst.data.hasOwnProperty(name), 'The dto name is a key in the "data" member of the package-instance.');
+  equal(dto.name, name, 'The dto\'s "name" member is the expected string.');
+  equal(T.type(dto.values), 'array', 'The dto\'s "values" member is an array.');
+  equal(dto.values.length, 0, 'The "values" array is empty.');
+  equal(pkgInst.getData(name), dto, 'A dto is a singleton, representing a variable of the state.');
+  pkgInst.getData(name, value);
+  equal(dto.values.length, 0, 'Passing a values argument to an existing dto does not add values.');
+  dto = pkgInst.getData(name2, value);
+  equal(typeof dto, 'object', 'Passing two arguments returns a dto.');
+  getData();
+  equal(data.length, 2, 'Two dto\'s exist.');
+  equal(dto.values.length, 1, 'The second dto has an initial value.');
+  equal(dto.values[0], value, 'The second dto has the expected initial value.');
 });
 
 test('.go()', 10, function () {
@@ -370,25 +371,25 @@ test('.vetIndexOf()', 3, function () {
 
 module('State');
 
-test('.scopeVars()', 5, function () {
+test('.scopeData()', 5, function () {
   var corePkg = Flow.pkg('core'),
     value = 'bar',
     coreInst = corePkg(new Flow({
-      _vars: [
+      _data: [
         {
           foo: value
         }
       ]
     })),
     state = coreInst.states[1],
-    vto = coreInst.getVar('foo', 1);
-  equal(state.scopeVars(), undefined, 'Returns "undefined".');
-  equal(vto.values.length, 2, 'Adds an index to the values array of the vto of a state.');
-  equal(vto.values[0], value, 'Prepends a value to the values array of the vto.');
-  state.scopeVars(1);
-  equal(vto.values.length, 1, 'Passing a truthy value removes an index from the vto values.');
-  state.scopeVars(1);
-  ok(!coreInst.vars.hasOwnProperty('foo'), 'When the vto has no more values, descoping removes the vto from the package-instance.');
+    dto = coreInst.getData('foo', 1);
+  equal(state.scopeData(), undefined, 'Returns "undefined".');
+  equal(dto.values.length, 2, 'Adds an index to the values array of the dto of a state.');
+  equal(dto.values[0], value, 'Prepends a value to the values array of the dto.');
+  state.scopeData(1);
+  equal(dto.values.length, 1, 'Passing a truthy value removes an index from the dto values.');
+  state.scopeData(1);
+  ok(!coreInst.data.hasOwnProperty('foo'), 'When the dto has no more values, descoping removes the dto from the package-instance.');
 });
 
 test('.canTgt()', 16, function () {
@@ -628,7 +629,7 @@ test('.go()', 18, function () {
 
 test('.wait()', 20, function () {
   var tic = 0,
-    tgtTics = 9;
+    tgtTics = 9,
     flow = new Flow({
       _in: function () {
         var scope = this;
@@ -679,19 +680,19 @@ test('.wait()', 20, function () {
   stop();
 });
 
-test('.vars()', 12, function () {
+test('.data()', 12, function () {
   var flow = new Flow(),
     vName = 'foo',
     vValue = 1;
-  equal(T.type(flow.vars()), 'array', 'Returns an array when called without arguments.');
-  equal(flow.vars().length, 0, 'The array is empty by default.');
+  equal(T.type(flow.data()), 'array', 'Returns an array when called without arguments.');
+  equal(flow.data().length, 0, 'The array is empty by default.');
   [null, undefined, [], {}, function () {}, NaN].forEach(function (arg) {
-    equal(flow.vars(arg), false, 'Returns false when the first argument is not a string.');
+    equal(flow.data(arg), false, 'Returns false when the first argument is not a string.');
   });
-  equal(flow.vars(vName), undefined, 'Returns "undefined" when retrieving an unknown variable.');
-  equal(flow.vars()[0], vName, 'The array contains the names of active variables.');
-  equal(flow.vars(vName, vValue), true, 'Returns true when setting a variable.');
-  equal(flow.vars(vName), vValue, 'Returns the value previously set.');
+  equal(flow.data(vName), undefined, 'Returns "undefined" when retrieving an unknown variable.');
+  equal(flow.data()[0], vName, 'The array contains the names of active variables.');
+  equal(flow.data(vName, vValue), true, 'Returns true when setting a variable.');
+  equal(flow.data(vName), vValue, 'Returns the value previously set.');
 });
 
 test('.args()', 19, function () {
@@ -1305,7 +1306,7 @@ test('Traversal method behavior on a locked flow.', 16, function () {
     equal(this.go(0), true, 'pkg.go() works internally.');
     equal(this.target(0, 'foo'), true, 'pkg.target() works internally.');
     equal(this.args(0), 'foo', 'Using pkg.target() internally does change arguments.');
-    equal(this.vars('hello', 'chicken'), true, 'pkg.vars() works internally.');
+    equal(this.data('hello', 'chicken'), true, 'pkg.data() works internally.');
     this.wait(function () {
         this.lock(0);
         equal(this.lock(), false, 'The flow is now unlocked.');
@@ -1319,8 +1320,8 @@ test('Traversal method behavior on a locked flow.', 16, function () {
   equal(flow.lock(), true, 'Externally, after pausing navigation, pkg.lock() returns true.');
   equal(flow.args(0), 'foo', 'pkg.args() can get arguments externally.');
   equal(flow.args(0, 'bar'), false, 'pkg.args() will not set arguments externally.');
-  equal(flow.vars('hello'), 'chicken', 'pkg.vars() can get variables externally.');
-  equal(flow.vars('hello', 'world'), true, 'pkg.vars() can set variables externally.');
+  equal(flow.data('hello'), 'chicken', 'pkg.data() can get variables externally.');
+  equal(flow.data('hello', 'world'), true, 'pkg.data() can set variables externally.');
   equal(flow.go(0), false, 'pkg.go() does not work externally.');
   equal(flow.target(0, 'bar'), false, 'pkg.target() does not work externally.');
   equal(flow.args(0), 'foo', 'Using pkg.target() externally does not change arguments.');
@@ -1331,14 +1332,14 @@ test('Buffered execution, after numerous calls.', 2, function () {
   var i = 0, callCnt = 100,
     arbitraryEventData = {},
     eventHandlerFlow = new Flow({
-      _vars: {bufferCount: 0},
+      _data: {bufferCount: 0},
       _on: function (evtData) {
-        this.vars('bufferCount', this.vars('bufferCount') + 1);
+        this.data('bufferCount', this.data('bufferCount') + 1);
         this.go('//handleEvent/');
         this.wait(0);
       },
       handleEvent: function (eventData) {
-        equal(this.vars('bufferCount'), callCnt, 'The flow was called ' + callCnt + ' times, and the target behavior executed once.');
+        equal(this.data('bufferCount'), callCnt, 'The flow was called ' + callCnt + ' times, and the target behavior executed once.');
         strictEqual(eventData, arbitraryEventData, 'The execution recieved the original arguments.');
         start();
       }
