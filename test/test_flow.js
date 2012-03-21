@@ -6,329 +6,411 @@ var T = {
 
 module('Flow');
 
-test('Dependencies', 3, function () {
+test('Dependencies', function () {
   equal(typeof Panzer, 'object', 'The "Panzer" object is present.');
   equal(Panzer.version, '0.2.2', 'The correct version of Panzer is loaded.');
   ok(Array.prototype.indexOf, 'Array.prototype.indexOf exists.');
   ok(Array.prototype.every, 'Array.prototype.every exists.');
-  ok(Flow.pkg().filter(function (pkg) {
-      return pkg === 'core';
-    }).length, 'The "core" package is present.');
 });
 
-test('Definition', 8, function () {
-  var corePkgDef = Flow.pkg('core');
-  'addStatus|events|attributeKey|invalidKey|init|onBegin|onTraverse|onEnd'.split('|').forEach(function (mbr) {
-    ok(corePkgDef.hasOwnProperty(mbr), 'The package-definition has a "' + mbr + '" member.');
+test('Namespace', function () {
+  equal(typeof Flow, 'function', 'The "Flow" function is present.');
+  equal(typeof Flow.version, 'string', 'Flow.version is a string.');
+  equal(typeof Flow.pkg, 'function', 'Flow.pkg() is a function.');
+  ok(Flow.pkg().length === 1 && Flow.pkg()[0] === 'core', 'The only package present is named "core".');
+});
+
+module('Core');
+
+test('Package', function () {
+  var
+    corePkgDef;
+  equal(Flow.pkg().indexOf('core'), 0, 'The "core" package already exists.');
+  corePkgDef = Flow.pkg('core');
+  'actives|events'.split('|').forEach(function (prop) {
+    ok(corePkgDef[prop] instanceof Array, 'CorePkgDef.' + prop + ' is an array.');
   });
-});
+})
 
-test('Instance', 17, function () {
+test('Instance', function () {
   var coreInst = Flow.pkg('core')(new Flow());
   'indexOf|vetIndexOf|getData|go'.split('|').forEach(function (mbr) {
-    equal(typeof coreInst[mbr], 'function', 'The package-instance method "' + mbr + '" is present.');
+    equal(typeof coreInst[mbr], 'function', '<Core-Instance>.' + mbr + ' is a  method.');
   });
-  'trust|args|calls|route|data|delay|cache|locked|nodeIds|pending|parents|targets|phase'.split('|').forEach(function (mbr) {
-    ok(typeof coreInst[mbr] !== 'undefined', 'The package-instance property "' + mbr + '" is present.');
-  });
+  'trust,0|args|calls|route|data|delay|cache|locked,0|nodeIds|pending,0|parents|targets|phase,0'.split('|').forEach(function (mbrSet) {
+      var
+        split = mbrSet.split(','),
+        mbr = split[0],
+        defaultFlag = split[1];
+      ok(typeof coreInst[mbr] !== 'undefined', '<Core-Instance>.' + mbr + ' is a property.');
+      if (split.length > 1) {
+        equal(coreInst[mbr], defaultFlag, '<Core-Instance>.' + mbr + ' is ' + defaultFlag + ', by default.');
+      }
+    });
 });
 
-test('State', 9, function () {
-  var state = Flow.pkg('core')(new Flow()).nodes[0];
-  'pendable|isRoot|rootIndex|restrict|map|data|fncs'.split('|').forEach(function (mbr) {
-    ok(state.hasOwnProperty(mbr), 'Has the "' + mbr + '" member-property.');
-  });
-  equal(typeof state.scopeData, 'function', 'Has the "scopeData" member-function.');
-  equal(typeof state.canTgt, 'function', 'Has the "canTgt" member-function.');
-});
-
-test('Proxy', 9, function () {
-  var flow = new Flow();
-  'map|query|lock|data|args|target|go|wait|status'.split('|').forEach(function (mbr) {
-    equal(typeof flow[mbr], 'function', 'The proxy method "' + mbr + '" is present.');
-  });
-});
-
-module('State Components');
-
-test('parsing keys', 3, function () {
+test('State', function () {
   var
-    corePkg = Flow.pkg('core'),
-    defCnt = corePkg(new Flow()).nodes.length,
-    attrs = {
-      _junk: {},
-      '_': {},
-      _in: {}
-    },
-    stateAttrs = corePkg(new Flow(attrs)).nodes[1].attributes,
-    attr,
-    hasAllAttrs = false;
-  equal(corePkg(new Flow({
-      '!@#$%^&*().,;:\'"]{}-+~`\\<>': 1, // no alphanumerics
-      'a|': 1, // has pipe
-      'a/': 1, // has forward slash
-      '_a': 1, // begins with underscore
-      '@a': 1, // begins with @
-      '[a': 1, // begins with [
-      toString: 1 // is the string "toString"
-    })).nodes.length, defCnt,
-    'A program with invalid keys has the expected number of states.'
-  );
-  equal(corePkg(new Flow({
-      'a_': 1,
-      'a@': 1,
-      'a[': 1,
-      'tostring': 1
-    })).nodes.length, defCnt + 4,
-    'A program with valid keys has the expected number of states.'
-  );
-  for (attr in stateAttrs) {
-    if (stateAttrs.hasOwnProperty(attr) && (hasAllAttrs = stateAttrs[attr] === attrs[attr])) {
-      break;
+    states = Flow.pkg('core')(new Flow({foo: 'bar'})).nodes,
+    state = states[2];
+  'pendable,1|root|restrict|map|data|fncs'.split('|').forEach(function (mbrSet) {
+      var
+        split = mbrSet.split(','),
+        mbr = split[0],
+        defaultFlag = split[1];
+      ok(state.hasOwnProperty(mbr), '<Core-State>.' + mbr + ' is a property.');
+      if (defaultFlag) {
+        defaultFlag *= 1;
+        equal(state[mbr], defaultFlag, '<Core-State>.' + mbr + ' is "' + (defaultFlag ? 'truthy' : 'falsy') + '", by default.');
+      }
     }
-  }
-  ok(hasAllAttrs, 'A state, defined with underscore-prefixed keys, has the expected attributes.');
+  );
+  equal(state.root, 1, '<Core-State>.root is 1, by default.');
+  equal(state.restrict, -1, '<Core-State>.restrict is -1, by default.');
+  equal(state.root, 1, '<Core-State>.root is 1 by default.');
+  'scopeData|canTgt'.split('|').forEach(function (mbr) {
+    equal(typeof state[mbr], 'function', '<Core-State>.' + mbr + '() is a method.');
+  });
+  equal(states[0].name, '_flow', 'The first state is named "_flow".');
+  equal(states[1].name, '_program', 'The second state is named "_program".');
+  ok(states[0].root === states[1].index && states[0].root === 1, 'The "flow" and "program" root is the program state.');
 });
 
-test('_on', 3, function () {
-  var corePkg = Flow.pkg('core'),
+test('Proxy', function () {
+  var flow = new Flow();
+  'map|query|lock|data|args|target|go|wait|status|bless'.split('|').forEach(function (mbr) {
+    equal(typeof flow[mbr], 'function', '<Core-Proxy>.' + mbr + '() is a method.');
+  });
+});
+
+module('Parsing');
+
+test('Invalid Keys', function () {
+  var
+    corePkgDef = Flow.pkg('core'),
+    defCnt = corePkgDef(new Flow()).nodes.length;
+  equal(
+    corePkgDef(new Flow({'!@#$%^&*().,;:\'"]{}-+~`\\<>': 1})).nodes.length,
+    defCnt,
+    'Keys without alphanumeric characters are ignored.'
+  );
+  equal(
+    corePkgDef(new Flow({'a|': 1})).nodes.length,
+    defCnt,
+    'Keys with a pipe character are ignored.'
+  );
+  equal(
+    corePkgDef(new Flow({'a/': 1})).nodes.length,
+    defCnt,
+    'Keys with a forward-slash character are ignored.'
+  );
+  equal(
+    corePkgDef(new Flow({'@a': 1})).nodes.length,
+    defCnt,
+    'Keys beginning with an at ("@") character are ignored.'
+  );
+  equal(
+    corePkgDef(new Flow({'[a': 1})).nodes.length,
+    defCnt,
+    'Keys beginning with a left-square bracker ("[") character are ignored.'
+  );
+});
+
+test('Valid Keys', function () {
+  var
+    corePkgDef = Flow.pkg('core'),
+    defCnt = corePkgDef(new Flow()).nodes.length,
+    stateName = 'f@[',
+    validStates = {},
+    validAttrs = {
+      '_': 1,
+      _foo: 1,
+      _in: 1
+    };
+  validStates[stateName] = 1;
+  equal(
+    corePkgDef(new Flow(validStates)).nodes[2].name,
+    stateName,
+    'Keys with at least one alphanumeric character become states.'
+  );
+  deepEqual(
+    corePkgDef(new Flow(validAttrs)).nodes[1].attributes,
+    validAttrs,
+    'Keys beginning with underscores become state attributes.'
+  );
+});
+
+test('State values', function () {
+  var
+    fnc = function () {},
+    coreInst = Flow.pkg('core')(new Flow(fnc));
+  equal(coreInst.nodes[1].value, fnc, 'Paired values are stored in <Core-State>.value.');
+  equal(coreInst.nodes[1].fncs[0], fnc, 'Paired functions become the on-behavior of a state.');
+});
+
+module('Attribute');
+
+test('_on', function () {
+  var corePkgDef = Flow.pkg('core'),
     fnc = function () {};
-  equal(corePkg(new Flow(fnc)).nodes[1].fncs[0], fnc, 'A single function passed to a new Flow is compiled as a function of the state.');
-  equal(corePkg(new Flow({_on: fnc})).nodes[1].fncs[0], fnc, 'The _on component was compiled as a function of the state.');
-  equal(corePkg(new Flow({_on: 1})).nodes[1].fncs[0], 0, 'The _on component was not compiled when not a function.');
+  equal(corePkgDef(new Flow({_on: fnc})).nodes[1].fncs[0], fnc, 'As a function, the on-behavior is parsed from the _on attribute.');
+  equal(corePkgDef(new Flow({_on: 1})).nodes[1].fncs[0], 0, 'As a non-function, the on-behavior is not parsed from the _on attribute.');
 });
 
-test('_in', 2, function () {
-  var corePkg = Flow.pkg('core'),
+test('_in', function () {
+  var corePkgDef = Flow.pkg('core'),
     fnc = function () {};
-  equal(corePkg(new Flow({_in: fnc})).nodes[1].fncs[1], fnc, 'The _in component was compiled as a function of the state.');
-  equal(corePkg(new Flow({_in: 1})).nodes[1].fncs[1], 0, 'The _in component was not compiled when not a function.');
+  equal(corePkgDef(new Flow({_in: fnc})).nodes[1].fncs[1], fnc, 'As a function, the in-behavior is parsed from the _in attribute.');
+  equal(corePkgDef(new Flow({_in: 1})).nodes[1].fncs[1], 0, 'As a non-function, the in-behavior is not parsed from the _in attribute.');
 });
 
-test('_out', 2, function () {
-  var corePkg = Flow.pkg('core'),
+test('_out', function () {
+  var corePkgDef = Flow.pkg('core'),
     fnc = function () {};
-  equal(corePkg(new Flow({_out: fnc})).nodes[1].fncs[2], fnc, 'The _out component was compiled as a function of the state.');
-  equal(corePkg(new Flow({_out: 1})).nodes[1].fncs[2], 0, 'The _out component was not compiled when not a function.');
+  equal(corePkgDef(new Flow({_out: fnc})).nodes[1].fncs[2], fnc, 'As a function, the out-behavior is parsed from the _out attribute.');
+  equal(corePkgDef(new Flow({_out: 1})).nodes[1].fncs[2], 0, 'As a non-function, the out-behavior is not parsed from the _out attribute.');
 });
 
-test('_over', 2, function () {
-  var corePkg = Flow.pkg('core'),
+test('_over', function () {
+  var corePkgDef = Flow.pkg('core'),
     fnc = function () {};
-  equal(corePkg(new Flow({_over: fnc})).nodes[1].fncs[3], fnc, 'The _over component was compiled as a function of the state.');
-  equal(corePkg(new Flow({_over: 1})).nodes[1].fncs[3], 0, 'The _over component was not compiled when not a function.');
+  equal(corePkgDef(new Flow({_over: fnc})).nodes[1].fncs[3], fnc, 'As a function, the over-behavior is parsed from the _over attribute.');
+  equal(corePkgDef(new Flow({_over: 1})).nodes[1].fncs[3], 0, 'As a non-function, the over-behavior is not parsed from the _over attribute.');
 });
 
-test('_bover', 2, function () {
-  var corePkg = Flow.pkg('core'),
+test('_bover', function () {
+  var corePkgDef = Flow.pkg('core'),
     fnc = function () {};
-  equal(corePkg(new Flow({_bover: fnc})).nodes[1].fncs[4], fnc, 'The _bover component was compiled as a function of the state.');
-  equal(corePkg(new Flow({_bover: 1})).nodes[1].fncs[4], 0, 'The _bover component was not compiled when not a function.');
+  equal(corePkgDef(new Flow({_bover: fnc})).nodes[1].fncs[4], fnc, 'As a function, the bover-behavior is parsed from the _bover attribute.');
+  equal(corePkgDef(new Flow({_bover: 1})).nodes[1].fncs[4], 0, 'As a non-function, the bover-behavior is not parsed from the _bover attribute.');
 });
 
-test('_root', 6, function () {
-  var states = Flow.pkg('core')(new Flow({
-      a: {
+test('_root', function () {
+  var
+    corePkgDef = Flow.pkg('core'),
+    states = corePkgDef(new Flow({
+      _root: 0,
+      a2: {},
+      b3: {
         _root: 1,
-        b: {
-          _root: 0,
-          c: {
-            _root: 1
-          }
-        }
+        c4: {}
       },
-      b: {
+      d5: {
         _root: 0
       }
     })).nodes;
-  [0,1,2,2,4,1].forEach(function (rootIdx, stateIdx) {
-      equal(states[stateIdx].rootIndex, rootIdx, 'The state at index ' + stateIdx + ', has the expected "rootIndex" value.');
-  });
+  ok(!states[2].attributes.hasOwnProperty('_root') && states[2].root === 1, 'When omitted, <Core-State>.root points to the program\'s root state index, by default.');
+  ok(states[5].attributes.hasOwnProperty('_root') && states[5].root === 1, 'Setting a falsy value is the same as omission.');
+  equal(states[3].root, 3, "A rooted state references it's own index.");
+  equal(states[4].root, 3, 'Descendents of a rooted state point to the first rooted ancestor state\'s index.');
+  ok(states[1].attributes.hasOwnProperty('_root') && !states[1].attributes._root && states[1].root === 1, 'The program state ignores the _root attribute.');
 });
 
-test('_pendable', 6, function () {
-  var states = Flow.pkg('core')(new Flow({
-      a: {
+test('_pendable', function () {
+  var
+    corePkgDef = Flow.pkg('core'),
+    states = corePkgDef(new Flow({
+      a2: {},
+      b3: {
         _pendable: 0,
-        b: {
-          _pendable: 1,
-          c: {
-            _pendable: 0
-          }
+        c4: {
+          _pendable: 1
         }
       },
-      b: {
-        _pendable: 0
+      d5: {
+        _pendable: 1
       }
     })).nodes;
-  [1,1,0,0,0,0].forEach(function (pendingFlag, stateIdx) {
-      equal(states[stateIdx].pendable, pendingFlag, 'The state at index ' + stateIdx + ', has the expected "pendable" value.');
-  });
+  ok(!states[2].attributes.hasOwnProperty('_pendable') && states[2].pendable, 'When omitted, <Core-State>.pendable is truthy, by default.');
+  ok(states[5].attributes._pendable && states[5].pendable, 'Setting a truthy value is the same as omission.');
+  ok(states[3].attributes.hasOwnProperty('_pendable') && !states[3].pendable, 'When falsy, <Core-State>.pendable is falsy.');
+  ok(states[4].attributes._pendable && !states[3].pendable && !states[4].pendable, 'Descendants of non-pending states ignore the _pendable attribute, and are also non-pending.');
 });
 
-test('_restrict', 6, function () {
-  var states = Flow.pkg('core')(new Flow({
-      a: {
-        _restrict: 0,
-        b: {
-          _restrict: 1,
-          c: {
-            _restrict: 0
-          }
+test('_restrict', function () {
+  var
+    flow = new Flow({
+      a2: {},
+      b3: {
+        _restrict: 1,
+        c4: {},
+        d5: {
+          _restrict: 0
         }
+      },
+      e6: {
+        _restrict: 0
+      }
+    }),
+    states = Flow.pkg('core')(flow).nodes;
+  ok(!states[2].attributes.hasOwnProperty('_restrict') && !~states[2].restrict, 'When omitted, <Core-State>.restrict is -1, by default.');
+  ok(states[6].attributes.hasOwnProperty('_restrict') && !~states[5].restrict, 'Setting a falsy value is the same as omission.');
+  ok(states[3].attributes._restrict && states[3].restrict === 3, 'When truthy, <Core-State>.restrict is the node index.');
+  ok(!states[4].attributes.hasOwnProperty('_restrict') && states[4].restrict === 3, 'When ommited, ancestor state restrictions are adopted.');
+  ok(states[5].attributes.hasOwnProperty('_restrict') && !states[5].attributes._restrict && !~states[5].restrict, 'When falsy, ancestor state restrictions are ignored.');
+  flow.target('//b3/');
+  equal(flow.target(0), false, 'A restricted state can not navigate outside it\'s own branch of the program tree.');
+  flow.target('//c4/');
+  equal(flow.target('//b3/'), false, 'Descendents of restricted states can not navigate outside to the first ancestor with a truthy _restrict flag.');
+  equal(flow.target(0), false, 'Descendents of restricted states can not navigate outside the first ancestor with a truthy _restrict flag.');
+  equal(flow.target('//b3/d5/'), true, 'Descendents of restricted states may navigate to any descendent of the restricted state.');
+  equal(flow.target(0), true, 'Descendents of restricted states that are not restricted may navigate anywhere in the program.');
+});
+
+test('_data', function () {
+  var
+    corePkgDef = Flow.pkg('core'),
+    states = corePkgDef(new Flow({
+      _data: 'foo',
+      a: {
+        _data: ['foo','bar']
       },
       b: {
-        _restrict: 1
+        _data: {foo:{a:1,b:{c:1}}, bar: 1}
+      },
+      c: {
+        _data: ['foo',['bar'], {baz:1}]
+      },
+      d: {
+        _data: 1
       }
     })).nodes;
-  '|||1|1|1'.split('|').forEach(function (restricted, stateIdx) {
-      equal(states[stateIdx].restrict, restricted, 'The state at index ' + stateIdx + ', has the expected "restricted" flag.');
+  'string,foo|array of strings,foo,bar|object,foo,bar|mixed array,foo,bar,baz|number,1'.split('|').forEach(function (keySet, idx) {
+    var
+      keys = keySet.split(','),
+      type = keys.splice(0, 1)[0],
+      state = states[idx + 1];
+    ok(
+      state.data.length === keys.length && state.data.every(function (data, dataIdx) {
+        return data.hasOwnProperty('name') && data.hasOwnProperty('use') && data.hasOwnProperty('value') && data.name === keys[dataIdx];
+      }),
+      'When set to a ' + type + ' the expected data configuration objects are compiled.'
+    );
   });
+  equal(
+    corePkgDef(new Flow({_data:null})).nodes[1].data.length,
+    0,
+    'When set to null, no data configuration objects are compiled.'
+  );
+  equal(
+    corePkgDef(new Flow({_data:undefined})).nodes[1].data.length,
+    0,
+    'When set to undefined, no data configuration objects are compiled.'
+  );
 });
 
-test('_data', 30, function () {
-  var obj = {},
-    rand = Math.random(),
-    stateData = [
-      [], // _flow
-      [ // _program
-        {name: '1', value: undefined, use: 0}
-      ],
-      [ // a
-        {name: 'a', value: undefined, use: 0},
-        {name: 'b', value: undefined, use: 0},
-        {name: 'c', value: obj, use: 1},
-        {name: 'd', value: rand, use: 1}
-      ],
-      [ // a/b
-        {name: 'a', value: undefined, use: 0}
-      ],
-      [ // a/c
-        {name: 'a', value: obj, use: 1}
-      ],
-      [ // a/d
-        {name: '0', value: undefined, use: 0}
-      ],
-      [ // /failedData/c
-      ],
-      [ // /failedData/d
-      ],
-      [ // /failedData/e
-      ],
-      [ // /failedData/f
-      ],
-      [ // /failedData/g
-      ]
-    ];
-    Flow.pkg('core')(new Flow({
-      _data: 1,
-      a: {
-        _data: ['a', ['b', {c: obj, d: rand}]],
-        b: {
-          _data: 'a',
-          c: {
-            _data: {a:obj}
-          }
-        },
-        d: {
-          _data: 0
-        }
+module('Core-Package');
+
+test('.actives', 8, function () {
+  var
+    corePkgDef = Flow.pkg('core'),
+    flow = new Flow({
+      _in: function () {
+        this.wait();
+        equal(corePkgDef.actives.length, 1, 'Populated when a flow is navigating.');
       },
-      failedData: {
-        _data: undefined,
-        b: {
-          _data: null
-        },
-        c: {
-          _data: /s/
-        },
-        d: {
-          _data: []
-        },
-        e: {
-          _data: {}
-        }
+      _on: function () {
+        var
+          nestedFlow = new Flow(function () {
+            this.wait();
+            equal(corePkgDef.actives.length, 2, 'Increments by one for each nested flow.');
+            ok(
+              corePkgDef.actives.every(function (f) {
+                return f instanceof Flow;
+              }),
+              'Active items are flow instances.'
+            );
+            ok(corePkgDef.actives[0] === nestedFlow, 'Is a stack - the first item is the currently navigating flow instance.');
+          });
+        nestedFlow.target(1);
+        equal(corePkgDef.actives.length, 1, 'Updated whenever a flow stops navigating.');
       }
-    })).nodes.forEach(function (state, stateIdx) {
-      state.data.forEach(function (dataSet, varIdx) {
-        var varCfg = stateData[stateIdx][varIdx];
-        equal(dataSet.name, varCfg.name, 'The variable ' + varIdx + ' of state ' + state.path + ', has the expected "name" value.');
-        equal(dataSet.value, varCfg.value, 'The variable ' + varIdx + ' of state ' + state.path + ', has the expected "value" value.');
-        equal(dataSet.use, varCfg.use, 'The variable ' + varIdx + ' of state ' + state.path + ', has the expected "use" value.');
-      });
-      if (!state.data.length) {
-        ok(1, 'A _data component of "' + state.attributes._data + '" does not compile into variable configurations.');
-      }
-  });
+    });
+  equal(corePkgDef.actives.length, 0, 'Empty by default.');
+  flow.target(1);
+  ok(!corePkgDef.actives.length && flow.status().paused, 'Empty when all flows stop navigating, even if a flow is paused.');
+  flow.target(1);
+  ok(!corePkgDef.actives.length && flow.status().pending, 'Empty when all flows stop navigating, even if a flow is pending.');
 });
 
-module('Package');
-
-test('.getData()', 15, function () {
-  var corePkg = Flow.pkg('core'),
-    pkgInst = corePkg(new Flow()),
-    data,
+test('.events', 3, function () {
+  var
+    corePkgDef = Flow.pkg('core'),
     value = {},
-    name = 'foo',
-    name2 = 'bar',
-    dto;
-  function getData() {
-    data = [];
-    for (var varName in pkgInst.data) {
-      if (pkgInst.data.hasOwnProperty(varName)) {
-        data.push(varName);
-      }
+    retValue = function () {
+      return value;
+    },
+    flowCompiledWithOn = new Flow(retValue);
+  console.log(corePkgDef.events);
+  deepEqual(corePkgDef.events, 'on|in|out|over|bover'.split('|'), 'Has the default event names.');
+  corePkgDef.events[0] = 'foo';
+  ok(
+    (new Flow({_foo: retValue})).target(1) === value
+    && (new Flow(retValue)).target(1) === value,
+    'Flow instances are compiled according to the current event names.'
+  );
+  equal(flowCompiledWithOn.target(1), value, 'Event name changes do not impact existing flows.');
+  // restore .events
+  corePkgDef.events[0] = 'on';
+});
+
+module('Core-Instance');
+
+test('.getData()', function () {
+  var corePkgDef = Flow.pkg('core'),
+    pkgInst = corePkgDef(new Flow()),
+    keyName = 'foo',
+    instData = pkgInst.data,
+    dataTrackingObject;
+  [[null,'"null"'], [undefined,'"undefined"'],['','an empty string'],['!@#$%^&*()','a non-alphanumeric string']].forEach(
+    function (argSet) {
+      equal(pkgInst.getData(argSet[0]), false, 'Passing ' + argSet[1] + ' returns false.');
     }
-  }
-
-  getData();
-  ok(!data.length, 'There are no active variables by default.');
-  [null, undefined].forEach(function (arg) {
-    equal(pkgInst.getData(arg), false, 'Passing "' + arg + '" returns false.');
-  });
-  dto = pkgInst.getData(name);
-  equal(typeof dto, 'object', 'Passing a name argument returns an object.');
-  getData();
-  equal(data.length, 1, 'One variable tracking object exists.');
-  ok(pkgInst.data.hasOwnProperty(name), 'The dto name is a key in the "data" member of the package-instance.');
-  equal(dto.name, name, 'The dto\'s "name" member is the expected string.');
-  equal(T.type(dto.values), 'array', 'The dto\'s "values" member is an array.');
-  equal(dto.values.length, 0, 'The "values" array is empty.');
-  equal(pkgInst.getData(name), dto, 'A dto is a singleton, representing a variable of the state.');
-  pkgInst.getData(name, value);
-  equal(dto.values.length, 0, 'Passing a values argument to an existing dto does not add values.');
-  dto = pkgInst.getData(name2, value);
-  equal(typeof dto, 'object', 'Passing two arguments returns a dto.');
-  getData();
-  equal(data.length, 2, 'Two dto\'s exist.');
-  equal(dto.values.length, 1, 'The second dto has an initial value.');
-  equal(dto.values[0], value, 'The second dto has the expected initial value.');
+  );
+  ok(
+    !instData.hasOwnProperty(keyName)
+    && (dataTrackingObject = pkgInst.getData(keyName))
+    && instData.hasOwnProperty(keyName),
+    'Creates and returns a data tracking object in <Core-Instance>.data with the given alphanumeric string.'
+  );
+  deepEqual(pkgInst.getData(keyName), dataTrackingObject, 'Passing an existing key returns the same data tracking object.');
+  ok(dataTrackingObject.hasOwnProperty('name'), '<DTO>.name is a string.');
+  equal(T.type(dataTrackingObject.values), 'array', '<DTO>.values is an array.');
+  equal(pkgInst.getData('bar', keyName).values[0], keyName, 'The second argument becomes the first entry in the data tracking object\'s values array.');
+  pkgInst.getData(keyName, 1);
+  equal(dataTrackingObject.values.length, 0, 'Passing a second argument for an existing data tracking object does nothing.');
 });
 
-test('.go()', 10, function () {
-  var flow = new Flow(),
-    pkg = Flow.pkg('core')(flow),
-    tank = pkg.tank;
-  equal(tank.currentIndex, 0, 'The flow is currently on state 0.');
-  equal(pkg.go.length, 0, 'pkg.go() expects no arguments.');
-  equal(pkg.go(), 0, 'pkg.go() returns 0 when there are no indice in the pkg.targets array.');
-  pkg.targets = [0];
-  equal(pkg.go(), 1, 'The flow starts on the 0 state.');
-  equal(tank.currentIndex, 0, 'The flow is now "on" the 0 state.');
-  pkg.targets = [tank.currentIndex];
-  equal(pkg.go(), 1, 'pkg.go() returns 1 when the pkg.targets index is the current state.');
-  pkg.targets = [0, 1];
-  equal(pkg.go(), 3, 'pkg.go() returns the number of steps (per state) traversed in order to navigate the pkg.target states.');
-  equal(tank.currentIndex, 1, 'The flow is now at state 1.');
-  pkg.pause = 1;
-  pkg.go();
-  equal(pkg.pause, 0, 'pkg.go() sets pkg.pause to 0, irregardless of pkg.targets.');
-  pkg.pending = 1;
-  pkg.targets = [0];
-  equal(pkg.go(), 0, 'pkg.go() returns 0 when pkg.pending is truthy.');
+test('.go()', function () {
+  var
+    pkgInst = Flow.pkg('core')(new Flow({
+      a: {
+        _in: function () {
+          this.wait();
+        }
+      }
+    })),
+    tank = pkgInst.tank,
+    initialIndex = tank.currentIndex,
+    stepCount;
+
+  equal(pkgInst.go.length, 0, 'Expects no arguments.');
+  ok(!isNaN(pkgInst.go()), 'Returns an integer.');
+  pkgInst.pause = 1;
+  ok(pkgInst.pause && !pkgInst.go() && !pkgInst.pause, 'Unpauses a flow.');
+  ok(!pkgInst.targets.length && !pkgInst.go() && tank.currentIndex === initialIndex,'The current state index is not changed when <Core-Instance>.targets is empty.');
+  pkgInst.targets.push(1);
+  ok(pkgInst.targets.length && (stepCount = pkgInst.go()) && tank.currentIndex !== initialIndex, 'Changes the current state index when <Core-Instance>.targets has indice.');
+  equal(stepCount, 2, 'Returns the number of traversal events fired while navigating to the target index(es).');
+  equal(pkgInst.targets.length, 0, '<Core-Instance>.targets is empty upon completion.');
+  pkgInst.targets.push(tank.currentIndex);
+  equal(pkgInst.go(), 1, 'Triggers one traversal event when the target index matches the current index.');
+  pkgInst.pending = 1;
+  pkgInst.targets.push(0);
+  equal(pkgInst.go(), 0, 'Returns 0 when <Core-Instance>.pending is truthy.');
 });
 
-test('.indexOf()', 8, function () {
+test('.indexOf()', function () {
   var coreInst = Flow.pkg('core')(new Flow({
       a: {
         b: {
@@ -356,7 +438,7 @@ test('.indexOf()', 8, function () {
   equal(coreInst.indexOf(randIdx), randIdx, 'Returns the same index when the query is an in-range number.');
 });
 
-test('.vetIndexOf()', 3, function () {
+test('.vetIndexOf()', function () {
   var coreDef = Flow.pkg('core'),
     coreInst = coreDef(new Flow(
       {
@@ -371,30 +453,42 @@ test('.vetIndexOf()', 3, function () {
   equal(coreInst.vetIndexOf(1, coreInst.nodes[2]), -1, 'Returns -1 when targeting a state outside the path of the restricted state.');
 });
 
-module('State');
+module('Core-State');
 
-test('.scopeData()', 5, function () {
-  var corePkg = Flow.pkg('core'),
+test('.scopeData()', function () {
+  var corePkgDef = Flow.pkg('core'),
     value = 'bar',
-    coreInst = corePkg(new Flow({
-      _data: [
-        {
-          foo: value
-        }
-      ]
+    value2 = 'woz',
+    coreInst = corePkgDef(new Flow({
+      _data: {
+        foo: value,
+        bar: value
+      },
+      a: {
+        _data: {foo: value2}
+      },
+      b: {
+        _data: 'bar'
+      },
+      c: {}
     })),
-    state = coreInst.nodes[1],
-    dto = coreInst.getData('foo', 1);
-  equal(state.scopeData(), undefined, 'Returns "undefined".');
-  equal(dto.values.length, 2, 'Adds an index to the values array of the dto of a state.');
-  equal(dto.values[0], value, 'Prepends a value to the values array of the dto.');
-  state.scopeData(1);
-  equal(dto.values.length, 1, 'Passing a truthy value removes an index from the dto values.');
-  state.scopeData(1);
-  ok(!coreInst.data.hasOwnProperty('foo'), 'When the dto has no more values, descoping removes the dto from the package-instance.');
+    dtos = coreInst.data,
+    states = coreInst.nodes;
+  equal(states[1].scopeData(), undefined, 'Returns "undefined".');
+  ok(
+    states[1].data.every(function (dco) {return dtos.hasOwnProperty(dco.name);}),
+    'Adds data tracking objects for each data configuration declared by a state\'s data attribute.'
+  );
+  states[2].scopeData();
+  equal(dtos.foo.values.length, 2, 'Scoping a state with an existing data configuration, increments the .values array of the corresponding tracking object.');
+  equal(dtos.foo.values[0], value2, 'The first item of a data tracking object matches the last value scoped.');
+  states[3].scopeData();
+  equal(dtos.bar.values[0], dtos.bar.values[1], 'Scoping a data configuration with no value, duplicates the last value scoped.');
+  states[4].scopeData();
+  equal(dtos.bar.values.length, 2, 'Scoping a state that does not have data configurations for existing data tracking objects, does not increment their .values array.');
 });
 
-test('.canTgt()', 16, function () {
+test('.canTgt()', function () {
   var
     pkg = Flow.pkg('core')(
       new Flow({ // 1
@@ -414,7 +508,7 @@ test('.canTgt()', 16, function () {
   equal(states[0].canTgt(states[states.length - 1]), true, 'state.canTgt() permits targeting descendent states.');
   equal(states[3].canTgt(states[2]), true, 'state.canTgt() permits targeting the parent state.');
   equal(states[3].canTgt(states[0]), true, 'state.canTgt() permits targeting ancestor states.');
-  equal(states[4].restrict, true, 'There is a restricted state.');
+  ok(states[4].restrict, 'There is a restricted state.');
   equal(states[4].canTgt(states[5]), true, 'Restricted states can target descendant states.');
   equal(states[4].canTgt(states[3]), false, 'Restricted states can not target ancestor states.');
   equal(states[4].canTgt(states[4]), false, 'Restricted states can not target themselves.');
@@ -428,9 +522,9 @@ test('.canTgt()', 16, function () {
   });
 });
 
-module('Proxy');
+module('Core-Proxy');
 
-test('.lock()', 16, function  () {
+test('.lock()', function  () {
   var flow = new Flow(function () {
       var scope = this;
       [null, undefined, false, true].forEach(function (arg) {
@@ -459,7 +553,7 @@ test('.query()', function () {
   };
 });
 
-test('.target()', 22, function () {
+test('.target()', function () {
   var rtnVal = {},
     testVal = {},
     flow = new Flow({
@@ -532,7 +626,7 @@ test('.target()', 22, function () {
   flow.target(0, testVal);
 });
 
-test('.go()', 18, function () {
+test('.go()', function () {
   var tic = 0,
     multiTic = 0,
     pendTic = 0,
@@ -629,7 +723,7 @@ test('.go()', 18, function () {
   equal(pendTic, 1, 'Did not fire the _on function of a pending state!');
 });
 
-test('.wait()', 20, function () {
+test('.wait()', function () {
   var tic = 0,
     tgtTics = 9,
     flow = new Flow({
@@ -687,6 +781,11 @@ test('.bless()', function  () {
     value = {},
     flow = new Flow({
       _on: function () {
+        var
+          scope = {};
+        function noscope() {
+          return this;
+        }
         ok(
           ![null, undefined, NaN, '', 1, {}, []].some(function (arg) {
             return flow.bless(arg);
@@ -695,9 +794,21 @@ test('.bless()', function  () {
         );
         equal(typeof flow.bless(function () {}), 'function', 'Returns a function when passed a function.');
         blessedFnc = flow.bless(unblessedFnc);
+        ok(scope === flow.bless(noscope).call(scope), 'Blessed functions preserve the given execution scope.');
         this.lock(1);
       },
       foo: function () {
+        return value;
+      }
+    }),
+    restrictedFlow = new Flow({
+      _restrict: 1,
+      _in: function () {
+        blessFnc = this.bless(function () {
+          return restrictedFlow.target(1);
+        });
+      },
+      _on: function () {
         return value;
       }
     }),
@@ -711,8 +822,15 @@ test('.bless()', function  () {
     && flow.target(1)
     && flow.lock()
     && unblessedFnc() == false
-    && blessedFnc() === value,
+    && blessedFnc() === value
+    && flow.lock(),
     'A blessed untrusted function can direct a locked flow.'
+  );
+  ok(
+    restrictedFlow.target(1) === value
+    && restrictedFlow.target(1) === false
+    && blessedFnc() === value,
+    'A blessed untrusted function ignores navigation restrictions.'
   );
 });
 
@@ -731,7 +849,7 @@ test('.data()', function () {
   equal(flow.data(vName), vValue, 'Returns the value previously set.');
 });
 
-test('.args()', 19, function () {
+test('.args()', function () {
   var val1 = {},
     val2 = {},
     valAry = [val1, val2],
@@ -772,7 +890,7 @@ test('.args()', 19, function () {
   equal(flow.args().length, 1, 'Removes the last argument when setting the last indice to undefined.');
 });
 
-test('.map()', 12, function () {
+test('.map()', function () {
   var rtnVal = {},
     program = {
       a: {
@@ -813,7 +931,7 @@ test('.map()', 12, function () {
   ok(curIndex !== coreInst.tank.currentIndex, 'Changes the current state of a Flow.');
 });
 
-test('status()', 12, function () {
+test('status()', function () {
   var status = (new Flow({})).status();
   'trust|loops|depth|paused|pending|pendable|targets|route|path|index|phase|state'
     .split('|')
@@ -824,39 +942,9 @@ test('status()', 12, function () {
     );
 });
 
-module('pkg.status()');
+module('&lt;Proxy&gt;.status()');
 
-test('PackageDefinition.addStatus Framework', 21, function () {
-  var corePkgDef = Flow.pkg('core'),
-    oldAddStatus = corePkgDef.addStatus,
-    flow = new Flow(),
-    params = [0, 1, NaN, undefined, null, {}, [], 'foo'];
-  corePkgDef.addStatus = function (existingObject) {
-    ok(this === corePkgDef(flow), 'Scope of PkgDef.addStatus() is the package instance.');
-    equal(typeof existingObject, 'object', 'An existing object is passed to PkgDef.addStatus().');
-    existingObject.foo = 'bar';
-  };
-  deepEqual(flow.status(), {foo:'bar'}, 'Editing keys of the addStatus argument, impacts the status object.');
-  [[1,2,3], {0:1, 1:2, 2:3}].forEach(function (val) {
-    corePkgDef.addStatus = function () {
-      return val;
-    };
-    deepEqual(flow.status(), {0:1, 1:2, 2:3}, 'When PkgDef.addStatus() returns a ' + T.type(val) + ', it\'s members are added to the status object.');
-  });
-  params.forEach(function (val) {
-    corePkgDef.addStatus = val;
-    deepEqual(flow.status(),{},'Setting PkgDef.addStatus to "' + val + '" (' + T.type(val) + ') does not impact the status object.');
-  });
-  params.forEach(function (val) {
-    corePkgDef.addStatus = function () {
-      return val;
-    };
-    deepEqual(flow.status(),{},'When PkgDef.addStatus is a function that returns (an empty) "' + val + '" (' + T.type(val) + ') it does not impact the status object.');
-  });
-  corePkgDef.addStatus = oldAddStatus;
-});
-
-test('.trust', 6, function () {
+test('.trust', function () {
   var flow = new Flow({
       _on: function () {
         equal(this.status().trust, true, 'status.trust is true when called internally.');
@@ -877,7 +965,7 @@ test('.trust', 6, function () {
   stop();
 });
 
-test('.loops', 6, function () {
+test('.loops', function () {
   var tic = 0,
     tgtLoops = 3,
     pend = (new Flow({
@@ -914,7 +1002,7 @@ test('.loops', 6, function () {
   equal(flow.status().loops, 1, 'status.loops is preserved when the flow is pending.');
 });
 
-test('.depth', 7, function () {
+test('.depth', function () {
   var depthTest = function (depth) {
       return function () {
         equal(this.status().depth, depth, 'The depth is accurate.');
@@ -937,7 +1025,7 @@ test('.depth', 7, function () {
   flow.target(0);
 });
 
-test('.paused', 6, function () {
+test('.paused', function () {
   var flow = new Flow({
       pause: function () {
         this.wait();
@@ -963,7 +1051,7 @@ test('.paused', 6, function () {
   stop();
 });
 
-test('.pending', 10, function () {
+test('.pending', function () {
   var pend = (new Flow({
       _on: function () {
         this.wait();
@@ -1013,7 +1101,7 @@ test('.pending', 10, function () {
   equal(flow.status().pending, false, 'status.pending is false when all descendant flows are resumed.');
 });
 
-test('.pendable', 5, function () {
+test('.pendable', function () {
   var flow = new Flow({
     a: {
       _pendable: 0,
@@ -1034,7 +1122,7 @@ test('.pendable', 5, function () {
   equal(flow.status().pendable, true, 'status.pendable reflects the current state.');
 });
 
-test('.targets', 17, function () {
+test('.targets', function () {
   var pend = (new Flow({
       _on: function () {
         this.wait();
@@ -1105,7 +1193,7 @@ test('.targets', 17, function () {
   ok(!flow.status().targets.length, 'status.targets is empty when the flow is idle.');
 });
 
-test('.route', 20, function () {
+test('.route', function () {
   var pend = (new Flow({
       _on: function () {
         this.wait();
@@ -1190,7 +1278,7 @@ test('.route', 20, function () {
   ok(!flow.status().route.length, 'status.routeis empty when the flow is idle.');
 });
 
-test('.path', 5, function () {
+test('.path', function () {
   var flow = new Flow({
     a: {
       b: 1
@@ -1208,7 +1296,7 @@ test('.path', 5, function () {
   equal(flow.status().path, '//c/', 'status.path reflects the current state.');
 });
 
-test('.index', 5, function () {
+test('.index', function () {
   var flow = new Flow({
     a: {
       b: 1
@@ -1226,7 +1314,7 @@ test('.index', 5, function () {
   equal(flow.status().index, 4, 'status.index reflects the current state.');
 });
 
-test('.phase', 13, function () {
+test('.phase', function () {
   var corePkgDef = Flow.pkg('core'),
     oldOnName = corePkgDef.events[0],
     newOnName = 'foo',
@@ -1274,7 +1362,7 @@ test('.phase', 13, function () {
   ok(!flow.status().phase, 'status.phase is an empty string when idle.');
 });
 
-test('.state', 5, function () {
+test('.state', function () {
   var flow = new Flow({
     a: {
       b: 1
@@ -1283,7 +1371,7 @@ test('.state', 5, function () {
   });
   equal(flow.status().state, '_flow', 'status.state is "_flow" by default.');
   flow.go(1);
-  equal(flow.status().state, '_root', 'status.state is "_root" when on the program state.');
+  equal(flow.status().state, '_program', 'status.state is "_program" when on the program state.');
   flow.go(2);
   equal(flow.status().state, 'a', 'status.state reflects the current state.');
   flow.go(3);
@@ -1294,7 +1382,7 @@ test('.state', 5, function () {
 
 module('Scenario');
 
-test('Control executions during asynchrounous actions.', 8, function () {
+test('Control executions during asynchrounous actions.', function () {
   var scenario = new Flow({
     restrict: function () {
       var async = new Flow({
@@ -1334,7 +1422,7 @@ test('Control executions during asynchrounous actions.', 8, function () {
   stop();
 });
 
-test('Traversal method behavior on a locked flow.', 16, function () {
+test('Traversal method behavior on a locked flow.', function () {
   var flow = new Flow(function () {
     this.lock(1);
     equal(this.lock(), true, 'The flow is now locked.');
@@ -1364,7 +1452,7 @@ test('Traversal method behavior on a locked flow.', 16, function () {
   stop();
 });
 
-test('Buffered execution, after numerous calls.', 2, function () {
+test('Buffered execution, after numerous calls.', function () {
   var i = 0, callCnt = 100,
     arbitraryEventData = {},
     eventHandlerFlow = new Flow({
@@ -1387,7 +1475,7 @@ test('Buffered execution, after numerous calls.', 2, function () {
   stop();
 });
 
-test('Flow arguments are passed to the _on function of the last/destination state.', 7, function () {
+test('Flow arguments are passed to the _on function of the last/destination state.', function () {
   var argValue = {},
     plannedRoute = new Flow({
       waypoint: function () {
@@ -1417,7 +1505,7 @@ test('Flow arguments are passed to the _on function of the last/destination stat
   dynamicRoute.target('//a/', argValue);
 });
 
-test('Calculate the fibonacci number of 1000 without causing a stack-overflow.', 1, function () {
+test('Calculate the fibonacci number of 1000 without causing a stack-overflow.', function () {
   var fibonacci = (new Flow(function (number, previousNumber, currentNumber) {
     if (arguments.length === 1) {
       previousNumber = 0;
@@ -1433,7 +1521,7 @@ test('Calculate the fibonacci number of 1000 without causing a stack-overflow.',
   fibonacci(1000);
 });
 
-test('Prevent consecutive execution for the same state.', 1, function () {
+test('Prevent consecutive execution for the same state.', function () {
   var tic = 0,
     doImportantThing = (new Flow({
       _in: function () {
@@ -1445,7 +1533,7 @@ test('Prevent consecutive execution for the same state.', 1, function () {
   equal(tic, 1, 'Function executed once!');
 });
 
-test('Reversing the flow\'s direction during an _over and _bover step does not trigger the other step.', 10, function () {
+test('Reversing the flow\'s direction during an _over and _bover step does not trigger the other step.', function () {
   var tic = 0,
     pause = 0,
     overBounce = new Flow({
@@ -1500,7 +1588,7 @@ test('Reversing the flow\'s direction during an _over and _bover step does not t
   equal(tic, 2, 'Bouncing the flow from the _bover step, after pausing, does not trigger the _over step.');
 });
 
-test('Automatic execution of prerequisite functions.', 1, function () {
+test('Automatic execution of prerequisite functions.', function () {
   var prereqs = 0,
     modelPrereq = {
       _over: function () {
@@ -1539,7 +1627,7 @@ test('Alter arguments before executing a function.', function () {
   equal(invertEcho(input), invertEchoOutput, 'The flow alters the original arguments as expected.');
 });
 
-test('Execute a function sequence.', 1, function () {
+test('Execute a function sequence.', function () {
   var strings = [],
     phrase = 'hello foo bar',
     modelFnc = function () {
