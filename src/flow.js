@@ -1007,43 +1007,11 @@
     return !!result;
   };
 
-  // capture aspects of this package
-  corePkgDef.proxy.status = function  () {
+  // return an object with status information about the flow and it's current state
+  corePkgDef.proxy.status = function () {
     var
-      // this flow proxy
-      proxy = this,
-      // the status object to build and ultimately return
-      status = {};
-    // with each package...
-    Flow.pkg().forEach(function (pkgName) {
-      var
-        // get the package-definition
-        pkgDef = Flow.pkg(pkgName),
-        // placeholder and loop data for scanning the status object returned
-        stats, key;
-      // if this package-definition has a static addStatus function and it returns an object...
-      if (typeof pkgDef.addStatus === 'function' && typeof (stats = pkgDef.addStatus.call(pkgDef(proxy), status)) === 'object') {
-        // with each key of the returned object...
-        for (key in stats) {
-          // if not inherited...
-          if (stats.hasOwnProperty(key)) {
-            // copy to status object
-            status[key] = stats[key];
-          }
-        }
-      }
-    });
-    // return final status object
-    return status;
-  };
-
-  // define status properties
-  // returns an object whose keys are copied to the final status object
-  //   newer package definitions can override the keys set by older package definitions
-  corePkgDef.addStatus = function (status) {
-    var
-      // the package instance
-      pkg = this,
+      // get the package instance
+      pkg = corePkgDef(this),
       // alias the current node
       currentNode = pkg.nodes[pkg.tank.currentIndex],
       // permit showing traversal information when paused, pending, or there are targets
@@ -1070,6 +1038,21 @@
       state: currentNode.name
     };
   };
+  /*
+  Other packages should override this method in the following manner, to add and edit their own status properties:
+
+  //example--------/
+  SomePkgDef.proxy.status = function () {
+    var
+      stats = SomePkgDef.getSuper('status').call(this) || {},
+      somePkgInst = SomePkgDef(this);
+    stats.someProperty = somePkgInst.someValueToReport;
+    return stats;
+  };
+  /--------example//
+
+  Using .getSuper('status') allows earlier packages to include their status values.
+  */
   // expose Flow namespace
   (inCommonJsEnv ? exports : window).Flow = Flow;
 }(typeof require !== 'undefined', Array, this);
