@@ -259,7 +259,9 @@
       // set root to default index or self, based on _root attribute
       node.root = idx < 2 ? 1 : node.attributes._root && node.index || parent.root;
       // set restrict node index, based on the "_restrict" attribute or the parent's existing restriction
-      node.restrict = node.attributes.hasOwnProperty('_restrict') ? node.attributes._restrict : parent && parent.restrict;
+      node.restrict = node.attributes.hasOwnProperty('_restrict') ? node.attributes._restrict && node.index || -1 : parent && parent.restrict || -1;
+      // set restrict node index, based on the "_restrict" attribute or the parent's existing restriction
+      node.restrict = node.attributes.hasOwnProperty('_restrict') ? node.attributes._restrict && node.index || -1 : parent && parent.restrict || -1;
       // define map function - a curried call to .target()
       node.map = function () {
         var
@@ -663,8 +665,11 @@
 
   // add method to determine if another node can be targeted from this node
   corePkgDef.node.canTgt = function (targetNode) {
+    var
+      // alias the restrict node (if any)
+      restrictingNode = this.pkg.nodes[this.restrict];
     // return true if this node is not restricted, or when the targetNode is within the restricting node's path
-    return !this.restrict || (targetNode !== this && !targetNode.path.indexOf(this.path));
+    return !restrictingNode || (targetNode !== restrictingNode && !targetNode.path.indexOf(restrictingNode.path));
   };
 
   // add method to de/scope data
