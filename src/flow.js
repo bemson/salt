@@ -755,6 +755,35 @@
     return !!pkg.locked;
   };
 
+  // set trust flag before and after execution
+  corePkgDef.proxy.bless = function (fnc) {
+    var
+      // placeholder for package instance
+      pkg;
+    if (typeof fnc === 'function') {
+      // alias the package instance
+      pkg = corePkgDef(this);
+      // return wrapped function
+      return function () {
+          var
+            // capture initial trust value
+            initialTrustValue = pkg.trust,
+            // placeholder to capture execution result
+            rslt;
+          // ensure we're executing in a trusted environment
+          pkg.trust = 1;
+          // call and capture function result, pass along scope and args
+          rslt = fnc.apply(this, arguments);
+          // restore trust value
+          pkg.trust = initialTrustValue;
+          // return result of function call
+          return rslt;
+        }
+    }
+    // (otherwise) return false
+    return false;
+  };
+
   // access and edit scoped data for a node
   corePkgDef.proxy.data = function (name, value) {
     var
