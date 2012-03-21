@@ -152,6 +152,8 @@
     // aliased for minification
     arrayPrototype = Array.prototype;
 
+  // set version string
+  Flow.version = '0.3';
 
   // return a given namespace, based on whether in a browser or CommonJS environment
   function getExternalNamespace(namespace) {
