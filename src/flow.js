@@ -761,15 +761,14 @@
   corePkgDef.proxy.bless = function (fnc) {
     var
       // placeholder for package instance
-      pkg;
-    if (typeof fnc === 'function') {
-      // alias the package instance
       pkg = corePkgDef(this);
-      // return wrapped function
+    // if in a trusted environment and given a function...
+    if (pkg.trust && typeof fnc === 'function') {
+      // return "blessed" function
       return function () {
           var
             // capture initial trust value
-            initialTrustValue = pkg.trust,
+            currentTrustValue = pkg.trust,
             // placeholder to capture execution result
             rslt;
           // ensure we're executing in a trusted environment
@@ -777,7 +776,7 @@
           // call and capture function result, pass along scope and args
           rslt = fnc.apply(this, arguments);
           // restore trust value
-          pkg.trust = initialTrustValue;
+          pkg.trust = currentTrustValue;
           // return result of function call
           return rslt;
         }
