@@ -152,32 +152,6 @@
     // aliased for minification
     arrayPrototype = Array.prototype;
 
-  /**
-    Shims for missing native object methods (on crap browsers).
-    WARNING: These methods are not robust and do no validation! They merely support the needs of this library.
-    Shim these methods yourself before loading this script, if you want something equivalent to https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/
-    Ofcourse, we're targeting IE here. I didn't want to include this, but - then again - no one wants to work with IE... We just have to.
-  */
-  if (!arrayPrototype.every) {
-    arrayPrototype.every = function(fnc, scope) {
-      for (var i = 0, j = this.length; i < j; i++) {
-        if (!fnc.call(scope, this[i], i, this)) {
-          return false;
-        }
-      }
-      return true;
-    };
-  }
-  if (!arrayPrototype.indexOf) {
-    arrayPrototype.indexOf = function (searchElement, fromIndex) {
-      for (var i = (fromIndex | 0), j = this.length; i < j; i++) {
-        if (this[i] === searchElement) {
-          return i;
-        }
-      }
-      return -1;
-    }
-  }
 
   // return a given namespace, based on whether in a browser or CommonJS environment
   function getExternalNamespace(namespace) {
