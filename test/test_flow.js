@@ -680,7 +680,41 @@ test('.wait()', 20, function () {
   stop();
 });
 
-test('.data()', 12, function () {
+test('.bless()', function  () {
+  var
+    value = {},
+    flow = new Flow({
+      _on: function () {
+        ok(
+          ![null, undefined, NaN, '', 1, {}, []].some(function (arg) {
+            return flow.bless(arg);
+          }),
+          'Returns false when called without a function.'
+        );
+        equal(typeof flow.bless(function () {}), 'function', 'Returns a function when passed a function.');
+        blessedFnc = flow.bless(unblessedFnc);
+        this.lock(1);
+      },
+      foo: function () {
+        return value;
+      }
+    }),
+    unblessedFnc = function () {
+      return flow.target('//foo/');
+    },
+    blessedFnc;
+  ok(!flow.bless(function () {}), 'Returns false when called from an untrusted routine.');
+  ok(
+    !flow.lock()
+    && flow.target(1)
+    && flow.lock()
+    && unblessedFnc() == false
+    && blessedFnc() === value,
+    'A blessed untrusted function can direct a locked flow.'
+  );
+});
+
+test('.data()', function () {
   var flow = new Flow(),
     vName = 'foo',
     vValue = 1;
