@@ -256,10 +256,8 @@
       node.pkg = pkg;
       // set pendable flag, (true by default, and otherwise inherited when the parent is not pendable)
       node.pendable = (parent && !parent.pendable) ? 0 : (node.attributes.hasOwnProperty('_pendable') ? !!node.attributes._pendable : 1);
-      // set isRoot flag, based on index or "_root" component
-      node.isRoot = idx < 2 ? 1 : !!node.attributes._root;
-      // set rootIndex to self or the parent's root, based on isRoot flag
-      node.rootIndex = node.isRoot ? node.index : parent.rootIndex;
+      // set root to default index or self, based on _root attribute
+      node.root = idx < 2 ? 1 : node.attributes._root && node.index || parent.root;
       // set restrict node index, based on the "_restrict" attribute or the parent's existing restriction
       node.restrict = node.attributes.hasOwnProperty('_restrict') ? node.attributes._restrict : parent && parent.restrict;
       // define map function - a curried call to .target()
@@ -400,7 +398,7 @@
                       break;
 
                       case '@root': // root relative the to the current node
-                        idx = qryNode.rootIndex;
+                        idx = qryNode.root;
                       break;
 
                       case '@program': // program root
@@ -459,7 +457,7 @@
                 qry = node.path + qry;
               } else if (qry.charAt(1) !== '/') { // or, when the second character is not a forward slash...
                 // prepend the current node's root
-                qry = nodes[node.rootIndex].path + qry.substr(1);
+                qry = nodes[node.root].path + qry.substr(1);
               }
               // if the last character is not a forward slash...
               if (qry.slice(-1) !== '/') {
