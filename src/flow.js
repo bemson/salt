@@ -17,9 +17,9 @@
 
   var
     // get Panzer namespace from environment, then define the Flow namespace
-    Flow = getExternalNamespace('Panzer').Panzer.create(),
+    Flow = getFromEnvironment('Panzer').Panzer.create(),
     // get genData from environment
-    genData = getExternalNamespace('genData').genData,
+    genData = getFromEnvironment('genData').genData,
     // define the "core" package
     corePkgDef = Flow.pkg('core'),
     /*
@@ -156,7 +156,7 @@
   Flow.version = '0.3';
 
   // return a given namespace, based on whether in a browser or CommonJS environment
-  function getExternalNamespace(namespace) {
+  function getFromEnvironment(namespace) {
     return inCommonJsEnv ? require(namespace) : window;
   }
 
@@ -181,7 +181,7 @@
     corePkgDef.actives.shift();
   }
 
-  // collection of active package-trees, to support package integration
+  // collection of active package-trees - exposed to support package integration
   corePkgDef.actives = [];
 
   // define traversal event names
@@ -488,14 +488,14 @@
       return (~targetIdx && (pkg.trust || node.canTgt(pkg.nodes[targetIdx]))) ? targetIdx : -1;
     },
     // add a data-tracking-object to this package
-    getData: function (name, value) {
+    getData: function (name, initialValue) {
       var
         // alias self
         pkg = this;
       // return false when name is invalid or an existing or new data tracking object
       return isDataNameValid(name) && (pkg.data.hasOwnProperty(name) ? pkg.data[name] : (pkg.data[name] = {
         name: name,
-        values: arguments.length > 1 ? [value] : []
+        values: arguments.length > 1 ? [initialValue] : []
       }));
     },
     // proceed towards the latest/current target
