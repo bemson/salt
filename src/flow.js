@@ -243,6 +243,8 @@
     pkg.phase = 0;
     // set name of first node name to _flow
     pkg.nodes[0].name = '_flow';
+    // set name of second node
+    pkg.nodes[1].name = '_program';
     // initialize each node...
     pkg.nodes.forEach(function (node, idx) {
       var
@@ -349,11 +351,11 @@
           if (qry == '') {
             break;
           }
-          // if qry is the _flow or _root id...
+          // if qry is the _flow or _program id...
           if (qry === '..//' || qry === '//') {
             // set idx to 0 or 1, based on qry
             idx = qry === '//' ? 1 : 0;
-          } else { // otherwise, when the string is not the _flow or _root ids...
+          } else { // otherwise, when the string is not the _flow or _program ids...
             // extract tokens from the query
             tokens = qry.match(/^(?:(?:\.{1,2}|[@\[][^\/]+)\/?)+/);
             /*
