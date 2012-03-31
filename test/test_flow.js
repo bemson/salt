@@ -8,7 +8,7 @@ module('Flow');
 
 test('Dependencies', function () {
   equal(typeof Panzer, 'object', 'The "Panzer" object is present.');
-  equal(Panzer.version, '0.2.2', 'The correct version of Panzer is loaded.');
+  equal(Panzer.version, '0.2.3', 'The correct version of Panzer is loaded.');
   ok(Array.prototype.indexOf, 'Array.prototype.indexOf exists.');
   ok(Array.prototype.every, 'Array.prototype.every exists.');
 });
