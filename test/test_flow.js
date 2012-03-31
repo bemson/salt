@@ -17,7 +17,6 @@ test('Namespace', function () {
   equal(typeof Flow, 'function', 'The "Flow" function is present.');
   equal(typeof Flow.version, 'string', 'Flow.version is a string.');
   equal(typeof Flow.pkg, 'function', 'Flow.pkg() is a function.');
-  ok(Flow.pkg().length === 1 && Flow.pkg()[0] === 'core', 'The only package is "core".');
 });
 
 module('Core');
