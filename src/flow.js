@@ -644,13 +644,8 @@
           });
           // queue post-loop callback function
           tank.post(function () {
-            var
-              // copy the parents of this flow
-              parents = [].concat(pkg.parents);
-            // clear parents from this flow
-            pkg.parents = [];
-            // with each parent flow...
-            parents.forEach(function (parentFlow) {
+            // process and remove each parent flow
+            pkg.parents.splice(0).forEach(function (parentFlow) {
               // if this parent has no more children and is not paused...
               if (!(parentFlow.pending | parentFlow.pause)) {
                 // tell the parent to resume it's traversal
