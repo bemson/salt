@@ -17,16 +17,14 @@ test('Namespace', function () {
   equal(typeof Flow, 'function', 'The "Flow" function is present.');
   equal(typeof Flow.version, 'string', 'Flow.version is a string.');
   equal(typeof Flow.pkg, 'function', 'Flow.pkg() is a function.');
-  ok(Flow.pkg().length === 1 && Flow.pkg()[0] === 'core', 'The only package present is named "core".');
+  ok(Flow.pkg().length === 1 && Flow.pkg()[0] === 'core', 'The only package is "core".');
 });
 
 module('Core');
 
 test('Package', function () {
   var
-    corePkgDef;
-  equal(Flow.pkg().indexOf('core'), 0, 'The "core" package already exists.');
-  corePkgDef = Flow.pkg('core');
+    corePkgDef = Flow.pkg('core');
   'actives|events'.split('|').forEach(function (prop) {
     ok(corePkgDef[prop] instanceof Array, 'CorePkgDef.' + prop + ' is an array.');
   });
@@ -37,7 +35,7 @@ test('Instance', function () {
   'indexOf|vetIndexOf|getData|go'.split('|').forEach(function (mbr) {
     equal(typeof coreInst[mbr], 'function', '<Core-Instance>.' + mbr + ' is a  method.');
   });
-  'trust,0|args|calls|route|data|delay|cache|locked,0|nodeIds|pending,0|parents|targets|phase,0'.split('|').forEach(function (mbrSet) {
+  'trust,0|args|calls|route|data|delay|cache|locked,0|nodeIds|pending,0|pendees|targets|phase,0'.split('|').forEach(function (mbrSet) {
       var
         split = mbrSet.split(','),
         mbr = split[0],
@@ -735,9 +733,12 @@ test('.wait()', function () {
         equal(this.wait(2, 0), true, 'Returns true when passed a state index and valid integer.');
         equal(this.wait('//', 0), true, 'Returns true when passed a state query and valid integer.');
         equal(this.wait(function () {ok(1, 'THIS CALLBACK SHOULD NOT FIRE.')}, 0), true, 'Returns true when passed a function and valid integer.');
-        [NaN, -1, null, {}, [], undefined, function () {}].forEach(function (param) {
-          equal(scope.wait(param), false, 'Returns false when passed a single "' + param + '" (' + T.type(param) + ').');
-        });
+        ok(
+          [NaN, -1, null, {}, [], undefined, function () {}].every(function (param) {
+            return scope.wait(param) === false;
+          }),
+          'Returns false when passed a single argument that is not a positive integer.'
+        );
         this.wait();
         equal(this.status().paused, true, 'The flow is paused after a successful proxy.wait() call.');
         this.go();

@@ -165,22 +165,6 @@
     return name != null && /\w/.test(name);
   }
 
-  // add the given flow to the active flow collections
-  function addActiveFlow(pkg) {
-    // add the given package-instance to private collection
-    activeFlows.unshift(pkg);
-    // add proxy to the public collection
-    corePkgDef.actives.unshift(pkg.proxy);
-  }
-
-  // remove from active flow collections
-  function removeActiveFlow() {
-    // remove from the private collection
-    activeFlows.shift();
-    // remove from the public collection
-    corePkgDef.actives.shift();
-  }
-
   // collection of active package-trees - exposed to support package integration
   corePkgDef.actives = [];
 
@@ -233,10 +217,8 @@
     pkg.nodeIds = {};
     // the number of child flows fired by this flow's program functions
     pkg.pending = 0;
-    // collection of parent flows which are pending
-    pkg.penders = {};
-    // collect parent flow references
-    pkg.parents = [];
+    // collection of parent flow references
+    pkg.pendees = [];
     // collection of targeted nodes
     pkg.targets = [];
     // identify the initial phase for this flow, 0 by default
@@ -514,25 +496,14 @@
   corePkgDef.onBegin = function (evtName) {
     var
       // alias this package
-      pkg = this,
-      // capture the callback function (if any)
-      delayFnc = pkg.delay.callback,
-      // alias the parent flow, if any
-      parentFlow = activeFlows[0];
-    // if there is a parent flow is pendable, and not already pending...
-    if (parentFlow && parentFlow.nodes[parentFlow.tank.currentIndex].pendable && !pkg.penders[parentFlow.tank.id]) {
-      // flag that this flow is being pended
-      pkg.penders[parentFlow.tank.id] = 1;
-      // increment the number of child flows for the parent flow
-      parentFlow.pending++;
-      // if this parent is unique...
-      if (!~pkg.parents.indexOf(parentFlow)) {
-        // capture for later
-        pkg.parents.unshift(parentFlow);
-      }
-    }
-    // add to collection of active flows
-    addActiveFlow(pkg);
+      pkg = this
+      // capture the delay callback (if any)
+      , delayFnc = pkg.delay.callback
+    ;
+    // add this package to private collection
+    activeFlows.unshift(pkg);
+    // add proxy to the public collection
+    corePkgDef.actives.unshift(pkg.proxy);
     // clear the delay timer
     clearTimeout(pkg.delay.timer);
     // clear callback
@@ -541,7 +512,7 @@
     if (delayFnc) {
       // trust api calls
       pkg.trust = 1;
-      // execute the delayed function in scope of the proxy
+      // execute the delay callback in scope of the proxy
       delayFnc.call(pkg.proxy);
       // untrust api calls
       pkg.trust = 0;
@@ -610,51 +581,74 @@
   corePkgDef.onEnd = function (evtName) {
     var
       // alias self
-      pkg = this,
+      pkg = this
       // alias tank
-      tank = pkg.tank,
-      // flag when this flow is not paused or pending
-      notblocked = !(pkg.pause || pkg.pending);
-    // if the traversal ends outside the on[0] phase...
-    if (pkg.phase) {
-      // (just) deactivate this flow
-      removeActiveFlow();
-    } else if (notblocked && pkg.targets.length) { // or, when stopped at the _on phase, and there are remaining targets it can pursue (i.e., it's not blocked)
-      // direct tank to the next node
+      , tank = pkg.tank
+      // alias the parent flow, if any
+      , parentFlow = activeFlows[1]
+      // flag when this flow is paused, pending, or not at the _on phase
+      , blocked = pkg.pause || pkg.pending || pkg.phase
+    ;
+
+    // if not blocked and there are more targets...
+    if (!blocked && pkg.targets.length) {
+      // direct tank to the next state
       tank.go(pkg.targets[0]);
-    } else { // otherwise, when at the _on phase, and the flow can't move, or there are no remaining targets...
-      // deactivate this flow (since we're about to exit)
-      removeActiveFlow();
-      // if not blocked (neither paused nor pending)...
-      if (notblocked) {
+    } else { // otherwise, when blocked or there are no more targets...
+      // if blocked...
+      if (blocked) {
+        // if this flow is not pending...
+        if (!pkg.pending) {
+          // assume/ensure it appears paused (since any package can stop the tank)
+          pkg.pause = 1;
+        }
+        // if this state and that of an unknown parent flow are pendable...
+        if (
+            // there is a parent flow
+            parentFlow
+            // the parent flow's state is pendable
+            && parentFlow.nodes[parentFlow.tank.currentIndex].pendable
+            // the state of this flow is pendable
+            && pkg.nodes[tank.currentIndex].pendable
+            // the parent flow is not already pended by this flow
+            && !pkg.pendees[parentFlow.tank.id]
+        ) {
+          // increment the parents number of pending flows
+          parentFlow.pending++;
+          // index this parent by it's tank id
+          pkg.pendees[parentFlow.tank.id] = parentFlow;
+        }
+      } else { // otherwise, when not blocked...
         // clear call arguments
         pkg.args = [];
         // clear calls array
         pkg.calls = [];
         // clear route
         pkg.route = [];
-        // if there are (pending) parent flows...
-        if (pkg.parents.length) {
-          // with each parent flow...
-          pkg.parents.forEach(function (parentFlow) {
-            // remove flag that this parent flow is being pended
-            pkg.penders[parentFlow.tank.id] = 0;
-            // remove this child from the pending parent
-            parentFlow.pending--;
+        // if there are pending (parent) flows...
+        if (pkg.pendees.length) {
+          // with each pending flow...
+          pkg.pendees.forEach(function (pender) {
+            // reduce the number of child flows for this pending parent flow
+            pender.pending--;
           });
           // queue post-loop callback function
           tank.post(function () {
             // process and remove each parent flow
-            pkg.parents.splice(0).forEach(function (parentFlow) {
+            pkg.pendees.splice(0).forEach(function (pender) {
               // if this parent has no more children and is not paused...
-              if (!(parentFlow.pending | parentFlow.pause)) {
+              if (!(pender.pending || pender.pause)) {
                 // tell the parent to resume it's traversal
-                parentFlow.go();
+                pender.go();
               }
             });
           });
         }
       }
+      // remove this flow from the private collection
+      activeFlows.shift();
+      // remove this flow's proxy from the public collection
+      corePkgDef.actives.shift();
     }
   };
 
