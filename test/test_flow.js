@@ -8,7 +8,7 @@ module('Flow');
 
 test('Dependencies', function () {
   equal(typeof Panzer, 'object', 'The "Panzer" object is present.');
-  equal(Panzer.version, '0.2.3', 'The correct version of Panzer is loaded.');
+  ok(Panzer.version.replace(/\./g,'') > '0.2.3'.replace(/\./g,''), 'The minimum version of Panzer is loaded.');
   ok(Array.prototype.indexOf, 'Array.prototype.indexOf exists.');
   ok(Array.prototype.every, 'Array.prototype.every exists.');
 });
@@ -338,7 +338,6 @@ test('.events', 3, function () {
       return value;
     },
     flowCompiledWithOn = new Flow(retValue);
-  console.log(corePkgDef.events);
   deepEqual(corePkgDef.events, 'on|in|out|over|bover'.split('|'), 'Has the default event names.');
   corePkgDef.events[0] = 'foo';
   ok(
@@ -1397,7 +1396,7 @@ test('Control executions during asynchrounous actions.', function () {
         });
       equal(async.go(1), true, 'Started a restricted async action.');
       ok(!async.query(0, 1), 'Cannot re-execute the restricted async action nor ancestor states.');
-      deepEqual(async.query('//done/'), ['//done/'], 'Can navigate to descendants of the restricted async action.');
+      equal(async.query('//done/'), '//done/', 'Can navigate to descendants of the restricted async action.');
     },
     lock: function () {
       var async = new Flow({

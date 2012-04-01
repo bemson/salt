@@ -699,17 +699,17 @@
   corePkgDef.proxy.query = function (node) {
     var
       // get package instance
-      pkg = corePkgDef(this),
+      pkg = corePkgDef(this)
+      // alias for minification
+      , args = arguments
       // node indice resolved by query
-      nodes = [];
+      , nodes = [];
     // return false, a string or array of strings, based on whether a single node reference fails
     return (
       // at least one parameter
-      node
-      // and
-      &&
+      args.length
       // all parameters resolve to nodes
-      [].slice.call(arguments).every(function (nodeRef) {
+      && [].slice.call(arguments).every(function (nodeRef) {
         var
           // resolve index of this reference
           idx = pkg.vetIndexOf(nodeRef),
@@ -725,7 +725,7 @@
         // return the result
         return result;
       })
-    ) ? (nodes.length > 0 ? nodes : nodes[0]) : false;
+    ) ? (nodes.length > 1 ? nodes : nodes[0]) : false;
   };
 
   // access and edit the locked status of a flow
