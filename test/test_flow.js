@@ -1410,8 +1410,9 @@ test('Control executions during asynchrounous actions.', function () {
           ok(1, 'The locked async flow has completed.');
         }
       });
+      ok(!async.lock() && async.target(0), 'Can navigate an unlocked flow.');
       equal(async.go(1), true, 'Started a locked async action.');
-      ok(!async.query(0, 1, '//done/'), 'Cannot navigate to any state of the locked flow.');
+      ok(!async.target(0), 'Cannot navigate a locked flow.');
     },
     done: function () {
       start();
