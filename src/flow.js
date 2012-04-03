@@ -487,8 +487,22 @@
         pkg = this;
       // unpause this flow
       pkg.pause = 0;
+      // clear the timer
+      pkg.delTimer();
       // exit when pending, or direct tank to the first target - returns the number of steps completed (or false when there is no target)
       return pkg.pending ? 0 : pkg.tank.go(pkg.targets[0]);
+    }
+    , delTimer: function () {
+      var
+        // alias self
+        pkg = this;
+      // if there is an existing timer...
+      if (pkg.delay.timer) {
+        // clear any existing delay
+        clearTimeout(pkg.delay.timer);
+        // set to 0
+        pkg.delay.timer = 0;
+      }
     }
   };
 
@@ -504,8 +518,8 @@
     activeFlows.unshift(pkg);
     // add proxy to the public collection
     corePkgDef.actives.unshift(pkg.proxy);
-    // clear the delay timer
-    clearTimeout(pkg.delay.timer);
+    // clear any timer
+    pkg.delTimer();
     // clear callback
     pkg.delay.callback = 0;
     // if there was a delayed callback...
@@ -972,8 +986,8 @@
       pkg.pause = 1;
       // stop the tank
       pkg.tank.stop();
-      // clear any existing delay
-      clearTimeout(pkg.delay.timer);
+      // clear the timer
+      pkg.delTimer();
       // set delay to truthy value, callback, or traversal call
       pkg.delay.timer = argLn ?
         setTimeout(
