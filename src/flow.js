@@ -364,8 +364,12 @@
                   if (!token.set || !token.parent.done) {
                     // based on the token value...
                     switch (token.value) {
-                      case '@child':
+                      case '@firstchild':
                         idx = qryNode.firstChildIndex;
+                      break;
+
+                      case '@lastchild':
+                        idx = qryNode.lastChildIndex;
                       break;
 
                       case '@next':
@@ -399,7 +403,7 @@
                       case '@oldest':
                       case '@youngest':
                         // set index to first or last child, based on whether there is a parent
-                        idx = (nodes[qryNode.parentIndex]) ? (nodes[qryNode.parentIndex][~token.value.indexOf('y') ? 'firstChildIndex' : 'lastChildIndex']) : -1;
+                        idx = (nodes[qryNode.parentIndex]) ? (nodes[qryNode.parentIndex][~token.value.indexOf('y') ? 'firstChild' : 'lastChild']) + 'Index' : -1;
                       break;
 
                       case '@self':
