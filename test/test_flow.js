@@ -1050,6 +1050,10 @@ test('.paused', function () {
   stop();
 });
 
+/*
+TODO: add test for pendable attribute and child overrides
+*/
+
 test('.pending', function () {
   var pend = (new Flow({
       _on: function () {
@@ -1451,6 +1455,8 @@ test('Traversal method behavior on a locked flow.', function () {
   equal(flow.args(0), 'foo', 'Using pkg.target() externally does not change arguments.');
   stop();
 });
+
+// TODO: test that .go() and .target() clear timeouts set by .wait()
 
 test('Buffered execution, after numerous calls.', function () {
   var i = 0, callCnt = 100,
