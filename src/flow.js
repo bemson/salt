@@ -154,7 +154,7 @@
     arrayPrototype = Array.prototype;
 
   // set version string
-  Flow.version = '0.3';
+  Flow.version = '0.3.0';
 
   // return a given namespace, based on whether in a browser or CommonJS environment
   function getFromEnvironment(namespace) {
