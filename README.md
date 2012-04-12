@@ -1,8 +1,8 @@
-# Flow :: NextGen Branch
+# Flow
 by Bemi Faison
 
-version 1.0.0
-(12/24/11)
+version 0.3.0
+(4/12/12)
 
 ## DESCRIPTION
 
@@ -11,28 +11,27 @@ Flow is a semantic JavaScript framework, for unparalleled code organization and 
 ## FILES
 
 * src/ - Directory containing the source code
-* src-test/ - [Qunit](http://docs.jquery.com/QUnit) tests of minified source files
+* test/ - [Qunit](http://docs.jquery.com/QUnit) tests of minified source files
 * README.md - This readme file
 * LICENSE - The legal terms and conditions under which this software may be used
 * flow-min.js - The Flow platform, including dependencies
-* core-package-min.js - The "Core" package (requires flow-min.js)
 
 Source files minified with [UglifyJS](http://marijnhaverbeke.nl/uglifyjs)
 
 ## INSTALLATION
 
-Flow requires [genData v1.2](https://github.com/bemson/genData).
+Flow requires [Panzer v0.2.4](https://github.com/bemson/Panzer).
 
-**At this time, this branch is not recommended for production.**
+**At this time, Flow is not recommended for production.**
 
 ## USAGE
 
-**The nextgen branch is _undocumented_. Please review the test and source files for insights into the new codebase. Thank you for your patience!**
+During this alpha-stage of development, **the code remains undocumented**. Please review the test and source files for insights into the codebase. Thank you for your patience!
 
-Older documentation and tutorials are available on the [Flow wiki](http://github.com/bemson/Flow/wiki/).
+Older documentation and tutorials on Flow version 0.2.x are available on the [Flow wiki](http://github.com/bemson/Flow/wiki/).
 
 ## LICENSE
 
 Flow is available under the terms of the [MIT-License](http://en.wikipedia.org/wiki/MIT_License#License_terms).
 
-Copyright 2011, Bemi Faison
+Copyright 2012, Bemi Faison
