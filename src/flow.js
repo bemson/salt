@@ -3,7 +3,8 @@
  * http://github.com/bemson/Flow/
  *
  * Dependencies:
- * Panzer v0.1.1 / Bemi Faison (c) 2011 / MIT (http://github.com/bemson/Panzer/
+ * - Panzer v0.2.4 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
+ * - genData v1.2 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/genData/)
  *
  * Copyright 2012, Bemi Faison
  * Released under the MIT License
