@@ -12,6 +12,7 @@
     , "organization"
     , "framework"
   ]
+  , "private": true
   , "author": "Bemi Faison <bemson@gmail.com> (https://github.com/bemson)"
   , "repository": {
     "type": "git"
