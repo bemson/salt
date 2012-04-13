@@ -4,6 +4,7 @@
   , "description": "A semantic JavaScript framework, for unparalled code organization and execution control."
   , "dependencies" : {
     "Panzer": "0.2.x"
+    , "genData": "1.2.x"
   }
   , "keywords": [
     "asynchronous"
