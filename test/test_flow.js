@@ -27,7 +27,7 @@ test('Package', function () {
   'actives|events'.split('|').forEach(function (prop) {
     ok(corePkgDef[prop] instanceof Array, 'CorePkgDef.' + prop + ' is an array.');
   });
-})
+});
 
 test('Instance', function () {
   var coreInst = Flow.pkg('core')(new Flow());
@@ -422,7 +422,7 @@ test('.indexOf()', function () {
     states = coreInst.nodes,
     randIdx = ~~(Math.random() * states.length),
     qryPaths = '//'.split('|');
-  function customFunction() {};
+  function customFunction() {}
   customFunction.toString = function () {
     return qryPath;
   };
@@ -544,9 +544,39 @@ test('.lock()', function  () {
 });
 
 test('.query()', function () {
-  var program = {
-
-  };
+  var flow = new Flow({
+    parent: {
+      _root: 1,
+      youngest: 1,
+      startingpoint: {
+        firstchild: 1,
+        lastchild: 1
+      },
+      next: 1,
+      oldest: 1
+    }
+  });
+  flow.go('//parent/startingpoint/');
+  [
+    '.,//parent/startingpoint/',
+    '..,//parent/',
+    '@firstchild,//parent/startingpoint/firstchild/',
+    '@flow,..//',
+    '@lastchild,//parent/startingpoint/lastchild/',
+    '@next,//parent/next/',
+    '@oldest,//parent/oldest/',
+    '@parent,//parent/',
+    '@program,//',
+    '@root,//parent/',
+    '@self,//parent/startingpoint/',
+    '@youngest,//parent/youngest/'
+  ].forEach(function (set) {
+    var
+      parts = set.split(',')
+    ;
+    equal(flow.query(parts[0]), parts[1], 'The query token "' + parts[0] + '" matches correctly.');
+  });
+  // todo - test against grouped token combinations "[]"
 });
 
 test('.target()', function () {
@@ -1005,7 +1035,7 @@ test('.depth', function () {
   var depthTest = function (depth) {
       return function () {
         equal(this.status().depth, depth, 'The depth is accurate.');
-      }
+      };
     },
     flow = new Flow({
       _in: depthTest(1),

@@ -404,7 +404,7 @@
                       case '@oldest':
                       case '@youngest':
                         // set index to first or last child, based on whether there is a parent
-                        idx = (nodes[qryNode.parentIndex]) ? (nodes[qryNode.parentIndex][~token.value.indexOf('y') ? 'firstChild' : 'lastChild']) + 'Index' : -1;
+                        idx = (nodes[qryNode.parentIndex]) ? nodes[qryNode.parentIndex][(~token.value.indexOf('y') ? 'firstChild' : 'lastChild') + 'Index'] : -1;
                       break;
 
                       case '@self':
