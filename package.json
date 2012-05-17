@@ -1,16 +1,16 @@
 {
   "name": "Flow"
-  , "version": "0.3.0"
+  , "version": "0.3.1"
   , "description": "A semantic JavaScript framework, for unparalled code organization and execution control."
   , "dependencies" : {
-    "Panzer": "0.2.x"
-    , "genData": "1.2.x"
+    "Panzer": ">=0.2.5"
+    , "genData": "2"
   }
   , "keywords": [
     "asynchronous"
     , "synchronous"
     , "semantic"
-    , "organization"
+    , "architecture"
     , "framework"
   ]
   , "private": true
