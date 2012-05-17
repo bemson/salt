@@ -677,7 +677,7 @@
       // alias the restrict node (if any)
       restrictingNode = this.pkg.nodes[this.restrict];
     // return true if this node is not restricted, or when the targetNode is within the restricting node's path
-    return !restrictingNode || (targetNode !== restrictingNode && !targetNode.path.indexOf(restrictingNode.path));
+    return !restrictingNode || targetNode.within(restrictingNode);
   };
 
   // add method to de/scope data
@@ -706,6 +706,16 @@
         dto.values.unshift(dataCfg.use ? dataCfg.value : dto.values[0]);
       }
     });
+  };
+
+  // add method to determine when this node is a descendant of the given/current node
+  corePkgDef.node.within = function (nodeRef) {
+    var
+      // resolve the parent node to check
+      parentNode = arguments.length ? (typeof nodeRef === 'object' ? nodeRef : this.pkg.nodes[nodeRef]) : this.pkg.nodes[this.pkg.tank.currentIndex]
+    ;
+    // return whether the current node is within the parent node - auto-pass when parentNode is the flow state
+    return parentNode ? parentNode !== this && (!parentNode.index || !this.path.indexOf(parentNode.path)) : false;
   };
 
   // add method to return map of this flow's nodes

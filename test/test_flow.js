@@ -65,7 +65,7 @@ test('State', function () {
   equal(state.root, 1, '<Core-State>.root is 1, by default.');
   equal(state.restrict, -1, '<Core-State>.restrict is -1, by default.');
   equal(state.root, 1, '<Core-State>.root is 1 by default.');
-  'scopeData|canTgt'.split('|').forEach(function (mbr) {
+  'scopeData|canTgt|within'.split('|').forEach(function (mbr) {
     equal(typeof state[mbr], 'function', '<Core-State>.' + mbr + '() is a method.');
   });
   equal(states[0].name, '_flow', 'The first state is named "_flow".');
@@ -482,6 +482,22 @@ test('.scopeData()', function () {
   equal(dtos.bar.values[0], dtos.bar.values[1], 'Scoping a data configuration with no value, duplicates the last value scoped.');
   states[4].scopeData();
   equal(dtos.bar.values.length, 2, 'Scoping a state that does not have data configurations for existing data tracking objects, does not increment their .values array.');
+});
+
+test('.within()', function () {
+  var
+    flow = new Flow({ // 1
+      child: {}       // 2
+    }),
+    pkg = Flow.pkg('core')(flow),
+    states = pkg.nodes;
+  equal(states[2].within.length, 1, 'state.within() expects one argument.');
+  equal(typeof states[0].within(), 'boolean', 'Returns a boolean.');
+  ok(states[2].within(1), 'Accepts a numeric argument.');
+  ok(states[2].within(states[1]), 'Accepts a state object as an argument.');
+  equal(states[1].within(1), false, 'Returns false when a state is checked against itself.');
+  pkg.proxy.go(1);
+  ok(states[2].within(1) && states[2].within(), 'When called with no arguments, state.within() looks inside the current state.');
 });
 
 test('.canTgt()', function () {
