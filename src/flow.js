@@ -1,5 +1,5 @@
 /*!
- * Flow v0.3.0
+ * Flow v0.3.1
  * http://github.com/bemson/Flow/
  *
  * Dependencies:
