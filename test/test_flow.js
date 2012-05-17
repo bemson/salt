@@ -825,57 +825,55 @@ test('.bless()', function  () {
   var
     value = {},
     flow = new Flow({
-      _on: function () {
+      _in: function () {
         var
-          scope = {};
-        function noscope() {
-          return this;
-        }
+          that = this
+        ;
         ok(
-          ![null, undefined, NaN, '', 1, {}, []].some(function (arg) {
-            return flow.bless(arg);
+          ![null, undefined, NaN, '', /baz/, 1, {}, []].some(function (arg) {
+            return that.bless(arg);
           }),
           'Returns false when called without a function.'
         );
-        equal(typeof flow.bless(function () {}), 'function', 'Returns a function when passed a function.');
-        blessedFnc = flow.bless(unblessedFnc);
-        ok(scope === flow.bless(noscope).call(scope), 'Blessed functions preserve the given execution scope.');
+        blessedQuery = this.bless(rawQuery);
+        equal(typeof blessedQuery, 'function', 'Returns a function when passed a function.');
+        equal(this.bless(function () {return this;})(), window, 'Blessed functions execute in the global scope.');
         this.lock(1);
       },
-      foo: function () {
-        return value;
+      _on: onBehavior,
+      restricted: {
+        _restrict: 1,
+        _in: function () {
+          this.lock(0);
+        },
+        _on: onBehavior
       }
     }),
-    restrictedFlow = new Flow({
-      _restrict: 1,
-      _in: function () {
-        blessFnc = this.bless(function () {
-          return restrictedFlow.target(1);
-        });
-      },
-      _on: function () {
-        return value;
-      }
-    }),
-    unblessedFnc = function () {
-      return flow.target('//foo/');
-    },
-    blessedFnc;
-  ok(!flow.bless(function () {}), 'Returns false when called from an untrusted routine.');
+    blessedQuery
+  ;
+
+  function onBehavior() {
+    return value;
+  }
+
+  function rawQuery(qry) {
+    return flow.target(qry);
+  }
+
+  equal(flow.bless.length, 1, 'The bless function expects one parameter.');
+  equal(flow.bless(rawQuery), false, 'Returns false when called from an untrusted routine.');
+  flow.target(1);
   ok(
-    !flow.lock()
-    && flow.target(1)
-    && flow.lock()
-    && unblessedFnc() == false
-    && blessedFnc() === value
-    && flow.lock(),
-    'A blessed untrusted function can direct a locked flow.'
+    flow.lock()
+    && rawQuery('restricted') === false
+    && blessedQuery('restricted') === value,
+    'A blessed function can direct a locked flow.'
   );
   ok(
-    restrictedFlow.target(1) === value
-    && restrictedFlow.target(1) === false
-    && blessedFnc() === value,
-    'A blessed untrusted function ignores navigation restrictions.'
+    !flow.lock()
+    && rawQuery(1) === false
+    && blessedQuery(1) === value,
+    'A blessed function ignores traversal restrictions.'
   );
 });
 

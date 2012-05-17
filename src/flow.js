@@ -496,8 +496,8 @@
       pkg.delTimer();
       // exit when pending, or direct tank to the first target - returns the number of steps completed (or false when there is no target)
       return pkg.pending ? 0 : pkg.tank.go(pkg.targets[0]);
-    }
-    , delTimer: function () {
+    },
+    delTimer: function () {
       var
         // alias self
         pkg = this;
