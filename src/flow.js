@@ -4,7 +4,7 @@
  *
  * Dependencies:
  * - Panzer v0.2.4 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
- * - genData v1.2 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/genData/)
+ * - genData v2.0.0 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/genData/)
  *
  * Copyright 2012, Bemi Faison
  * Released under the MIT License
@@ -35,7 +35,7 @@
       > _data: [{foo: 'bar'}, {hello: 'world'}]
       > _data: [['g',{foo: 'bar'}], 'alpha', {accts: 9}] // mixed
     */
-    generateDataConfigurationObjects = new genData(function (name, value, parent, dataset, flags, shared) {
+    generateDataConfigurationObjects = genData.spawn(function (name, value, parent, dataset, flags, shared) {
       var
         // alias self
         data = this,
@@ -107,7 +107,7 @@
       }
     }),
     // return path-tokens from a given string
-    generateTokens = new genData(function (name, value, parent, dataset, flags) {
+    generateTokens = genData.spawn(function (name, value, parent, dataset, flags) {
       var
         // alias self
         data = this,
@@ -153,8 +153,8 @@
     // aliased for minification
     arrayPrototype = Array.prototype;
 
-  // set version string
-  Flow.version = '0.3.0';
+  // version string
+  Flow.version = '0.3.1';
 
   // return a given namespace, based on whether in a browser or CommonJS environment
   function getFromEnvironment(namespace) {
