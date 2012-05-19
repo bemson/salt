@@ -879,17 +879,18 @@ test('.bless()', function  () {
 
 test('.data()', function () {
   var flow = new Flow(),
-    vName = 'foo',
-    vValue = 1;
-  equal(T.type(flow.data()), 'array', 'Returns an array when called without arguments.');
-  equal(flow.data().length, 0, 'The array is empty by default.');
-  [null, undefined, [], {}, function () {}, NaN].forEach(function (arg) {
-    equal(flow.data(arg), false, 'Returns false when the first argument is not a string.');
-  });
-  equal(flow.data(vName), undefined, 'Returns "undefined" when retrieving an unknown variable.');
-  equal(flow.data()[0], vName, 'The array contains the names of active variables.');
-  equal(flow.data(vName, vValue), true, 'Returns true when setting a variable.');
-  equal(flow.data(vName), vValue, 'Returns the value previously set.');
+    name = 'foo',
+    value = 1;
+  ok(
+    ['.', '', 0, 1, null, undefined, function () {}, NaN, [], {}].every(function (arg) {
+      return !flow.data(arg);
+    }),
+    'Returns false when the first argument is not a valid string.'
+  );
+  equal(flow.data(name), undefined, 'The value of undeclared variables is "undefined".');
+  deepEqual(flow.data(), [name], 'Returns an array of declared variables, when called without arguments.');
+  equal(flow.data(name, value), true, 'Returns true when setting a variable.');
+  equal(flow.data(name), value, 'Returns the last set value of a variable.');
 });
 
 test('.args()', function () {
