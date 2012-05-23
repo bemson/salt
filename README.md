@@ -1,8 +1,8 @@
 # Flow
 by Bemi Faison
 
-version 0.3.0
-(4/12/12)
+version 0.3.1
+(5/22/12)
 
 ## DESCRIPTION
 
@@ -20,7 +20,7 @@ Source files minified with [UglifyJS](http://marijnhaverbeke.nl/uglifyjs)
 
 ## INSTALLATION
 
-Flow requires [Panzer v0.2.4](https://github.com/bemson/Panzer).
+Flow requires [Panzer v0.2.5](https://github.com/bemson/Panzer).
 
 **At this time, Flow is not recommended for production.**
 
