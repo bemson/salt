@@ -191,7 +191,7 @@
 
   // initialize the package instance with custom properties
   // only argument is the object passed after the program when calling "new Flow(program, extraArg)"
-  corePkgDef.init = function () {
+  corePkgDef.init = function (cfg) {
     // init vars
     var
       // alias self
@@ -279,6 +279,28 @@
         node.fncs[0] = node.value;
       }
     });
+    // if the cfg has a host key...
+    if (cfg.hasOwnProperty('hostKey')) {
+      // capture the host key
+      pkg.hostKey = cfg.hostKey;
+    }
+    // if the cfg contains a cede list....
+    if (cfg.cedeHosts instanceof Array) {
+      // override .allowed() method
+      pkg.allowed = function () {
+        // flag when...
+        return pkg
+          // this flow is in a trusted state
+          .trust ||
+          // or,
+          (
+            // this flow is hosted by another...
+            activeFlows.length > 1 &&
+            // which has permission...
+            ~cfg.cedeHosts.indexOf(activeFlows[1].hostKey)
+          );
+      };
+    }
   };
 
   // define prototype of any package instances
@@ -472,7 +494,7 @@
       // use the current node, when node is omitted
       node = node || pkg.nodes[pkg.tank.currentIndex];
       // return the target index or -1, based on whether the target is valid, given the trust status of the package or the restrictions of the current node
-      return (~targetIdx && (pkg.trust || node.canTgt(pkg.nodes[targetIdx]))) ? targetIdx : -1;
+      return (~targetIdx && (pkg.allowed() || node.canTgt(pkg.nodes[targetIdx]))) ? targetIdx : -1;
     },
     // add a data-tracking-object to this package
     getData: function (name, initialValue) {
@@ -508,6 +530,11 @@
         // set to 0
         pkg.delay.timer = 0;
       }
+    },
+    // returns current trust state - can be overriden when the parent flow's hostkey matches an item in the called flow's cedeHosts array
+    // this method is overriden at intialization
+    allowed: function () {
+      return this.trust;
     }
   };
 
@@ -519,7 +546,7 @@
       // capture the delay callback (if any)
       , delayFnc = pkg.delay.callback
     ;
-    // add this package to private collection
+    // add this package to the private collection
     activeFlows.unshift(pkg);
     // add proxy to the public collection
     corePkgDef.actives.unshift(pkg.proxy);
@@ -765,7 +792,7 @@
     // if arguments were passed...
     if (arguments.length) {
       // if allowed to change the lock status...
-      if (pkg.trust) {
+      if (pkg.allowed()) {
         // set new lock state
         pkg.locked = !!set;
         // flag success in changing the locked property of this flow
@@ -783,8 +810,8 @@
     var
       // placeholder for package instance
       pkg = corePkgDef(this);
-    // if in a trusted environment and given a function...
-    if (pkg.trust && typeof fnc === 'function') {
+    // if allowed and given a function...
+    if (pkg.allowed() && typeof fnc === 'function') {
       // return "blessed" function
       return function () {
           var
@@ -863,8 +890,8 @@
       argCnt = arguments.length,
       // get type of first argument
       idxType = typeof idx;
-    // if getting a single value, or setting arguments on a trusted or unlocked flow...
-    if (argCnt === 1 || (argCnt && (pkg.trust || !pkg.locked))) {
+    // if getting a single value, or setting arguments on a permitted or unlocked flow...
+    if (argCnt === 1 || (argCnt && (pkg.allowed() || !pkg.locked))) {
       // if idx is an array...
       if (idx instanceof Array) {
         // replace args with a copy of the idx array
@@ -901,8 +928,8 @@
     var
      // alias this package
       pkg = corePkgDef(this),
-      // resolve a node index from qry, or nothing if trusted or unlocked
-      tgtIdx = (pkg.trust || !pkg.locked) ? pkg.vetIndexOf(qry) : -1;
+      // resolve a node index from qry, or nothing if allowed or unlocked
+      tgtIdx = (pkg.allowed() || !pkg.locked) ? pkg.vetIndexOf(qry) : -1;
     // if the destination node is valid, and the flow can move...
     if (~tgtIdx) {
       // capture arguments after the tgt
@@ -921,7 +948,7 @@
       // when external (outside a program-function)
         // false when this flow is paused or exits outside of phase 0
         // true when the traversal result is undefined - otherwise the traversal result is returned
-    return pkg.trust ? !pkg.pending : ((pkg.phase || pkg.pause) ? false : pkg.result === undefined || pkg.result);
+    return pkg.allowed() ? !pkg.pending : ((pkg.phase || pkg.pause) ? false : pkg.result === undefined || pkg.result);
   };
 
   /**
@@ -944,8 +971,8 @@
       result = 0;
     // if...
     if (
-      // trusted or unlocked and ...
-      (pkg.trust || !pkg.locked) &&
+      // allowed or unlocked and ...
+      (pkg.allowed() || !pkg.locked) &&
       // any and all node references are valid...
       [].slice.call(arguments).every(function (nodeRef) {
         var
@@ -995,8 +1022,8 @@
       time = args[argLn - 1],
       // indicates result of call
       result = 0;
-    // if trusted and the the argument's are valid...
-    if (pkg.trust && (!argLn || (time >= 0 && typeof time === 'number' && (noAction || ~delayNodeIdx || isFnc)))) {
+    // if allowed and the the argument's are valid...
+    if (pkg.allowed() && (!argLn || (time >= 0 && typeof time === 'number' && (noAction || ~delayNodeIdx || isFnc)))) {
       // flag that we've paused this flow
       pkg.pause = 1;
       // stop the tank
@@ -1039,7 +1066,7 @@
       // alias the current node
       currentNode = pkg.nodes[pkg.tank.currentIndex],
       // permit showing traversal information when paused, pending, or there are targets
-      canShowTraversalInformation = pkg.trust | pkg.pause | pkg.pending;
+      canShowTraversalInformation = pkg.allowed() || pkg.pause || pkg.pending;
 
     // map-function for retrieving the node index
     function getPathFromIndex(idx) {
@@ -1048,7 +1075,7 @@
 
     // return the collection of keys for the node object
     return {
-      trust: !!pkg.trust,
+      trust: !!pkg.allowed(),
       loops: Math.max((pkg.calls.join().match(new RegExp('\\b' + currentNode.index + '.' + pkg.phase, 'g')) || []).length - 1, 0),
       depth: currentNode.depth,
       paused: !!pkg.pause,
