@@ -866,7 +866,7 @@
     // if getting a single value, or setting arguments on a trusted or unlocked flow...
     if (argCnt === 1 || (argCnt && (pkg.trust || !pkg.locked))) {
       // if idx is an array...
-      if (idxType instanceof Array) {
+      if (idx instanceof Array) {
         // replace args with a copy of the idx array
         pkg.args = [].concat(idx);
         // flag success with setting new argument values
