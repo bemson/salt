@@ -31,7 +31,7 @@ test('Package', function () {
 
 test('Instance', function () {
   var coreInst = Flow.pkg('core')(new Flow());
-  'indexOf|vetIndexOf|getData|go'.split('|').forEach(function (mbr) {
+  'allowed|indexOf|vetIndexOf|getData|go'.split('|').forEach(function (mbr) {
     equal(typeof coreInst[mbr], 'function', '<Core-Instance>.' + mbr + ' is a  method.');
   });
   'trust,0|args|calls|route|data|delay|cache|locked,0|nodeIds|pending,0|pendees|targets|phase,0'.split('|').forEach(function (mbrSet) {
@@ -351,6 +351,32 @@ test('.events', 3, function () {
 });
 
 module('Core-Instance');
+
+test('.allowed()', function () {
+  var
+    hostKeyRef = {},
+    flow = new Flow(0, {cedeHosts:[hostKeyRef]}),
+    flowPkg = Flow.pkg('core')(flow),
+    isFlowAccesible = function () {
+      return flowPkg.allowed();
+    },
+    badHost = new Flow(isFlowAccesible),
+    goodHost = new Flow(isFlowAccesible, {hostKey: hostKeyRef}),
+    goodBadHost = new Flow(function () {
+      return badHost.target(1);
+    },  {hostKey: hostKeyRef});
+    badGoodHost = new Flow(function () {
+      return goodHost.target(1);
+    });
+  equal(flowPkg.allowed.length, 0, 'Expects zero parameters.');
+  equal(flowPkg.allowed(), false, 'Returns a falsy value by default.');
+  flowPkg.trust = 1;
+  ok(flowPkg.trust && flowPkg.allowed(), 'Returns a truthy value when <core-instance>.trust is truthy.');
+  flowPkg.trust = 0;
+  ok(!flowPkg.trust && !badHost.target(1), 'Returns a falsy value when invoked from the callback of an unknown host flow.');
+  ok(!flowPkg.trust && goodHost.target(1), 'Returns a truthy value when invoked from the callback of a known host flow.');
+  ok(!flowPkg.trust && !goodBadHost.target(1) && badGoodHost.target(1), 'Only the first host flow is considered when determining the return value.');
+});
 
 test('.getData()', function () {
   var corePkgDef = Flow.pkg('core'),
@@ -1006,6 +1032,10 @@ test('.trust', function () {
   flow.target(1);
   flow.target('//wait/');
   equal(flow.status().trust, false, 'status.trust is false when called externally and the flow is idle.');
+  (new Flow(function () {
+    var hostedFlow = new Flow(0, {cedeHosts:[1]});
+    equal(hostedFlow.status().trust, true, 'status.trust is true when tested by an authorized host flow.');
+  }, {hostKey:1})).go(1);
   stop();
 });
 
