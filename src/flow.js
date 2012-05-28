@@ -290,14 +290,14 @@
       pkg.allowed = function () {
         // flag when...
         return pkg
-          // this flow is in a trusted state
+          // this flow is in a trusted state (i.e., executing)
           .trust ||
           // or,
           (
-            // this flow is hosted by another...
-            activeFlows.length > 1 &&
+            // this flow is dormant but being checked by another flow...
+            activeFlows.length &&
             // which has permission...
-            ~cfg.cedeHosts.indexOf(activeFlows[1].hostKey)
+            ~cfg.cedeHosts.indexOf(activeFlows[0].hostKey)
           );
       };
     }
