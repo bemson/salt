@@ -243,8 +243,6 @@
       node.root = idx < 2 ? 1 : node.attributes._root && node.index || parent.root;
       // set restrict node index, based on the "_restrict" attribute or the parent's existing restriction
       node.restrict = node.attributes.hasOwnProperty('_restrict') ? node.attributes._restrict && node.index || -1 : parent && parent.restrict || -1;
-      // set restrict node index, based on the "_restrict" attribute or the parent's existing restriction
-      node.restrict = node.attributes.hasOwnProperty('_restrict') ? node.attributes._restrict && node.index || -1 : parent && parent.restrict || -1;
       // define map function - a curried call to .target()
       node.map = function () {
         var
