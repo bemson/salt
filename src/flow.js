@@ -591,7 +591,7 @@
         // if the node specifies locking...
         if (node.lock) {
           // lock the flow
-          pkg.lock = 1;
+          pkg.locked = 1;
         }
         // scope data for this node
         node.scopeData();
@@ -601,7 +601,7 @@
         // if this node has an auto lock and the parent does not...
         if (node.lock && !node.plock) {
           // unlock (occurs before executing any _out callback)
-          pkg.lock = 0;
+          pkg.locked = 0;
         }
         // set the outNode to the current node
         pkg.outNode = node;
