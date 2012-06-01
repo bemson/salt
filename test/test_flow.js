@@ -203,6 +203,52 @@ test('_root', function () {
   ok(states[1].attributes.hasOwnProperty('_root') && !states[1].attributes._root && states[1].root === 1, 'The program state ignores the _root attribute.');
 });
 
+test('_lock', 4, function () {
+  var
+    flow = new Flow({
+      basics: {
+        _lock: 1,
+        _in: function () {
+          ok(this.args().length && !this.args(0) && this.lock(), 'A flow is locked when entering a state attributed with "_lock".');
+        },
+        _on: function () {
+          this.go('//calls/');
+        },
+        _out: function () {
+          ok(!this.lock(), 'A flow is unlocked after existing an auto-lock state.');
+        }
+      },
+      calls: {
+        _lock: 1,
+        _on: function () {
+          this.go('//nesting/');
+        },
+        _out: function () {
+          this.lock(1);
+        }
+      },
+      verify: {
+        _over: function () {
+          ok(this.lock(), 'Flow honors locks set while invoking the _out callback of an auto-locked state.');
+          this.lock(0);
+        }
+      },
+      nesting : {
+        _lock: 1,
+        _on: function () {
+          this.go('child', 0);
+        },
+        child: {
+          _lock: 1,
+          _out: function () {
+            ok(this.lock(), 'Flow remains locked when traversing from an auto-locked child state to an auto-lock parent state.');
+          }
+        }
+      }
+    });
+  flow.target('//basics/', flow.lock());
+});
+
 test('_pendable', function () {
   var
     corePkgDef = Flow.pkg('core'),
