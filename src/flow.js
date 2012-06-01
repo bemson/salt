@@ -243,6 +243,10 @@
       node.root = idx < 2 ? 1 : node.attributes._root && node.index || parent.root;
       // set restrict node index, based on the "_restrict" attribute or the parent's existing restriction
       node.restrict = node.attributes.hasOwnProperty('_restrict') ? node.attributes._restrict && node.index || -1 : parent && parent.restrict || -1;
+      // set lock to boolean equivalent of attribute
+      node.lock = !!node.attributes._lock;
+      // capture when the parent lock property is true
+      node.plock = parent ? parent.lock : 0;
       // define map function - a curried call to .target()
       node.map = function () {
         var
@@ -584,11 +588,21 @@
     // based on the motion id...
     switch (phase) {
       case 1: // in
+        // if the node specifies locking...
+        if (node.lock) {
+          // lock the flow
+          pkg.lock = 1;
+        }
         // scope data for this node
         node.scopeData();
       break;
 
       case 2: // out
+        // if this node has an auto lock and the parent does not...
+        if (node.lock && !node.plock) {
+          // unlock (occurs before executing any _out callback)
+          pkg.lock = 0;
+        }
         // set the outNode to the current node
         pkg.outNode = node;
       break;
