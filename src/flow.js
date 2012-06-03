@@ -18,11 +18,11 @@
 
   var
     // get Panzer namespace from environment, then define the Flow namespace
-    Flow = getFromEnvironment('Panzer').Panzer.create(),
+    Flow = getFromEnvironment('Panzer').Panzer.create()
     // get genData from environment
-    genData = getFromEnvironment('genData').genData,
+    , genData = getFromEnvironment('genData').genData
     // define the "core" package
-    corePkgDef = Flow.pkg('core'),
+    , corePkgDef = Flow.pkg('core')
     /*
     this generator handles any nesting and combination of _data component values...
     ...strings
@@ -35,21 +35,22 @@
       > _data: [{foo: 'bar'}, {hello: 'world'}]
       > _data: [['g',{foo: 'bar'}], 'alpha', {accts: 9}] // mixed
     */
-    generateDataConfigurationObjects = genData.spawn(function (name, value, parent, dataset, flags, shared) {
+    , generateDataConfigurationObjects = genData.spawn(function (name, value, parent, dataset, flags, shared) {
       var
         // alias self
-        data = this,
+        data = this
         // flag when this item will be a data configuration
-        keep = 1,
+        , keep = 1
         // data configuration object
-        obj = {
+        , obj = {
           // name of data
-          name: data.name,
+          name: data.name
           // initial data value
-          value: data.value,
+          , value: data.value
           // flag to use this value (true by default)
-          use: 1
-        };
+          , use: 1
+        }
+      ;
       // omit everything
       flags.omit = 1;
       // flag when this is an object
@@ -105,14 +106,15 @@
           shared.keys[obj.name] = dataset.push(obj) - 1;
         }
       }
-    }),
+    })
     // return path-tokens from a given string
-    generateTokens = genData.spawn(function (name, value, parent, dataset, flags) {
+    , generateTokens = genData.spawn(function (name, value, parent, dataset, flags) {
       var
         // alias self
-        data = this,
+        data = this
         // shorthand forward-slash character
-        slash = '/';
+        , slash = '/'
+      ;
       // init set property (default is false, or "not a set")
       data.set = 0;
       // capture parent
@@ -149,9 +151,10 @@
       }
     }),
     // collection of active flows
-    activeFlows = [],
+    , activeFlows = []
     // aliased for minification
-    arrayPrototype = Array.prototype;
+    , arrayPrototype = Array.prototype
+  ;
 
   // version string
   Flow.version = '0.3.3';
@@ -195,7 +198,8 @@
     // init vars
     var
       // alias self
-      pkg = this;
+      pkg = this
+    ;
     // collection of arguments for traversal functions
     pkg.args = [];
     // collection of node calls made while traversing
@@ -232,26 +236,30 @@
     pkg.nodes.forEach(function (node, idx) {
       var
         // capture parent (undefined for the first node)
-        parent = pkg.nodes[node.parentIndex];
+        parent = pkg.nodes[node.parentIndex]
+        // alias node attributes
+        , attributes = node.attributes
+      ;
       // cache this nodes index by it's unique path
       pkg.nodeIds[node.path] = idx;
       // add reference to the package-instance containing this node
       node.pkg = pkg;
       // set pendable flag, (true by default, and otherwise inherited when the parent is not pendable)
-      node.pendable = (parent && !parent.pendable) ? 0 : (node.attributes.hasOwnProperty('_pendable') ? !!node.attributes._pendable : 1);
+      node.pendable = (parent && !parent.pendable) ? 0 : (attributes.hasOwnProperty('_pendable') ? !!node.attributes._pendable : 1);
       // set root to default index or self, based on _root attribute
-      node.root = idx < 2 ? 1 : node.attributes._root && node.index || parent.root;
+      node.root = idx < 2 ? 1 : attributes._root && node.index || parent.root;
       // set restrict node index, based on the "_restrict" attribute or the parent's existing restriction
-      node.restrict = node.attributes.hasOwnProperty('_restrict') ? node.attributes._restrict && node.index || -1 : parent && parent.restrict || -1;
+      node.restrict = attributes.hasOwnProperty('_restrict') ? attributes._restrict && node.index || -1 : parent && parent.restrict || -1;
       // set lock to boolean equivalent of attribute
-      node.lock = !!node.attributes._lock;
+      node.lock = !!attributes._lock;
       // capture when the parent lock property is true
       node.plock = parent ? parent.lock : 0;
       // define map function - a curried call to .target()
       node.map = function () {
         var
           // capture any arguments
-          args = [].slice.call(arguments);
+          args = [].slice.call(arguments)
+        ;
         // prepend this node's index as the target
         args.unshift(idx);
         // invoke the proxies target method, pass along arguments
@@ -263,7 +271,7 @@
         return node.path;
       };
       // add data configurations for this node
-      node.data = generateDataConfigurationObjects(node.attributes._data);
+      node.data = generateDataConfigurationObjects(attributes._data);
       // if this node's index is not 0...
       if (node.index) {
         // append to parent's map function
@@ -273,7 +281,7 @@
       node.fncs = corePkgDef.events.map(function (name) {
         name = '_' + name;
         //  set traversal function to 0 or the corresponding attribute key (when a function)
-        return typeof node.attributes[name] === 'function' ? node.attributes[name] : 0;
+        return typeof attributes[name] === 'function' ? attributes[name] : 0;
       });
       // if there is no _on[0] function and this node's value is a function...
       if (!node.fncs[0] && typeof node.value === 'function') {
@@ -315,23 +323,24 @@
     indexOf: function (qry, node) {
       var
         // alias self
-        pkg = this,
+        pkg = this
         // alias for minification and performance
-        nodes = pkg.nodes,
+        , nodes = pkg.nodes
         // alias for minification and performance
-        nodeIds = pkg.nodeIds,
+        , nodeIds = pkg.nodeIds
         // the untokenized portion of a tokenized query
-        qryLeaf,
+        , qryLeaf
         // the node to query from, when parsing tokens
-        qryNode,
+        , qryNode
         // flags when the query begins with a @program or @flow token
-        isAbsQry,
+        , isAbsQry
         // collection of individual tokens (extracted from the query)
-        tokens,
+        , tokens
         // the token being parsed
-        token,
+        , token
         // the index to return for the resolved node (default is -1, indicates when the node could not be found)
-        idx = -1;
+        , idx = -1
+      ;
       // use the current node, when node is omitted
       node = node || pkg.nodes[pkg.tank.currentIndex];
       // based on the type of qry...
@@ -490,9 +499,10 @@
     vetIndexOf: function (qry, node) {
       var
         // alias self
-        pkg = this,
+        pkg = this
         // get the index of the target node
-        targetIdx = pkg.indexOf(qry, node);
+        , targetIdx = pkg.indexOf(qry, node)
+      ;
       // use the current node, when node is omitted
       node = node || pkg.nodes[pkg.tank.currentIndex];
       // return the target index or -1, based on whether the target is valid, given the trust status of the package or the restrictions of the current node
@@ -502,7 +512,8 @@
     getData: function (name, initialValue) {
       var
         // alias self
-        pkg = this;
+        pkg = this
+      ;
       // return false when name is invalid or an existing or new data tracking object
       return isDataNameValid(name) && (pkg.data.hasOwnProperty(name) ? pkg.data[name] : (pkg.data[name] = {
         name: name,
@@ -513,7 +524,8 @@
     go: function () {
       var
         // alias self
-        pkg = this;
+        pkg = this
+      ;
       // unpause this flow
       pkg.pause = 0;
       // clear the timer
@@ -524,7 +536,8 @@
     delTimer: function () {
       var
         // alias self
-        pkg = this;
+        pkg = this
+      ;
       // if there is an existing timer...
       if (pkg.delay.timer) {
         // clear any existing delay
@@ -571,11 +584,12 @@
   corePkgDef.onTraverse = function (evtName, phase) {
     var
       // the package instance
-      pkg = this,
+      pkg = this
       // alias tank
-      tank = pkg.tank,
+      , tank = pkg.tank
       // the node being traversed (prototyped, read-only value)
-      node = pkg.nodes[tank.currentIndex];
+      , node = pkg.nodes[tank.currentIndex]
+    ;
     // trust api calls
     pkg.trust = 1;
     // if there is an out node...
@@ -609,7 +623,7 @@
     }
     // capture this phase
     pkg.phase = phase;
-    // if the current index `is not the same as the last one in the route...
+    // if the current index is not the same as the last one in the route...
     if (node.index !== pkg.route.slice(-1)[0]) {
       // add index to the route
       pkg.route.push(node.index);
@@ -714,7 +728,8 @@
   corePkgDef.node.canTgt = function (targetNode) {
     var
       // alias the restrict node (if any)
-      restrictingNode = this.pkg.nodes[this.restrict];
+      restrictingNode = this.pkg.nodes[this.restrict]
+    ;
     // return true if this node is not restricted, or when the targetNode is within the restricting node's path
     return !restrictingNode || targetNode.within(restrictingNode);
   };
@@ -723,14 +738,16 @@
   corePkgDef.node.scopeData = function (descope) {
     var
       // alias self (for closure)
-      node = this,
+      node = this
       // alias the package containing this node
-      pkg = node.pkg;
+      , pkg = node.pkg
+    ;
     // with each data configuration object in this node...
     node.data.forEach(function (dataCfg) {
       var
         // get the data tracking object with this name
-        dto = pkg.getData(dataCfg.name);
+        dto = pkg.getData(dataCfg.name)
+      ;
       // if descoping data...
       if (descope) {
         // remove current value from values
@@ -771,7 +788,8 @@
       // alias for minification
       , args = arguments
       // node indice resolved by query
-      , nodes = [];
+      , nodes = []
+    ;
     // return false, a string or array of strings, based on whether a single node reference fails
     return (
       // at least one parameter
@@ -800,7 +818,8 @@
   corePkgDef.proxy.lock = function (set) {
     var
       // alias package instance
-      pkg = corePkgDef(this);
+      pkg = corePkgDef(this)
+    ;
     // if arguments were passed...
     if (arguments.length) {
       // if allowed to change the lock status...
@@ -821,16 +840,18 @@
   corePkgDef.proxy.bless = function (fnc) {
     var
       // placeholder for package instance
-      pkg = corePkgDef(this);
+      pkg = corePkgDef(this)
+    ;
     // if allowed and given a function...
     if (pkg.allowed() && typeof fnc === 'function') {
       // return "blessed" function
       return function () {
           var
             // capture initial trust value
-            currentTrustValue = pkg.trust,
+            currentTrustValue = pkg.trust
             // placeholder to capture execution result
-            rslt;
+            , rslt
+          ;
           // ensure we're executing in a trusted environment
           pkg.trust = 1;
           // call and capture function result, pass along scope and args
@@ -849,13 +870,14 @@
   corePkgDef.proxy.data = function (name, value) {
     var
       // get package
-      pkg = corePkgDef(this),
+      pkg = corePkgDef(this)
       // get number of arguments passed
-      argCnt = arguments.length,
+      , argCnt = arguments.length
       // loop data
-      d,
+      , d
       // value to return (default is false)
-      rtn = false;
+      , rtn = false
+    ;
     // if passed arguments...
     if (argCnt) {
       // if the name is valid...
@@ -895,13 +917,14 @@
   corePkgDef.proxy.args = function (idx, value) {
     var
       // get package
-      pkg = corePkgDef(this),
+      pkg = corePkgDef(this)
       // alias arguments from this package
-      pkgArgs = pkg.args,
+      , pkgArgs = pkg.args
       // get number of arguments passed
-      argCnt = arguments.length,
+      , argCnt = arguments.length
       // get type of first argument
-      idxType = typeof idx;
+      , idxType = typeof idx
+    ;
     // if getting a single value, or setting arguments on a permitted or unlocked flow...
     if (argCnt === 1 || (argCnt && (pkg.allowed() || !pkg.locked))) {
       // if idx is an array...
@@ -939,9 +962,10 @@
   corePkgDef.proxy.target = function (qry) {
     var
      // alias this package
-      pkg = corePkgDef(this),
+      pkg = corePkgDef(this)
       // resolve a node index from qry, or nothing if allowed or unlocked
-      tgtIdx = (pkg.allowed() || !pkg.locked) ? pkg.vetIndexOf(qry) : -1;
+      , tgtIdx = (pkg.allowed() || !pkg.locked) ? pkg.vetIndexOf(qry) : -1
+    ;
     // if the destination node is valid, and the flow can move...
     if (~tgtIdx) {
       // capture arguments after the tgt
@@ -974,13 +998,14 @@
   corePkgDef.proxy.go = function (waypoint) {
     var
       // alias self
-      pkg = corePkgDef(this),
+      pkg = corePkgDef(this)
       // capture current paused status
-      wasPaused = pkg.pause,
+      , wasPaused = pkg.pause
       // collection of targets to add to targets
-      waypoints = [],
+      , waypoints = []
       // success status for this call
-      result = 0;
+      , result = 0
+    ;
     // if...
     if (
       // allowed or unlocked and ...
@@ -989,7 +1014,8 @@
       [].slice.call(arguments).every(function (nodeRef) {
         var
           // resolve index of this reference
-          idx = pkg.vetIndexOf(nodeRef);
+          idx = pkg.vetIndexOf(nodeRef)
+        ;
         // add to waypoints
         waypoints.push(idx);
         // return true when the resolved index is not -1
@@ -1017,23 +1043,24 @@
   corePkgDef.proxy.wait = function () {
     var
       // get package
-      pkg = corePkgDef(this),
+      pkg = corePkgDef(this)
       // alias arguments
-      args = arguments,
+      , args = arguments
       // capture number of arguments passed
-      argLn = args.length,
+      , argLn = args.length
       // flag when no action will be taken after a delay
-      noAction = argLn < 2,
+      , noAction = argLn < 2
       // capture first argument as action to take after the delay, when more than one argument is passed
-      delayFnc = noAction ? 0 : args[0],
+      , delayFnc = noAction ? 0 : args[0]
       // flag when the delay is a function
-      isFnc = typeof delayFnc === 'function',
+      , isFnc = typeof delayFnc === 'function'
       // get node referenced by delayFnc (the first argument) - no vet check, since this would be a priviledged call
-      delayNodeIdx = pkg.indexOf(delayFnc),
+      , delayNodeIdx = pkg.indexOf(delayFnc)
       // use last argument as a time
-      time = args[argLn - 1],
+      , time = args[argLn - 1]
       // indicates result of call
-      result = 0;
+      , result = 0
+    ;
     // if allowed and the the argument's are valid...
     if (pkg.allowed() && (!argLn || (time >= 0 && typeof time === 'number' && (noAction || ~delayNodeIdx || isFnc)))) {
       // flag that we've paused this flow
@@ -1074,11 +1101,12 @@
   corePkgDef.proxy.status = function () {
     var
       // get the package instance
-      pkg = corePkgDef(this),
+      pkg = corePkgDef(this)
       // alias the current node
-      currentNode = pkg.nodes[pkg.tank.currentIndex],
+      , currentNode = pkg.nodes[pkg.tank.currentIndex]
       // permit showing traversal information when paused, pending, or there are targets
-      canShowTraversalInformation = pkg.allowed() || pkg.pause || pkg.pending;
+      , canShowTraversalInformation = pkg.allowed() || pkg.pause || pkg.pending
+    ;
 
     // map-function for retrieving the node index
     function getPathFromIndex(idx) {
@@ -1087,18 +1115,19 @@
 
     // return the collection of keys for the node object
     return {
-      trust: !!pkg.allowed(),
-      loops: Math.max((pkg.calls.join().match(new RegExp('\\b' + currentNode.index + '.' + pkg.phase, 'g')) || []).length - 1, 0),
-      depth: currentNode.depth,
-      paused: !!pkg.pause,
-      pending: !!pkg.pending,
-      pendable: !!currentNode.pendable,
-      targets: pkg.targets.map(getPathFromIndex),
-      route: pkg.route.map(getPathFromIndex),
-      path: currentNode.path,
-      index: currentNode.index,
-      phase: canShowTraversalInformation ? corePkgDef.events[pkg.phase] : '',
-      state: currentNode.name
+      trust: !!pkg.trust
+      , permit: !!pkg.allowed()
+      , loops: Math.max((pkg.calls.join().match(new RegExp('\\b' + currentNode.index + '.' + pkg.phase, 'g')) || []).length - 1, 0)
+      , depth: currentNode.depth
+      , paused: !!pkg.pause
+      , pending: !!pkg.pending
+      , pendable: !!currentNode.pendable
+      , targets: pkg.targets.map(getPathFromIndex)
+      , route: pkg.route.map(getPathFromIndex)
+      , path: currentNode.path
+      , index: currentNode.index
+      , phase: canShowTraversalInformation ? corePkgDef.events[pkg.phase] : ''
+      , state: currentNode.name
     };
   };
   /*
