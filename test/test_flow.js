@@ -952,17 +952,23 @@ test('.bless()', function  () {
 test('.data()', function () {
   var flow = new Flow(),
     name = 'foo',
-    value = 1;
+    value = 1,
+    batch = {
+      bar: 'baz',
+      zog: 'pop'
+    };
   ok(
     ['.', '', 0, 1, null, undefined, function () {}, NaN, [], {}].every(function (arg) {
       return !flow.data(arg);
     }),
-    'Returns false when the first argument is not a valid string.'
+    'Returns false when the first argument is not a valid string or an empty/invalid object.'
   );
   equal(flow.data(name), undefined, 'The value of undeclared variables is "undefined".');
   deepEqual(flow.data(), [name], 'Returns an array of declared variables, when called without arguments.');
   equal(flow.data(name, value), true, 'Returns true when setting a variable.');
   equal(flow.data(name), value, 'Returns the last set value of a variable.');
+  equal(flow.data(batch), true, 'Returns true when given an object with one or more key/value pairs.');
+  equal(flow.data('bar'), 'baz', 'Passing an object allows batch addition of data keys and values.');
 });
 
 test('.args()', function () {

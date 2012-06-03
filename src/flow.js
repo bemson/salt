@@ -880,20 +880,37 @@
     ;
     // if passed arguments...
     if (argCnt) {
-      // if the name is valid...
-      if (typeof name === 'string' && /\w/.test(name)) {
-        // resolve data tracker
-        d = pkg.getData(name);
-        // if a value was passed...
-        if (argCnt > 1) {
-          // set the current value
-          d.values[0] = value;
-          // flag success with setting the value
-          rtn = true;
-        } else { // otherwise, when no value is passed...
-          // return the current value
-          rtn = d.values[0];
-        }
+      // based on the type of name...
+      switch (typeof name) {
+        case 'string':
+          // if the name is valid...
+          if (/\w/.test(name)) {
+            // resolve data tracker
+            d = pkg.getData(name);
+            // if a value was passed...
+            if (argCnt > 1) {
+              // set the current value
+              d.values[0] = value;
+              // flag success with setting the value
+              rtn = true;
+            } else { // otherwise, when no value is passed...
+              // return the current value
+              rtn = d.values[0];
+            }
+          }
+        break;
+
+        case 'object':
+          // capture key/value pairs of the given object...
+          rtn = generateKeyValueIndex(name);
+          // set return value to result of batch setting or false, based on whether there are items to process
+          rtn = rtn.length ?
+            rtn.every(function (item) {
+              // make recursive call to set this name/value pair
+              return pkg.proxy.data(item.name, item.value);
+            }) :
+            false;
+        break;
       }
     } else { // otherwise, when passed no arguments...
       // prepare to return an array
