@@ -149,7 +149,13 @@
         // exclude from dataset
         flags.omit = 1;
       }
-    }),
+    })
+    , generateKeyValueIndex = genData.spawn(
+      function (name, value, parent, dataset, flags) {
+        flags.omit = !parent;
+        flags.scan = !parent;
+      }
+    )
     // collection of active flows
     , activeFlows = []
     // aliased for minification
@@ -228,6 +234,10 @@
     pkg.targets = [];
     // identify the initial phase for this flow, 0 by default
     pkg.phase = 0;
+    // set owner to the active flow, if any
+    pkg.owner = activeFlows[0];
+    // stack of paths to invoke on the owner flow, whenever this flow ends navigation
+    pkg.updates = [];
     // set name of first node name to _flow
     pkg.nodes[0].name = '_flow';
     // set name of second node
@@ -252,6 +262,8 @@
       node.restrict = attributes.hasOwnProperty('_restrict') ? attributes._restrict && node.index || -1 : parent && parent.restrict || -1;
       // set lock to boolean equivalent of attribute
       node.lock = !!attributes._lock;
+      // set update path when _updates is a string
+      node.updates = attributes.hasOwnProperty('_updates') ? (typeof attributes._updates == 'string' ? attributes._updates : 0) : (parent && parent.updates);
       // capture when the parent lock property is true
       node.plock = parent ? parent.lock : 0;
       // define map function - a curried call to .target()
@@ -602,6 +614,8 @@
     // based on the motion id...
     switch (phase) {
       case 1: // in
+        // add to updates stack
+        pkg.updates.unshift(node.updates);
         // if the node specifies locking...
         if (node.lock) {
           // lock the flow
@@ -612,6 +626,8 @@
       break;
 
       case 2: // out
+        // remove from updates stack
+        pkg.updates.shift();
         // if this node has an auto lock and the parent does not...
         if (node.lock && !node.plock) {
           // unlock (occurs before executing any _out callback)
