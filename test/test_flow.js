@@ -1069,24 +1069,45 @@ module('&lt;Proxy&gt;.status()');
 test('.trust', function () {
   var flow = new Flow({
       _on: function () {
-        equal(this.status().trust, true, 'status.trust is true when called internally.');
+        equal(this.status().trust, true, 'true when called internally.');
       },
       wait: function () {
         this.wait(function () {
-          equal(this.status().paused, false, 'The flow is no longer paused.');
-          equal(this.status().trust, true, 'status.trust is true when called internally from a delayed function.');
+          equal(this.status().trust, true, 'true when called internally from a delayed function.');
           start();
         },10);
-        equal(this.status().paused, true, 'The flow is paused.');
       }
     });
-  equal(flow.status().trust, false, 'status.trust is false when called externally.');
+  equal(flow.status().trust, false, 'false when called externally.');
   flow.target(1);
   flow.target('//wait/');
-  equal(flow.status().trust, false, 'status.trust is false when called externally and the flow is idle.');
+  equal(flow.status().trust, false, 'false when called externally and the flow is idle.');
   (new Flow(function () {
     var hostedFlow = new Flow(0, {cedeHosts:[1]});
-    equal(hostedFlow.status().trust, true, 'status.trust is true when tested by an authorized host flow.');
+    equal(hostedFlow.status().trust, false, 'false when called externally by an authorized host flow.');
+  }, {hostKey:1})).go(1);
+  stop();
+});
+
+test('.permit', function () {
+  var flow = new Flow({
+      _on: function () {
+        equal(this.status().permit, true, 'true when called internally.');
+      },
+      wait: function () {
+        this.wait(function () {
+          equal(this.status().permit, true, 'true when called internally from a delayed function.');
+          start();
+        },10);
+      }
+    });
+  equal(flow.status().permit, false, 'false when called externally.');
+  flow.target(1);
+  flow.target('//wait/');
+  equal(flow.status().permit, false, 'false when called externally and the flow is idle.');
+  (new Flow(function () {
+    var hostedFlow = new Flow(0, {cedeHosts:[1]});
+    equal(hostedFlow.status().permit, true, 'true when called externally by an authorized host flow.');
   }, {hostKey:1})).go(1);
   stop();
 });
