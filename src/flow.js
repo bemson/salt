@@ -236,8 +236,6 @@
     pkg.phase = 0;
     // set owner to the active flow, if any
     pkg.owner = activeFlows[0];
-    // stack of paths to invoke on the owner flow, whenever this flow ends navigation
-    pkg.updates = [];
     // set name of first node name to _flow
     pkg.nodes[0].name = '_flow';
     // set name of second node
@@ -262,8 +260,26 @@
       node.restrict = attributes.hasOwnProperty('_restrict') ? attributes._restrict && node.index || -1 : parent && parent.restrict || -1;
       // set lock to boolean equivalent of attribute
       node.lock = !!attributes._lock;
-      // set update path when _updates is a string
-      node.updates = attributes.hasOwnProperty('_updates') ? (typeof attributes._updates == 'string' ? attributes._updates : 0) : (parent && parent.updates);
+      // set default for whether this node updates or is an update gate
+      node.upOwn = node.upGate = 0;
+      // if this package has an owner...
+      if (pkg.owner) {
+        // if there is a valid _updates attribute...
+        if (attributes.hasOwnProperty('_updates')) {
+          // if the attribute is valid...
+          if (typeof attributes._updates == 'string' || typeof attributes._updates == 'number') {
+            // flag that this node is should update an owning package, also when it's entered and exited
+            node.upOwn = node.upGate = 1;
+            // set (new) owner callback path
+            node.upPath = attributes._updates;
+          }
+        } else if (parent && parent.hasOwnProperty('upPath')) { // or, if the parent exists and has an upPath property...
+          // flag that this node has an owner update
+          node.upOwn = 1;
+          // set the upPath to the parent
+          node.upPath = parent.upPath;
+        }
+      }
       // capture when the parent lock property is true
       node.plock = parent ? parent.lock : 0;
       // define map function - a curried call to .target()
@@ -562,6 +578,20 @@
     // this method is overriden at intialization
     allowed: function () {
       return this.trust;
+    },
+    // calls .target() on the owning flow
+    upOwner: function (stateQuery) {
+      var
+        // alias self
+        pkg = this
+      ;
+      // if there is an owner...
+      if (pkg.owner) {
+        // return result of target
+        return pkg.owner.proxy.target(stateQuery, pkg.proxy);
+      }
+      // indicates that there is no owner (sorta)
+      return false;
     }
   };
 
@@ -608,14 +638,17 @@
     if (pkg.outNode) {
       // descope data in the outNode
       pkg.outNode.scopeData(1);
+      // if the outNode is an update gate...
+      if (pkg.outNode.upGate) {
+        // tell the owner to target this node's update path
+        pkg.upOwner(pkg.outNode.upPath);
+      }
       // clear the outNode
       pkg.outNode = 0;
     }
     // based on the motion id...
     switch (phase) {
       case 1: // in
-        // add to updates stack
-        pkg.updates.unshift(node.updates);
         // if the node specifies locking...
         if (node.lock) {
           // lock the flow
@@ -626,8 +659,6 @@
       break;
 
       case 2: // out
-        // remove from updates stack
-        pkg.updates.shift();
         // if this node has an auto lock and the parent does not...
         if (node.lock && !node.plock) {
           // unlock (occurs before executing any _out callback)
@@ -656,6 +687,11 @@
       // execute function, in scope of the proxy - pass arguments when there are no more targets
       pkg.result = node.fncs[phase].apply(pkg.proxy, (pkg.targets.length) ? [] : pkg.args);
     }
+    // if we've entered an update gate...
+    if (node.upGate && phase == 1) {
+      // direct owner to this node's update path
+      pkg.upOwner(node.upPath);
+    }
     // if we are pending...
     if (pkg.pending) {
       // stop navigating
@@ -676,6 +712,8 @@
       , parentFlow = activeFlows[1]
       // flag when this flow is paused, pending, or not at the _on phase
       , blocked = pkg.pause || pkg.pending || pkg.phase
+      // placeholder - the node navigation is ending on
+      , node
     ;
 
     // if not blocked and there are more targets...
@@ -707,36 +745,47 @@
           pkg.pendees[parentFlow.tank.id] = parentFlow;
         }
       } else { // otherwise, when not blocked...
-        // clear call arguments
-        pkg.args = [];
-        // clear calls array
-        pkg.calls = [];
-        // clear route
-        pkg.route = [];
-        // if there are pending (parent) flows...
-        if (pkg.pendees.length) {
-          // with each pending flow...
-          pkg.pendees.forEach(function (pender) {
-            // reduce the number of child flows for this pending parent flow
-            pender.pending--;
-          });
-          // queue post-loop callback function
-          tank.post(function () {
-            // process and remove each parent flow
-            pkg.pendees.splice(0).forEach(function (pender) {
-              // if this parent has no more children and is not paused...
-              if (!(pender.pending || pender.pause)) {
-                // tell the parent to resume it's traversal
-                pender.go();
-              }
+        // if the current node updates the owner...
+        if ((node = pkg.nodes[tank.currentIndex]).upOwn) {
+          // update the owning flow
+          pkg.upOwner(node.upPath);
+        }
+        /*
+        Updating the owning flow might result in this flow being directed somewhere. We need to check the targets length (again), to avoid ending navigation prematurely.
+        */
+        // if no new targets have been added (we're all done)...
+        if (!pkg.targets.length) {
+          // clear call arguments
+          pkg.args = [];
+          // clear calls array
+          pkg.calls = [];
+          // clear route
+          pkg.route = [];
+          // if there are pending (parent) flows...
+          if (pkg.pendees.length) {
+            // with each pending flow...
+            pkg.pendees.forEach(function (pender) {
+              // reduce the number of child flows for this pending parent flow
+              pender.pending--;
             });
-          });
+            // queue post-loop callback function
+            tank.post(function () {
+              // process and remove each parent flow
+              pkg.pendees.splice(0).forEach(function (pender) {
+                // if this parent has no more children and is not paused...
+                if (!(pender.pending || pender.pause)) {
+                  // tell the parent to resume it's traversal
+                  pender.go();
+                }
+              });
+            });
+          }
+          // remove this flow from the private collection
+          activeFlows.shift();
+          // remove this flow's proxy from the public collection
+          corePkgDef.actives.shift();
         }
       }
-      // remove this flow from the private collection
-      activeFlows.shift();
-      // remove this flow's proxy from the public collection
-      corePkgDef.actives.shift();
     }
   };
 
