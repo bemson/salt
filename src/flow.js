@@ -274,7 +274,7 @@
             node.upPath = attributes._updates;
           }
         } else if (parent && parent.hasOwnProperty('upPath')) { // or, if the parent exists and has an upPath property...
-          // flag that this node has an owner update
+          // flag that this is an update state
           node.upOwn = 1;
           // set the upPath to the parent
           node.upPath = parent.upPath;
@@ -713,7 +713,7 @@
       // flag when this flow is paused, pending, or not at the _on phase
       , blocked = pkg.pause || pkg.pending || pkg.phase
       // placeholder - the node navigation is ending on
-      , node
+      , node = pkg.nodes[tank.currentIndex]
     ;
 
     // if not blocked and there are more targets...
@@ -735,7 +735,7 @@
             // the parent flow's state is pendable
             && parentFlow.nodes[parentFlow.tank.currentIndex].pendable
             // the state of this flow is pendable
-            && pkg.nodes[tank.currentIndex].pendable
+            && node.pendable
             // the parent flow is not already pended by this flow
             && !pkg.pendees[parentFlow.tank.id]
         ) {
@@ -746,46 +746,45 @@
         }
       } else { // otherwise, when not blocked...
         // if the current node updates the owner...
-        if ((node = pkg.nodes[tank.currentIndex]).upOwn) {
-          // update the owning flow
+        if (node.upOwn) {
+        //   // update the owning flow
           pkg.upOwner(node.upPath);
-        }
-        /*
-        Updating the owning flow might result in this flow being directed somewhere. We need to check the targets length (again), to avoid ending navigation prematurely.
-        */
-        // if no new targets have been added (we're all done)...
-        if (!pkg.targets.length) {
-          // clear call arguments
-          pkg.args = [];
-          // clear calls array
-          pkg.calls = [];
-          // clear route
-          pkg.route = [];
-          // if there are pending (parent) flows...
-          if (pkg.pendees.length) {
-            // with each pending flow...
-            pkg.pendees.forEach(function (pender) {
-              // reduce the number of child flows for this pending parent flow
-              pender.pending--;
-            });
-            // queue post-loop callback function
-            tank.post(function () {
-              // process and remove each parent flow
-              pkg.pendees.splice(0).forEach(function (pender) {
-                // if this parent has no more children and is not paused...
-                if (!(pender.pending || pender.pause)) {
-                  // tell the parent to resume it's traversal
-                  pender.go();
-                }
-              });
-            });
+          // if new targets were added (by the owning flow)...
+          if (pkg.targets.length) {
+            // exit now, so the loop can continue navigating
+            return;
           }
-          // remove this flow from the private collection
-          activeFlows.shift();
-          // remove this flow's proxy from the public collection
-          corePkgDef.actives.shift();
+        }
+        // clear call arguments
+        pkg.args = [];
+        // clear calls array
+        pkg.calls = [];
+        // clear route
+        pkg.route = [];
+        // if there are pending (parent) flows...
+        if (pkg.pendees.length) {
+          // with each pending flow...
+          pkg.pendees.forEach(function (pender) {
+            // reduce the number of child flows for this pending parent flow
+            pender.pending--;
+          });
+          // queue post-loop callback function
+          tank.post(function () {
+            // process and remove each parent flow
+            pkg.pendees.splice(0).forEach(function (pender) {
+              // if this parent has no more children and is not paused...
+              if (!(pender.pending || pender.pause)) {
+                // tell the parent to resume it's traversal
+                pender.go();
+              }
+            });
+          });
         }
       }
+      // remove this flow from the private collection
+      activeFlows.shift();
+      // remove this flow's proxy from the public collection
+      corePkgDef.actives.shift();
     }
   };
 

@@ -50,7 +50,7 @@ test('State', function () {
   var
     states = Flow.pkg('core')(new Flow({foo: 'bar'})).nodes,
     state = states[2];
-  'pendable,1|root|restrict|map|data|fncs'.split('|').forEach(function (mbrSet) {
+  'pendable,1|root|restrict|map|data|fncs|upOwn,0'.split('|').forEach(function (mbrSet) {
       var
         split = mbrSet.split(','),
         mbr = split[0],
