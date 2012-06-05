@@ -34,12 +34,12 @@ test('Instance', function () {
   'allowed|indexOf|vetIndexOf|getData|go'.split('|').forEach(function (mbr) {
     equal(typeof coreInst[mbr], 'function', '<Core-Instance>.' + mbr + ' is a  method.');
   });
-  'trust,0|args|calls|route|data|delay|cache|locked,0|nodeIds|pending,0|pendees|targets|phase,0'.split('|').forEach(function (mbrSet) {
+  'trust,0|args|calls|route|data|delay|cache|locked,0|nodeIds|pending,0|pendees|targets|phase,0|owner'.split('|').forEach(function (mbrSet) {
       var
         split = mbrSet.split(','),
         mbr = split[0],
         defaultFlag = split[1];
-      ok(typeof coreInst[mbr] !== 'undefined', '<Core-Instance>.' + mbr + ' is a property.');
+      ok(coreInst.hasOwnProperty(mbr), '<Core-Instance>.' + mbr + ' is a property.');
       if (split.length > 1) {
         equal(coreInst[mbr], defaultFlag, '<Core-Instance>.' + mbr + ' is ' + defaultFlag + ', by default.');
       }
@@ -249,6 +249,77 @@ test('_lock', 4, function () {
   flow.target('//basics/', flow.lock());
 });
 
+test('_updates', function () {
+  var
+    corePkgDef = Flow.pkg('core'),
+    updateTicks = 0,
+    child,
+    updateArg,
+    programs = [
+      // 0 - simple, single gate
+      {
+        _updates: '//updates'
+      },
+      // 1 - one update state and a child state
+      {
+        relay: {
+          _updates: '//updates/',
+          sub: 1
+        }
+      },
+      // 2 - one update with redirecting child state
+      {
+        relay: {
+          _updates: '//updates/',
+          redirect: function () {
+            this.go(1);
+          }
+        }
+      },
+      // 3 - a delayed update
+      {
+        _updates: '//updates/',
+        _in: function () {
+          this.wait(0);
+        }
+      }
+    ],
+    owner = new Flow({
+      _on: function (idx) {
+        updateTicks = 0;
+        child = new Flow(programs[idx]);
+      },
+      updates: function (childFlowArg) {
+        updateArg = childFlowArg;
+        updateTicks++;
+      }
+    })
+  ;
+  owner.target(1, 0);
+  child.go(1);
+  strictEqual(child, updateArg, 'The owner update state receives the child flow as an argument.');
+  ok(updateTicks, 'An owner flow is updated when an update state is entered.');
+  equal(updateTicks, 2, 'The owner flow is updated when navigation ends within the state.');
+  child.go(0);
+  equal(updateTicks, 3, 'The owner flow is updated when an update state is exited.');
+  owner.target(1, 1);
+  child.go(1);
+  equal(updateTicks, 0, 'The owner is only signaled when the child state has an _updates attribute.');
+  child.go('//relay/sub/');
+  equal(updateTicks, 2, 'The owner is updated when the child flow ends navigation on a state within an update state.');
+  owner.target(1, 2);
+  child.go('//relay/redirect/');
+  ok(updateTicks == 2 && child.status().index == 1, 'The owner is not updated between navigation, waypoints.');
+  owner.target(1, 3);
+  child.go(1);
+  equal(updateTicks, 1, 'The owner is not updated when child flow navigation pauses.');
+  setTimeout(function () {
+    equal(updateTicks, 2, 'The owner is upated when the child flow completes navigation.');
+    start();
+  }, 20);
+  stop();
+});
+
 test('_pendable', function () {
   var
     corePkgDef = Flow.pkg('core'),
@@ -397,6 +468,53 @@ test('.events', 3, function () {
 });
 
 module('Core-Instance');
+
+test('.owner', function () {
+  var
+    corePkgDef = Flow.pkg('core'),
+    child,
+    cerateFromExternalBlessedFunction,
+    createChildFlowFnc = function () {
+      child = corePkgDef(new Flow());
+    },
+    owner = new Flow({
+      _on: function () {
+        createChildFlowFnc();
+        strictEqual(child.owner, corePkgDef(this), 'A flow has an owner when it is created within the callback of another flow.');
+        child = 0;
+        createFromExternalBlessedFunction = this.bless(function () {
+          createChildFlowFnc();
+          ok(!child.owner, 'A flow has no owner when called externally, even via blessed functions.');
+          owner.go('delayCallback');
+        });
+      },
+      delayCallback: {
+        _in: function () {
+          this.wait(createChildFlowFnc, 0);
+        },
+        _on: function () {
+          strictEqual(child.owner, corePkgDef(this), 'A flow has an owner when instantiated via a .wait() callback.');
+          this.go('../delay');
+        }
+      },
+      delay: {
+        _in: function () {
+          this.wait(0);
+        },
+        _on: function () {
+          createChildFlowFnc();
+          strictEqual(child.owner, corePkgDef(this), 'A flow has an owner when instantiated after a delay.');
+          start();
+        }
+      }
+    });
+  createChildFlowFnc();
+  ok(!child.owner, 'Flows created outside of another flow have no owner.');
+  child = 0;
+  owner.target(1);
+  createFromExternalBlessedFunction();
+  stop();
+});
 
 test('.allowed()', function () {
   var
