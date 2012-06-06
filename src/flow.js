@@ -873,7 +873,7 @@
           idx = pkg.vetIndexOf(nodeRef),
           // default result
           result = 0;
-        // if this index if not -1...
+        // if this index is not -1...
         if (~idx) {
           // capture the absolute path for this node
           nodes.push(pkg.nodes[idx].path);
