@@ -1,6 +1,6 @@
 {
   "name": "Flow"
-  , "version": "0.3.2"
+  , "version": "0.3.4"
   , "description": "A semantic JavaScript framework, for unparalled code organization and execution control."
   , "dependencies" : {
     "Panzer": ">=0.2.5"
