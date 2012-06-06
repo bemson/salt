@@ -1190,6 +1190,16 @@
     return !!result;
   };
 
+  // retrieve the flow that owns this one, if any
+  corePkgDef.proxy.owner = function () {
+    var
+      // alias this flow's core-instance
+      pkg = corePkgDef(this)
+    ;
+    // return the owning flow's proxy or true when external, otherwise return false when not owned
+    return pkg.owner && (pkg.allowed() ? pkg.owner.proxy : true) || false;
+  };
+
   // return an object with status information about the flow and it's current state
   corePkgDef.proxy.status = function () {
     var
