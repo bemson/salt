@@ -31,7 +31,7 @@ test('Package', function () {
 
 test('Instance', function () {
   var coreInst = Flow.pkg('core')(new Flow());
-  'allowed|indexOf|vetIndexOf|getData|go'.split('|').forEach(function (mbr) {
+  'allowed|indexOf|vetIndexOf|getData|go|upOwner'.split('|').forEach(function (mbr) {
     equal(typeof coreInst[mbr], 'function', '<Core-Instance>.' + mbr + ' is a  method.');
   });
   'trust,0|args|calls|route|data|delay|cache|locked,0|nodeIds|pending,0|pendees|targets|phase,0|owner'.split('|').forEach(function (mbrSet) {
@@ -41,7 +41,7 @@ test('Instance', function () {
         defaultFlag = split[1];
       ok(coreInst.hasOwnProperty(mbr), '<Core-Instance>.' + mbr + ' is a property.');
       if (split.length > 1) {
-        equal(coreInst[mbr], defaultFlag, '<Core-Instance>.' + mbr + ' is ' + defaultFlag + ', by default.');
+        equal(coreInst[mbr], +defaultFlag, '<Core-Instance>.' + mbr + ' is ' + defaultFlag + ', by default.');
       }
     });
 });
@@ -75,7 +75,7 @@ test('State', function () {
 
 test('Proxy', function () {
   var flow = new Flow();
-  'map|query|lock|data|args|target|go|wait|status|bless'.split('|').forEach(function (mbr) {
+  'map|query|lock|data|args|target|go|wait|status|bless|owner'.split('|').forEach(function (mbr) {
     equal(typeof flow[mbr], 'function', '<Core-Proxy>.' + mbr + '() is a method.');
   });
 });
