@@ -847,9 +847,13 @@
   };
 
   // add method to return map of this flow's nodes
-  corePkgDef.proxy.map = function () {
+  corePkgDef.proxy.map = function (fromCurrentState) {
+    var
+      // get core package instance
+      pkg = corePkgDef(this)
+    ;
     // return pre-made function-list
-    return corePkgDef(this).nodes[1].map;
+    return pkg.nodes[fromCurrentState && pkg.tank.currentIndex || 1].map;
   };
 
   // add method to 

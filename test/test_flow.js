@@ -1161,19 +1161,43 @@ test('.map()', function () {
     },
     flow = new Flow(program),
     coreInst = Flow.pkg('core')(flow),
-    curIndex = coreInst.tank.currentIndex,
-    map = flow.map();
-  equal(typeof map, 'function', 'Returns a function by default.');
-  equal(map, coreInst.nodes[1].map, 'The function is the ".map" member of the _program state.');
-  ok(map.hasOwnProperty('toString'), 'Have a custom .toString function.');
-  ok(map.a && map.a.b && map.a.c, 'Functions match the order and heirarchy of the program.');
-  equal(map(), true, 'Returns true when the corresponding state has no _on function');
-  equal(map.undef(), true, 'Returns true when the corresponding state has an _on function that returns "undefined"".');
-  equal(map.delayed(), false, 'Returns false when a component function halts traversal.');
-  equal(map.rtnVal(), rtnVal, 'Returns a value when the corresponding state has an _on function that returns a value.');
-  equal(map.sum(2, 2), 4, 'Passes arguments to the _on function.');
-  equal(map.redirect(), rtnVal, 'Returns result of the final state when redirected.');
-  ok(curIndex !== coreInst.tank.currentIndex, 'Changes the current state of a Flow.');
+    initialIndex = coreInst.tank.currentIndex,
+    map;
+  equal(flow.map.length, 1, 'Accepts one parameter.');
+  ok(
+    [1, 0, false, true, '', 'foo', {}, [], -1, /s/, function () {}].every(function (param) {
+      return typeof flow.map(param) == 'function';
+    }) &&
+    typeof flow.map() == 'function',
+    'Returns a function regardless of the argument count or value.'
+  );
+  map = flow.map();
+  ok(map.hasOwnProperty('toString'), 'The returned function has a custom .toString function.');
+  ok(
+    coreInst.nodes.every(function (node) {
+      flow.go(node.index);
+      return flow.map() === map;
+    }),
+    'Returns the same function when called with no arguments, regardless of the current state.'
+  );
+  equal(map, coreInst.nodes[1].map, 'When called with no arguments, the function returned is the ".map" member of the _program state.');
+  ok(
+    coreInst.nodes.slice(2, -1).every(function (node) {
+      flow.go(node.index);
+      return flow.map(true) !== map && flow.map(true) === node.map;
+    }),
+    'Returns the current state\'s ".map" member, when passed a truthy value.'
+  );
+  ok(map.a && map.a.b && map.a.c, 'The returned map-function has member functions that match the order and heirarchy of the original program.');
+  ok(
+    map() === true && // returns true when there is no _on callback
+    map.undef() === true && // returns true when the _on callback returns undefined
+    map.delayed() === false && // returns false when a state halts traversal
+    map.rtnVal() === rtnVal && // returns the value returned by the _on callback
+    map.redirect() === rtnVal && // returns result of final state, when redirected
+    flow.go(initialIndex) && map.redirect() && initialIndex !== coreInst.tank.currentIndex // changes the current state
+    , 'The returned map-function behaves like a curried call to flow.target().'
+  );
 });
 
 test('status()', function () {
