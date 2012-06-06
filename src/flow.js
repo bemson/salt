@@ -676,6 +676,8 @@
     }
     // capture this phase
     pkg.phase = phase;
+    // re-init result
+    pkg.result = undefined;
     // if the current index is not the same as the last one in the route...
     if (node.index !== pkg.route.slice(-1)[0]) {
       // add index to the route
