@@ -474,23 +474,28 @@ test('.owner', function () {
     corePkgDef = Flow.pkg('core'),
     child,
     cerateFromExternalBlessedFunction,
-    createChildFlowFnc = function () {
+    createOwnableChildFlow = function () {
+      child = corePkgDef(new Flow({_updates: 1}));
+    },
+    createChildFlow = function () {
       child = corePkgDef(new Flow());
     },
     owner = new Flow({
       _on: function () {
-        createChildFlowFnc();
+        createOwnableChildFlow();
         strictEqual(child.owner, corePkgDef(this), 'A flow has an owner when it is created within the callback of another flow.');
+        createChildFlow();
+        ok(!child.owner, 'A flow can not have an owner if no state has a valid _update attribute.');
         child = 0;
         createFromExternalBlessedFunction = this.bless(function () {
-          createChildFlowFnc();
+          createOwnableChildFlow();
           ok(!child.owner, 'A flow has no owner when called externally, even via blessed functions.');
           owner.go('delayCallback');
         });
       },
       delayCallback: {
         _in: function () {
-          this.wait(createChildFlowFnc, 0);
+          this.wait(createOwnableChildFlow, 0);
         },
         _on: function () {
           strictEqual(child.owner, corePkgDef(this), 'A flow has an owner when instantiated via a .wait() callback.');
@@ -502,13 +507,13 @@ test('.owner', function () {
           this.wait(0);
         },
         _on: function () {
-          createChildFlowFnc();
+          createOwnableChildFlow();
           strictEqual(child.owner, corePkgDef(this), 'A flow has an owner when instantiated after a delay.');
           start();
         }
       }
     });
-  createChildFlowFnc();
+  createOwnableChildFlow();
   ok(!child.owner, 'Flows created outside of another flow have no owner.');
   child = 0;
   owner.target(1);

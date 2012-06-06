@@ -205,6 +205,10 @@
     var
       // alias self
       pkg = this
+      // flag when an owner is available
+      , ownerIsAvailable = activeFlows[0]
+      // flag indicates when the program wants an owner
+      , childWantsToBind
     ;
     // collection of arguments for traversal functions
     pkg.args = [];
@@ -234,8 +238,6 @@
     pkg.targets = [];
     // identify the initial phase for this flow, 0 by default
     pkg.phase = 0;
-    // set owner to the active flow, if any
-    pkg.owner = activeFlows[0];
     // set name of first node name to _flow
     pkg.nodes[0].name = '_flow';
     // set name of second node
@@ -262,12 +264,14 @@
       node.lock = !!attributes._lock;
       // set default for whether this node updates or is an update gate
       node.upOwn = node.upGate = 0;
-      // if this package has an owner...
-      if (pkg.owner) {
+      // if an owning flow is available...
+      if (ownerIsAvailable) {
         // if there is a valid _updates attribute...
         if (attributes.hasOwnProperty('_updates')) {
           // if the attribute is valid...
           if (typeof attributes._updates == 'string' || typeof attributes._updates == 'number') {
+            // flag that this child flow wants an owner
+            childWantsToBind = 1;
             // flag that this node is should update an owning package, also when it's entered and exited
             node.upOwn = node.upGate = 1;
             // set (new) owner callback path
@@ -317,6 +321,8 @@
         node.fncs[0] = node.value;
       }
     });
+    // capture owning flow when one is available, and either there are update states or the owner collects
+    pkg.owner = (ownerIsAvailable && (childWantsToBind || ownerIsAvailable.nodes[ownerIsAvailable.tank.currentIndex].collects)) ? ownerIsAvailable : 0;
     // if the cfg has a host key...
     if (cfg.hasOwnProperty('hostKey')) {
       // capture the host key
