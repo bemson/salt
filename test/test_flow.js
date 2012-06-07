@@ -1613,52 +1613,58 @@ test('.index', function () {
 });
 
 test('.phase', function () {
-  var corePkgDef = Flow.pkg('core'),
-    oldOnName = corePkgDef.events[0],
-    newOnName = 'foo',
-    pend = (new Flow({
-      _on: function () {
-        this.wait();
+  var
+    corePkgDef = Flow.pkg('core')
+    , oldOnName = corePkgDef.events[0]
+    , newOnName = 'foo'
+    , simple = new Flow({
+      _in: function () {
+        testPhase('in', this);
+        this.target(0);
+        this.go('b');
       },
-      reset: 1
-    })).map(),
-    testPhase = function (phase) {
-      return function () {
-        equal(this.status().phase, phase, 'status.phase is "' + phase + '" as expected.');
-      };
-    },
-    flow = new Flow({
-      _in: testPhase('in'),
-      _out: testPhase('out'),
-      pend: function () {
-        pend();
-      },
-      over: {
-        _over: testPhase('over')
-      },
-      bover: {
+      a: {
+        _over: testPhase('over'),
         _bover: testPhase('bover')
       },
-      hold: function () {
-        equal(flow.status().phase, 'on', 'status.phase is "on" as expected.');
-        this.wait();
+      b: testPhase('on'),
+      _out: testPhase('out')
+    })
+    , delay = new Flow(function () {
+      this.wait();
+    })
+    , pend = new Flow({
+      _in: function () {
+        (new Flow(function () {
+          this.wait();
+        })).map()();
       }
-    });
-  equal(flow.status().phase, '', 'status.phase is an empty string by default.');
-  flow.target('//hold/');
-  ok(flow.status().phase, 'status.phase is available when the flow is paused.');
+    })
+  ;
+
+  function testPhase(phase, flow) {
+    if (arguments.length == 1) {
+      return function () {
+        testPhase(phase, this);
+      }
+    }
+    equal(flow.status().phase, phase, 'status.phase is "' + phase + '" as expected.');
+  }
+
+  equal((new Flow()).status().phase, '', 'Is an empty string by default.');
+  simple.target(1);
+  equal(simple.status().phase, '', 'Is an empty string when the flow is idle.');
+  delay.target(1);
+  equal(delay.status().phase, 'on', 'Is not empty when a flow is paused.');
+
   corePkgDef.events[0] = newOnName;
-  equal(flow.status().phase, newOnName, 'status.phase reflects the indice from the PkgDef.events array.');
+  equal(delay.status().phase, newOnName, 'Reflects values from the core-package-definition.events array.');
   corePkgDef.events[0] = oldOnName;
-  flow.target('//pend/');
-  equal(flow.status().paused, false, 'The flow is no longer paused.');
-  equal(flow.status().pending, true, 'The flow is pending.');
-  equal(flow.status().phase, 'on', 'status.phase is available hwen the flow is pending.');
-  pend.reset();
-  equal(flow.status().pending, false, 'The flow is no longer pending.');
-  flow.target(0);
-  ok(!flow.status().phase, 'status.phase is an empty string when idle.');
+
+  pend.go(1);
+  equal(pend.status().phase, 'in', 'Is not empty when a flow is pended.');
 });
+
 
 test('.state', function () {
   var flow = new Flow({
