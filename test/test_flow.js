@@ -251,73 +251,441 @@ test('_lock', 4, function () {
 
 test('_updates', function () {
   var
-    corePkgDef = Flow.pkg('core'),
-    updateTicks = 0,
-    child,
-    updateArg,
-    programs = [
+    corePkgDef = Flow.pkg('core')
+    , value = {}
+    , child
+    , parent
+    , grand
+    , updateStatePhases = []
+    , internalUpdate = new Flow({
+      _in: function () {
+        (new Flow({
+          _updates: '//detour/'
+        })).map()();
+      },
+      originalTarget: 'never hits this state',
+      detour: function () {
+        if (arguments.length) {
+          defaultOwnerUpdateAction.apply(this, arguments);
+        }
+        return value;
+      }
+    })
+    , pendByUpdater = new Flow({
+      _on: function () {
+        child = new Flow({
+          _updates: '//monitor'
+        });
+      },
+      monitor: function (f) {
+        this.wait();
+        defaultOwnerUpdateAction.apply(this, arguments);
+      }
+    })
+    , doubleInternalUpdate = new Flow({
+      _on: function () {
+        (new Flow({ // nested flow A
+          a: {
+            _updates: '//monitorA'
+            , _on: function () {
+              (new Flow({ // nested flow B
+                b: {
+                  _updates: '//monitorB/'
+                }
+              })).map().b();
+            }
+          }
+          , monitorB: defaultOwnerUpdateAction
+        })).map().a();
+      },
+      monitorA: defaultOwnerUpdateAction
+    })
+    , doubleUpdatePends = new Flow({
+
+    })
+    , ownPrograms = [
       // 0 - simple, single gate
       {
         _updates: '//updates'
-      },
-      // 1 - one update state and a child state
-      {
+      }
+      // 1 - single gate with callbacks
+      , {
+        _updates: '//updates',
+        _in: function () {
+          updateStatePhases.push('foo');
+        },
+        _on: function () {
+          updateStatePhases.push('bar');
+        },
+        _out: function () {
+          updateStatePhases.push('zog');
+        }
+      }
+      // 2 - one update state and a child state
+      , {
         relay: {
           _updates: '//updates/',
           sub: 1
         }
-      },
-      // 2 - one update with redirecting child state
-      {
+      }
+      // 3 - one update with redirecting child state
+      , {
         relay: {
           _updates: '//updates/',
           redirect: function () {
             this.go(1);
           }
         }
-      },
-      // 3 - a delayed update
-      {
+      }
+      // 4 - a pending flow
+      , {
+        _updates: '//updates',
+        _in: function () {
+            // pend this flow
+            this.tmpPender = new Flow(function () {
+              this.wait(0);
+            });
+            this.tmpPender.go(1);
+        }
+      }
+      // 5 - halt at _in
+      , {
+        _updates: '//updates/',
+        _in: function () {
+          this.wait();
+        }
+      }
+      // 6 - halt at _on
+      , {
+        _updates: '//updates/',
+        _on: function () {
+          this.wait();
+        }
+      }
+      // 7 - halt at _out
+      , {
+        _updates: '//updates/',
+        _out: function () {
+          this.wait();
+        }
+      }
+      // 8 - delay at _in
+      , {
         _updates: '//updates/',
         _in: function () {
           this.wait(0);
         }
       }
-    ],
-    owner = new Flow({
-      _on: function (idx) {
-        updateTicks = 0;
-        child = new Flow(programs[idx]);
-      },
-      updates: function (childFlowArg) {
-        updateArg = childFlowArg;
-        updateTicks++;
+      // 9 - delay at _on
+      , {
+        _updates: '//updates/',
+        _on: function () {
+          this.wait(0);
+        }
       }
-    })
+      // 10 - delay at _out
+      , {
+        _updates: '//updates/'
+        , _out: function () {
+          this.wait(0);
+        }
+      }
+      // 11 - triple delayed callbacks
+      , {
+        _updates: '//updates/'
+        , _in: function () {
+          this.wait(function () {
+            this.wait(function () {
+              this.wait(0);
+            }, 0);
+          },0);
+        }
+        , _on: function () {
+          deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is updated after all _in phase delays expire.');
+
+          this.wait(function () {
+            this.wait(function () {
+              this.wait(0);
+            }, 0);
+          },0);
+        }
+        , _out: function () {
+          deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is not updated on navigation waypoints.');
+
+          this.wait(function () {
+            this.wait(function () {
+              this.wait(0);
+            },0);
+          },0);
+        }
+      }
+
+      // 12 - pended callbacks
+      , {
+        _updates: '//updates'
+        , _in: function () {
+            // pend this flow
+            this.tmpPender = new Flow(function () {
+              this.wait();
+            });
+            this.tmpPender.go(1);
+        }
+        , _on: function () {
+            // pend this flow
+            this.tmpPender = new Flow(function () {
+              this.wait();
+            });
+            this.tmpPender.go(1);
+        }
+        , _out: function () {
+            // pend this flow
+            this.tmpPender = new Flow(function () {
+              this.wait();
+            });
+            this.tmpPender.go(1);
+        }
+      }
+
+      // 13 - pended and double delayed callbacks
+      , {
+        _updates: '//updates'
+        , _in: function () {
+            // pend this flow
+            this.tmpPender = new Flow(function () {
+              this.wait(function () {
+                this.wait(0);
+              }, 0);
+            });
+            this.tmpPender.go(1);
+        }
+        , _on: function () {
+            deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is updated after the child flow is unpended and all _in phase delays expire.');
+            // pend this flow
+            this.tmpPender = new Flow(function () {
+              this.wait(function () {
+                this.wait(0);
+              }, 0);
+            });
+            this.tmpPender.go(1);
+        }
+        , _out: function () {
+            // pend this flow
+            this.tmpPender = new Flow(function () {
+              this.wait(function () {
+                this.wait(50);
+              }, 0);
+            });
+            this.tmpPender.go(1);
+        }
+      }
+
+      // 14 - delay that pends
+      , {
+        _updates: '//updates'
+        , _in: function () {
+          this.wait(function () {
+            this.tmpPender = new Flow(function () {
+              this.wait();
+            });
+            this.tmpPender.go(1);
+          }, 0);
+        }
+      }
+    ],
+    own = (new Flow({
+      _on: function (idx) {
+        updateStatePhases = [];
+        child = new Flow(ownPrograms[idx]);
+      },
+      updates: defaultOwnerUpdateAction
+    })).map()
   ;
-  owner.target(1, 0);
+
+  function defaultOwnerUpdateAction(childFlow, childStatus) {
+    updateStatePhases.push(childStatus.state + '@' + childStatus.phase);
+  }
+
+  (new Flow({
+    _on: function () {
+      child = new Flow({
+        bar: 1,
+        foo: {
+          _updates: '//monitor',
+          _on: function () {
+            this.go('../bar');
+          }
+        }
+      });
+      child.map().foo();
+    },
+    monitor: function (childFlow, childStatus) {
+      var status = childFlow.status();
+      equal(arguments.length, 2, 'The state receiving updates is passed two arguments.');
+      ok(child === childFlow, 'The first argument is the child flow that is updating the owning flow.');
+      ok('trust|loops|depth|paused|pending|pendable|targets|route|path|index|phase|state'.split('|')
+        .every(function (statKey) {
+          return childStatus.hasOwnProperty(statKey);
+        }),
+        'The second argument is the object returned by core-proxy.status().'
+      );
+      ok(status.path != childStatus.path, 'The status is of the child flow at the moment the update triggered.');
+      ok(status.index < childStatus.index, 'The child flow can have a different status values than the one passed to the owning flow\'s update state.');
+    }
+  })).map()()
+
+  equal(internalUpdate.target('//originalTarget'), internalUpdate.target('//detour'), 'Child flows update their owner with a target call.');
+
+  deepEqual(updateStatePhases, ['_program@on'], 'If an owning flow\'s callback controls a child flow, the owning flow will only process the last child update.');
+
+  updateStatePhases = [];
+  pendByUpdater.go(1);
   child.go(1);
-  strictEqual(child, updateArg, 'The owner update state receives the child flow as an argument.');
-  ok(updateTicks, 'An owner flow is updated when an update state is entered.');
-  equal(updateTicks, 2, 'The owner flow is updated when navigation ends within the state.');
+  // child at _in (pended)
+  ok(pendByUpdater.status().paused && child.status().pending && child.status().phase == 'in' , 'The _in phase of a child flow can be pended during an update from the owning flow.');
+  deepEqual(updateStatePhases, ['_program@in'], 'Pending a child flow via the update of an owning flow does not prevent the update from executing.');
+  pendByUpdater.go();
+  // child at _on (pended)
+  deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'When resuming a child flow, pended by an update of the owning flow, the _in phase does not update twice.');
+  ok(pendByUpdater.status().paused && child.status().pending && child.status().phase == 'on', 'The _on phase of a child flow can be pended during an update from the owning flow.');
+  pendByUpdater.go();
+  // child at _on (free)
+  deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'When resuming a child flow, pended by an update of the owning flow, the _on phase does not update twice.');
   child.go(0);
-  equal(updateTicks, 3, 'The owner flow is updated when an update state is exited.');
-  owner.target(1, 1);
-  child.go(1);
-  equal(updateTicks, 0, 'The owner is only signaled when the child state has an _updates attribute.');
-  child.go('//relay/sub/');
-  equal(updateTicks, 2, 'The owner is updated when the child flow ends navigation on a state within an update state.');
-  owner.target(1, 2);
-  child.go('//relay/redirect/');
-  ok(updateTicks == 2 && child.status().index == 1, 'The owner is not updated between navigation, waypoints.');
-  owner.target(1, 3);
-  child.go(1);
-  equal(updateTicks, 1, 'The owner is not updated when child flow navigation pauses.');
-  setTimeout(function () {
-    equal(updateTicks, 2, 'The owner is upated when the child flow completes navigation.');
-    start();
-  }, 20);
+  // child at _out (pended)
+  ok(pendByUpdater.status().paused && child.status().pending && child.status().phase == 'out' , 'The _out phase of a child flow can be pended during an update from the owning flow.');
+  pendByUpdater.go();
+  // child outside of the update state (free)
+  deepEqual(updateStatePhases, ['_program@in', '_program@on', '_program@out'], 'When resuming a child flow, pended by an update of the owning flow, the _out phase does not update twice.');
+  ok(!pendByUpdater.status().paused && !child.status().pending && child.status().index != 1, 'An owning flow that pends a child flow, has no impact once the child flow has exited the state triggering updates');
+
+
+  updateStatePhases = [];
+  doubleInternalUpdate.go(1);
+  deepEqual(updateStatePhases, ['b@on', 'a@out'], 'Updates are fired in the correct order.');
+
+  own(0);
+    child.go(1);
+    equal(updateStatePhases[0], '_program@in', 'The owning flow is updated when an _update state is entered.');
+    equal(updateStatePhases[1], '_program@on', 'The owning flow is updated when navigation ends within an _update state.');
+    child.go(0);
+    equal(updateStatePhases[2], '_program@out', 'The owning flow is updated when an _update state is exits an _update state.');
+
+  own(1);
+    child.go(1);
+    child.go(0);
+    deepEqual(updateStatePhases, ['foo', '_program@in', 'bar', '_program@on', 'zog', '_program@out'], 'The owning flow is updated after the child callback executes.');
+
+  own(2);
+    child.go(1);
+    equal(updateStatePhases.length, 0, 'Only updates the owning when inside an _update state.');
+    child.go('//relay/sub/');
+    deepEqual(updateStatePhases, ['relay@in', 'sub@on'], 'Updates the owning when navigation stops on a descendent of an _update state.');
+
+  own(3);
+    child.go('//relay/redirect/');
+    deepEqual(updateStatePhases, ['relay@in', 'relay@out'], 'Does not update an owning flow of waypoints in the child\'s navigation.');
+
+  own(4);
+    child.go(1);
+    equal(updateStatePhases.length, 0, 'The owning flow is not updated when an _update state is pending.');
+    child.tmpPender.go();
+    deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'The owning flow is updated when the child flow is unpended.')
+
+  own(5);
+    child.go(1);
+    equal(updateStatePhases.length, 0, 'The owning flow is not updated when an _update state halts at the _in phase.');
+    child.go();
+    deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'The owning flow is updated when the halted child completes the _in phase.');
+
+  own(6);
+    child.go(1);
+    deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is not updated when an _update state halts at the _on phase.');
+    child.go();
+    deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'The owning flow is updated when the halted child completes the _on phase.');
+
+  own(7);
+    child.go(1, 0);
+    deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is not updated when an _update state halts at the _out phase.');
+    child.go();
+    deepEqual(updateStatePhases, ['_program@in', '_program@out'], 'The owning flow is updated when the halted child completes the _out phase.');
+
   stop();
+
+  own(8);
+    child.go(1);
+    equal(updateStatePhases.length, 0, 'The owning flow is not updated when an _update state delays the _in phase.');
+    setTimeout(function () {
+      deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'The owning flow is updated when the delayed child completes the _in phase.');
+
+      own(9);
+        child.go(1);
+        deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is not updated when an _update state delays the _on phase.');
+        setTimeout(function () {
+          deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'The owning flow is updated when the delayed child completes the _on phase.');
+
+          own(10);
+            child.go(1, 0);
+            deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is not updated when an _update state delays the _out phase.');
+            setTimeout(function () {
+              deepEqual(updateStatePhases, ['_program@in', '_program@out'], 'The owning flow is updated when the delayed child completes the _out phase.');
+
+              own(11);
+
+              child.go(1, 0);
+              equals(updateStatePhases.length, 0 , 'The owning flow does not update while the child flow\'s _in phase is paused.');
+
+              setTimeout(function () {
+                deepEqual(updateStatePhases, ['_program@in', '_program@out'], 'The owning flow is not updated until a child flow completes all delayed phases.');
+
+                own(12);
+
+                child.go(1);
+                equals(updateStatePhases.length, 0 , 'The owning flow does not update while the child flow\'s _in phase pending.');
+                child.tmpPender.go();
+                deepEqual(updateStatePhases, ['_program@in'], 'The child flow does not update the owning flow when pended.');
+                child.tmpPender.go();
+
+                setTimeout(function () {
+                  deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'The owning flow does not update while the child flow\'s _out phase is pending.')
+
+                  own(13);
+
+                  child.go(1, 0);
+                  equals(updateStatePhases.length, 0 , 'The owning flow does not update while the child flow\'s _in phase pending and paused.');
+
+                  setTimeout(function () {
+                    deepEqual(
+                      child.status().pending &&
+                      child.tmpPender.status().paused &&
+                      updateStatePhases
+                      , ['_program@in']
+                      , 'The child flow does not update the owning flow when pended and paused.'
+                    );
+
+                    setTimeout(function () {
+                      deepEqual(updateStatePhases, ['_program@in', '_program@out'], 'The owning flow does not update while the child flow\'s _out phase is pending and paused.')
+
+                      own(14);
+
+                      child.go(1);
+
+                      setTimeout(function () {
+                        ok(child.status().pending && !updateStatePhases.length, 'The owning flow does not update when the child flow is pending, even after a delay');
+
+                        child.tmpPender.go();
+                        ok(!child.status().pending && !child.tmpPender.status().paused, 'child is unpended - pender is unpaused');
+                        deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'The owning flow updates when unpended.');
+
+                        // resume testing
+                        start();
+                      }, 10);
+                    }, 100);
+                  }, 10);
+                }, 0);
+              }, 100);
+            }, 40);
+        }, 40);
+    }, 40);
 });
 
 test('_pendable', function () {
