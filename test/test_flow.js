@@ -521,7 +521,8 @@ test('_updates', function () {
     monitor: function (childFlow, childStatus) {
       var status = childFlow.status();
       equal(arguments.length, 2, 'The state receiving updates is passed two arguments.');
-      ok(child === childFlow, 'The first argument is the child flow that is updating the owning flow.');
+      ok(child === childFlow, 'The first argument is the child flow that has updated the owning flow.');
+      equal(childFlow.status().trust, false, 'The child flow has an untrusted status when the update executes.');
       ok('trust|loops|depth|paused|pending|pendable|targets|route|path|index|phase|state'.split('|')
         .every(function (statKey) {
           return childStatus.hasOwnProperty(statKey);
@@ -529,6 +530,7 @@ test('_updates', function () {
         'The second argument is the object returned by core-proxy.status().'
       );
       ok(status.path != childStatus.path, 'The status is of the child flow at the moment the update triggered.');
+      equal(childSTatus.trust, false, 'The child status is untrusted when the update is triggered.');
       ok(status.index < childStatus.index, 'The child flow can have a different status values than the one passed to the owning flow\'s update state.');
     }
   })).map()()
