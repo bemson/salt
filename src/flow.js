@@ -238,6 +238,8 @@
     pkg.targets = [];
     // identify the initial phase for this flow, 0 by default
     pkg.phase = 0;
+    // flags when the _in or _out phases have notified the owning flow (if any)
+    pkg.ownUp = 0;
     // set name of first node name to _flow
     pkg.nodes[0].name = '_flow';
     // set name of second node
@@ -628,8 +630,8 @@
         return;
       }
     }
-    // if resuming the entry or exit of an update gate...
-    if ((pkg.phase == 1 || pkg.phase == 2) && (node = pkg.nodes[pkg.tank.currentIndex]).upGate) {
+    // if not already updated and resuming the entry or exit of an update gate...
+    if (!pkg.ownUp && (pkg.phase == 1 || pkg.phase == 2) && (node = pkg.nodes[pkg.tank.currentIndex]).upGate) {
       // update the owning flow that the _in/_out phase completed (before we leave this state)
       pkg.upOwner(node.upPath);
     }
@@ -678,6 +680,8 @@
     pkg.phase = phase;
     // re-init result
     pkg.result = undefined;
+    // reset owner updated flag
+    pkg.ownUp = 0;
     // if the current index is not the same as the last one in the route...
     if (node.index !== pkg.route.slice(-1)[0]) {
       // add index to the route
@@ -704,10 +708,12 @@
       // stop navigating
       tank.stop();
     }
-    // if we're entering/exiting an update gate and the flow is not paused or pending...
+    // if not already notified, and we're entering/exiting an update gate and the flow is not paused or pending...
     if (node.upGate && (phase == 1 || phase == 2) && !(pkg.pause || pkg.pending)) {
       // direct owner to this node's update path
       pkg.upOwner(node.upPath);
+      // flag that the owner was updated for this phase
+      pkg.ownUp = 1;
     }
   };
 
@@ -756,10 +762,12 @@
         }
       } else { // otherwise, when not blocked...
         
-        // if the current node updates the owner...
-        if (node.upOwn) {
+        // if the current node updates the owner, which has not already been updated...
+        if (node.upOwn && !pkg.ownUp) {
           // update the owning flow
           pkg.upOwner(node.upPath);
+          // flag that the owner has been updated - only when the owner is inactive (trust = 0)
+          pkg.ownUp = !pkg.owner.trust;
           // if new targets were added (by the owning flow)...
           if (pkg.targets.length) {
             // exit now, so the loop can continue navigating
