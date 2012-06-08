@@ -603,6 +603,8 @@
       pkg = this
       // capture the delay callback (if any)
       , delayFnc = pkg.delay.callback
+      // placeholder for node inquiries (if any)
+      , node
     ;
     // add this package to the private collection
     activeFlows.unshift(pkg);
@@ -620,6 +622,16 @@
       delayFnc.call(pkg.proxy);
       // untrust api calls
       pkg.trust = 0;
+      // if the flow is now paused or pending...
+      if (pkg.pause || pkg.pending) {
+        // exit function
+        return;
+      }
+    }
+    // if resuming the entry or exit of an update gate...
+    if ((pkg.phase == 1 || pkg.phase == 2) && (node = pkg.nodes[pkg.tank.currentIndex]).upGate) {
+      // update the owning flow that the _in/_out phase completed (before we leave this state)
+      pkg.upOwner(node.upPath);
     }
   };
 
@@ -633,17 +645,10 @@
       // the node being traversed (prototyped, read-only value)
       , node = pkg.nodes[tank.currentIndex]
     ;
-    // trust api calls
-    pkg.trust = 1;
     // if there is an out node...
     if (pkg.outNode) {
       // descope data in the outNode
       pkg.outNode.scopeData(1);
-      // if the outNode is an update gate...
-      if (pkg.outNode.upGate) {
-        // tell the owner to target this node's update path
-        pkg.upOwner(pkg.outNode.upPath);
-      }
       // clear the outNode
       pkg.outNode = 0;
     }
@@ -685,23 +690,25 @@
     }
     // if there is a function for this phase...
     if (node.fncs[phase]) {
+      // trust api calls
+      pkg.trust = 1;
       // note that we are calling this program function
       pkg.calls.push(node.index + '.' + phase);
       // execute function, in scope of the proxy - pass arguments when there are no more targets
       pkg.result = node.fncs[phase].apply(pkg.proxy, (pkg.targets.length) ? [] : pkg.args);
-    }
-    // if we've entered an update gate...
-    if (node.upGate && phase == 1) {
-      // direct owner to this node's update path
-      pkg.upOwner(node.upPath);
+      // untrust api calls
+      pkg.trust = 0;
     }
     // if we are pending...
     if (pkg.pending) {
       // stop navigating
       tank.stop();
     }
-    // untrust api calls
-    pkg.trust = 0;
+    // if we're entering/exiting an update gate and the flow is not paused or pending...
+    if (node.upGate && (phase == 1 || phase == 2) && !(pkg.pause || pkg.pending)) {
+      // direct owner to this node's update path
+      pkg.upOwner(node.upPath);
+    }
   };
 
   // do something when the tank stops
@@ -748,9 +755,10 @@
           pkg.pendees[parentFlow.tank.id] = parentFlow;
         }
       } else { // otherwise, when not blocked...
+        
         // if the current node updates the owner...
         if (node.upOwn) {
-        //   // update the owning flow
+          // update the owning flow
           pkg.upOwner(node.upPath);
           // if new targets were added (by the owning flow)...
           if (pkg.targets.length) {
@@ -758,6 +766,7 @@
             return;
           }
         }
+        
         // clear call arguments
         pkg.args = [];
         // clear calls array
