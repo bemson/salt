@@ -1651,14 +1651,14 @@ test('.phase', function () {
     equal(flow.status().phase, phase, 'status.phase is "' + phase + '" as expected.');
   }
 
-  equal((new Flow()).status().phase, '', 'Is an empty string by default.');
+  equal((new Flow()).status().phase, 'on', 'The initial phase is "on".');
   simple.target(1);
-  equal(simple.status().phase, '', 'Is an empty string when the flow is idle.');
+  equal(simple.status().phase, 'on', 'The phase is "on" when the flow has stopped.');
   delay.target(1);
-  equal(delay.status().phase, 'on', 'Is not empty when a flow is paused.');
+  equal(delay.status().phase, 'on', 'The phase remains the same when the flow is paused.');
 
   corePkgDef.events[0] = newOnName;
-  equal(delay.status().phase, newOnName, 'Reflects values from the core-package-definition.events array.');
+  equal(delay.status().phase, newOnName, 'The phase name reflects the values from the array, core-package-definition.events.');
   corePkgDef.events[0] = oldOnName;
 
   pend.go(1);

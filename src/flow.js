@@ -1207,8 +1207,6 @@
       pkg = corePkgDef(this)
       // alias the current node
       , currentNode = pkg.nodes[pkg.tank.currentIndex]
-      // permit showing traversal information when paused, pending, or there are targets
-      , canShowTraversalInformation = pkg.allowed() || pkg.pause || pkg.pending
     ;
 
     // map-function for retrieving the node index
@@ -1229,7 +1227,7 @@
       , route: pkg.route.map(getPathFromIndex)
       , path: currentNode.path
       , index: currentNode.index
-      , phase: canShowTraversalInformation ? corePkgDef.events[pkg.phase] : ''
+      , phase: corePkgDef.events[pkg.phase]
       , state: currentNode.name
     };
   };
