@@ -590,11 +590,21 @@
       var
         // alias self
         pkg = this
+        // get trust value
+        // , currentTrustValue = pkg.trust
+        // the result from the proxy call
+        , result
       ;
       // if there is an owner...
       if (pkg.owner) {
-        // return result of target
-        return pkg.owner.proxy.target(stateQuery, pkg.proxy);
+        // trust calls from the owner
+        // pkg.trust = 1;
+        // capture result of target call
+        result = pkg.owner.proxy.target(stateQuery, pkg.proxy);
+        // restore trust
+        // pkg.trust = currentTrustValue;
+        // retur result of the proxy call
+        return result;
       }
       // indicates that there is no owner (sorta)
       return false;
