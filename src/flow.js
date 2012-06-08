@@ -759,6 +759,8 @@
           parentFlow.pending++;
           // index this parent by it's tank id
           pkg.pendees[parentFlow.tank.id] = parentFlow;
+          // tell the parent's tank to stop
+          parentFlow.tank.stop();
         }
       } else { // otherwise, when not blocked...
         
