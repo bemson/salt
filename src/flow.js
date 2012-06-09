@@ -1,5 +1,5 @@
 /*!
- * Flow v0.3.4
+ * Flow v0.3.5
  * http://github.com/bemson/Flow/
  *
  * Dependencies:
@@ -163,7 +163,7 @@
   ;
 
   // version string
-  Flow.version = '0.3.4';
+  Flow.version = '0.3.5';
 
   // return a given namespace, based on whether in a browser or CommonJS environment
   function getFromEnvironment(namespace) {
