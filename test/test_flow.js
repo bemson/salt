@@ -530,7 +530,7 @@ test('_updates', function () {
         'The second argument is the object returned by core-proxy.status().'
       );
       ok(status.path != childStatus.path, 'The status is of the child flow at the moment the update triggered.');
-      equal(childSTatus.trust, false, 'The child status is untrusted when the update is triggered.');
+      equal(childStatus.trust, false, 'The child status is untrusted when the update is triggered.');
       ok(status.index < childStatus.index, 'The child flow can have a different status values than the one passed to the owning flow\'s update state.');
     }
   })).map()()
@@ -1570,7 +1570,7 @@ test('.map()', function () {
   );
 });
 
-test('status()', function () {
+test('.status()', function () {
   var status = (new Flow({})).status();
   'trust|loops|depth|paused|pending|pendable|targets|route|path|index|phase|state'
     .split('|')
