@@ -593,8 +593,8 @@
         // alias self
         pkg = this
       ;
-      // return the result of targeting the owner when present
-      return pkg.owner && pkg.owner.proxy.target(stateQuery, pkg.proxy, pkg.proxy.pkgs.core.status());
+      // return the result of targeting the owner when present - pass the proxy and it's current status
+      return pkg.owner && pkg.owner.proxy.target(stateQuery, pkg.proxy, pkg.proxy.status());
     }
   };
 

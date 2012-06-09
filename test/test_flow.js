@@ -527,7 +527,7 @@ test('_updates', function () {
         .every(function (statKey) {
           return childStatus.hasOwnProperty(statKey);
         }),
-        'The second argument is the object returned by core-proxy.status().'
+        'The second argument has the same base structure as that return by core-proxy.status().'
       );
       ok(status.path != childStatus.path, 'The status is of the child flow at the moment the update triggered.');
       equal(childStatus.trust, false, 'The child status is untrusted when the update is triggered.');
