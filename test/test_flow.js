@@ -1505,6 +1505,51 @@ test('.args()', function () {
   equal(flow.args().length, 1, 'Removes the last argument when setting the last indice to undefined.');
 });
 
+test('.owner()', function () {
+  var
+    childOnCallbackPassThru = function (cb) {
+      cb.call(this);
+    }
+    , ownedFlow
+    , unownedFlow
+    , parentFlow = new Flow(function () {
+      unownedFlow = new Flow(childOnCallbackPassThru)
+      ownedFlow = new Flow({
+        _updates: 1
+        , _on: childOnCallbackPassThru
+      });
+    })
+    , orphanFlow = new Flow({
+      _updates: 1
+      , _on: childOnCallbackPassThru
+    })
+  ;
+  parentFlow.go(1);
+  equal(parentFlow.owner.length, 0, 'Expects zero paraneters');
+  strictEqual(unownedFlow.owner(), false, 'Return false when called in an untrusted environment for an unowned flow.');
+  strictEqual(ownedFlow.owner(), true, 'Return true when called in an untrusted environment for an owned flow.');
+  unownedFlow.target(1, function () {
+    strictEqual(this.owner(), false, 'Returns false when called internally and the flow has no owner.');
+  });
+  ownedFlow.target(1, function () {
+    ok(this.owner() instanceof Flow, 'Returns the owning flow when called internally and the flow has an owner.');
+  });
+  ok(
+    Flow.pkg('core')(unownedFlow).nodes.every(function (state) {
+      return !state.upOwn;
+    })
+    &&
+    Flow.pkg('core')(ownedFlow).nodes.some(function (state) {
+      return state.upOwn;
+    })
+    ,
+    'Flow programs with an _updates attribute can be owned.'
+  );
+  orphanFlow.target(1, function () {
+    strictEqual(this.owner(), false, 'Flows initialized via another flow callback can be owned.');
+  });
+});
+
 test('.map()', function () {
   var rtnVal = {},
     program = {
