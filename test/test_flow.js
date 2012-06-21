@@ -249,7 +249,7 @@ test('_lock', 4, function () {
   flow.target('//basics/', flow.lock());
 });
 
-test('_updates', function () {
+test('_owner', function () {
   var
     corePkgDef = Flow.pkg('core')
     , value = {}
@@ -260,7 +260,7 @@ test('_updates', function () {
     , internalUpdate = new Flow({
       _in: function () {
         (new Flow({
-          _updates: '//detour/'
+          _owner: '//detour/'
         })).map()();
       },
       originalTarget: 'never hits this state',
@@ -274,7 +274,7 @@ test('_updates', function () {
     , pendByUpdater = new Flow({
       _on: function () {
         child = new Flow({
-          _updates: '//monitor'
+          _owner: '//monitor'
         });
       },
       monitor: function (f) {
@@ -286,11 +286,11 @@ test('_updates', function () {
       _on: function () {
         (new Flow({ // nested flow A
           a: {
-            _updates: '//monitorA'
+            _owner: '//monitorA'
             , _on: function () {
               (new Flow({ // nested flow B
                 b: {
-                  _updates: '//monitorB/'
+                  _owner: '//monitorB/'
                 }
               })).map().b();
             }
@@ -306,11 +306,11 @@ test('_updates', function () {
     , ownPrograms = [
       // 0 - simple, single gate
       {
-        _updates: '//updates'
+        _owner: '//updates'
       }
       // 1 - single gate with callbacks
       , {
-        _updates: '//updates',
+        _owner: '//updates',
         _in: function () {
           updateStatePhases.push('foo');
         },
@@ -324,14 +324,14 @@ test('_updates', function () {
       // 2 - one update state and a child state
       , {
         relay: {
-          _updates: '//updates/',
+          _owner: '//updates/',
           sub: 1
         }
       }
       // 3 - one update with redirecting child state
       , {
         relay: {
-          _updates: '//updates/',
+          _owner: '//updates/',
           redirect: function () {
             this.go(1);
           }
@@ -339,7 +339,7 @@ test('_updates', function () {
       }
       // 4 - a pending flow
       , {
-        _updates: '//updates',
+        _owner: '//updates',
         _in: function () {
             // pend this flow
             this.tmpPender = new Flow(function () {
@@ -350,49 +350,49 @@ test('_updates', function () {
       }
       // 5 - halt at _in
       , {
-        _updates: '//updates/',
+        _owner: '//updates/',
         _in: function () {
           this.wait();
         }
       }
       // 6 - halt at _on
       , {
-        _updates: '//updates/',
+        _owner: '//updates/',
         _on: function () {
           this.wait();
         }
       }
       // 7 - halt at _out
       , {
-        _updates: '//updates/',
+        _owner: '//updates/',
         _out: function () {
           this.wait();
         }
       }
       // 8 - delay at _in
       , {
-        _updates: '//updates/',
+        _owner: '//updates/',
         _in: function () {
           this.wait(0);
         }
       }
       // 9 - delay at _on
       , {
-        _updates: '//updates/',
+        _owner: '//updates/',
         _on: function () {
           this.wait(0);
         }
       }
       // 10 - delay at _out
       , {
-        _updates: '//updates/'
+        _owner: '//updates/'
         , _out: function () {
           this.wait(0);
         }
       }
       // 11 - triple delayed callbacks
       , {
-        _updates: '//updates/'
+        _owner: '//updates/'
         , _in: function () {
           this.wait(function () {
             this.wait(function () {
@@ -422,7 +422,7 @@ test('_updates', function () {
 
       // 12 - pended callbacks
       , {
-        _updates: '//updates'
+        _owner: '//updates'
         , _in: function () {
             // pend this flow
             this.tmpPender = new Flow(function () {
@@ -448,7 +448,7 @@ test('_updates', function () {
 
       // 13 - pended and double delayed callbacks
       , {
-        _updates: '//updates'
+        _owner: '//updates'
         , _in: function () {
             // pend this flow
             this.tmpPender = new Flow(function () {
@@ -481,7 +481,7 @@ test('_updates', function () {
 
       // 14 - delay that pends
       , {
-        _updates: '//updates'
+        _owner: '//updates'
         , _in: function () {
           this.wait(function () {
             this.tmpPender = new Flow(function () {
@@ -510,7 +510,7 @@ test('_updates', function () {
       child = new Flow({
         bar: 1,
         foo: {
-          _updates: '//monitor',
+          _owner: '//monitor',
           _on: function () {
             this.go('../bar');
           }
@@ -845,7 +845,7 @@ test('.owner', function () {
     child,
     cerateFromExternalBlessedFunction,
     createOwnableChildFlow = function () {
-      child = corePkgDef(new Flow({_updates: 1}));
+      child = corePkgDef(new Flow({_owner: 1}));
     },
     createChildFlow = function () {
       child = corePkgDef(new Flow());
@@ -1515,12 +1515,12 @@ test('.owner()', function () {
     , parentFlow = new Flow(function () {
       unownedFlow = new Flow(childOnCallbackPassThru)
       ownedFlow = new Flow({
-        _updates: 1
+        _owner: 1
         , _on: childOnCallbackPassThru
       });
     })
     , orphanFlow = new Flow({
-      _updates: 1
+      _owner: 1
       , _on: childOnCallbackPassThru
     })
   ;
@@ -1543,7 +1543,7 @@ test('.owner()', function () {
       return state.upOwn;
     })
     ,
-    'Flow programs with an _updates attribute can be owned.'
+    'Flow programs with an _owner attribute can be owned.'
   );
   orphanFlow.target(1, function () {
     strictEqual(this.owner(), false, 'Flows initialized via another flow callback can be owned.');

@@ -268,16 +268,16 @@
       node.upOwn = node.upGate = 0;
       // if an owning flow is available...
       if (ownerIsAvailable) {
-        // if there is a valid _updates attribute...
-        if (attributes.hasOwnProperty('_updates')) {
+        // if there is a valid _owner attribute...
+        if (attributes.hasOwnProperty('_owner')) {
           // if the attribute is valid...
-          if (typeof attributes._updates == 'string' || typeof attributes._updates == 'number') {
+          if (typeof attributes._owner == 'string' || typeof attributes._owner == 'number') {
             // flag that this child flow wants an owner
             childWantsToBind = 1;
             // flag that this node is should update an owning package, also when it's entered and exited
             node.upOwn = node.upGate = 1;
             // set (new) owner callback path
-            node.upPath = attributes._updates;
+            node.upPath = attributes._owner;
           }
         } else if (parent && parent.hasOwnProperty('upPath')) { // or, if the parent exists and has an upPath property...
           // flag that this is an update state
