@@ -1006,6 +1006,23 @@
           }
         break;
 
+        case 'boolean':
+          // if only given one argument...
+          if (argCnt == 1) {
+            // if the only argument is true...
+            if (name) {
+              // with each data config, declared in the data authority...
+              rtn = pkg.nodes[pkg.tank.currentIndex].dataAuth.map(function (dataConfig) {
+                // capture name
+                return dataConfig.name;
+              });
+            } else { // otherwise, when the only argument is false...
+              // return result of this function, called with no arguments
+              rtn = this.data();
+            }
+          }
+        break;
+
         case 'object':
           // capture key/value pairs of the given object...
           rtn = generateKeyValueIndex(name);
