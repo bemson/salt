@@ -879,7 +879,7 @@
     // if targeting the current state...
     if (fromCurrentState) {
       // return map of the current state
-      states[pkg.tank.currentIndex].map;
+      return states[pkg.tank.currentIndex].map;
     } else { // otherwise, when not targeting the current state...
       // return map of the program (root) state
       return states[1].map;
