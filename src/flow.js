@@ -864,10 +864,18 @@
   corePkgDef.proxy.map = function (fromCurrentState) {
     var
       // get core package instance
-      pkg = corePkgDef(this)
+      pkg = corePkgDef(this),
+      // alias nodes
+      states = pkg.nodes
     ;
-    // return pre-made function-list
-    return pkg.nodes[fromCurrentState && pkg.tank.currentIndex || 1].map;
+    // if targeting the current state...
+    if (fromCurrentState) {
+      // return map of the current state
+      states[pkg.tank.currentIndex].map;
+    } else { // otherwise, when not targeting the current state...
+      // return map of the program (root) state
+      return states[1].map;
+    }
   };
 
   // add method to 
