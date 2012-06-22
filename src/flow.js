@@ -306,6 +306,14 @@
       };
       // add data configurations for this node
       node.data = generateDataConfigurationObjects(attributes._data);
+      // if data configs exist...
+      if (node.data.length) {
+        // capture own data member as the data authority
+        node.dataAuth = node.data;
+      } else { // otherwise, when no data objects are resolved for this state...
+        // capture the parent's data authority or an empty array
+        node.dataAuth = parent ? parent.dataAuth : [];
+      }
       // if this node's index is not 0...
       if (node.index) {
         // append to parent's map function
