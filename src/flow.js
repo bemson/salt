@@ -150,12 +150,6 @@
         flags.omit = 1;
       }
     })
-    , generateKeyValueIndex = genData.spawn(
-      function (name, value, parent, dataset, flags) {
-        flags.omit = !parent;
-        flags.scan = !parent;
-      }
-    )
     // collection of active flows
     , activeFlows = []
     // aliased for minification
