@@ -1024,15 +1024,23 @@
         break;
 
         case 'object':
-          // capture key/value pairs of the given object...
-          rtn = generateKeyValueIndex(name);
-          // set return value to result of batch setting or false, based on whether there are items to process
-          rtn = rtn.length ?
-            rtn.every(function (item) {
+          // capture keys
+          d = Object.keys(name);
+          // if every name is valid...
+          if (
+            d.every(function (key) {
+              // test name in batch
+              return isDataNameValid(key);
+            })
+          ) {
+            // with each name/value pair...
+            d.forEach(function (key) {
               // make recursive call to set this name/value pair
-              return pkg.proxy.data(item.name, item.value);
-            }) :
-            false;
+              pkg.proxy.data(key, name[key]);
+            });
+            // flag batch success
+            rtn = true;
+          }
         break;
       }
     } else { // otherwise, when passed no arguments...
