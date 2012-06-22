@@ -843,7 +843,7 @@ test('.owner', function () {
   var
     corePkgDef = Flow.pkg('core'),
     child,
-    cerateFromExternalBlessedFunction,
+    createFromExternalBlessedFunction,
     createOwnableChildFlow = function () {
       child = corePkgDef(new Flow({_owner: 1}));
     },
@@ -903,10 +903,11 @@ test('.allowed()', function () {
     goodHost = new Flow(isFlowAccesible, {hostKey: hostKeyRef}),
     goodBadHost = new Flow(function () {
       return badHost.target(1);
-    },  {hostKey: hostKeyRef});
+    },  {hostKey: hostKeyRef}),
     badGoodHost = new Flow(function () {
       return goodHost.target(1);
-    });
+    })
+  ;
   equal(flowPkg.allowed.length, 0, 'Expects zero parameters.');
   equal(flowPkg.allowed(), false, 'Returns a falsy value by default.');
   flowPkg.trust = 1;
