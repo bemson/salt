@@ -200,7 +200,7 @@
       // alias self
       pkg = this
       // flag when an owner is available
-      , ownerIsAvailable = activeFlows[0]
+      , activeFlow = activeFlows[0]
       // flag indicates when the program wants an owner
       , childWantsToBind
     ;
@@ -261,7 +261,7 @@
       // set default for whether this node updates or is an update gate
       node.upOwn = node.upGate = 0;
       // if an owning flow is available...
-      if (ownerIsAvailable) {
+      if (activeFlow) {
         // if there is a valid _owner attribute...
         if (attributes.hasOwnProperty('_owner')) {
           // if the attribute is valid...
@@ -325,8 +325,11 @@
         node.fncs[0] = node.value;
       }
     });
-    // capture owning flow when one is available, and either there are update states or the owner collects
-    pkg.owner = (ownerIsAvailable && (childWantsToBind || ownerIsAvailable.nodes[ownerIsAvailable.tank.currentIndex].collects)) ? ownerIsAvailable : 0;
+    // if there is an active flow...
+    if (activeFlow) {
+      // assign owner, based on whether the program has an _owner attribute
+      pkg.owner = childWantsToBind ? activeFlow : 0;
+    }
     // if the cfg has a host key...
     if (cfg.hasOwnProperty('hostKey')) {
       // capture the host key
