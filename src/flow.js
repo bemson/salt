@@ -654,8 +654,11 @@
     ;
     // if there is an out node...
     if (pkg.outNode) {
+      // if this node has data configs...
+      if (node.data.length) {
       // descope data in the outNode
       pkg.outNode.scopeData(1);
+      }
       // clear the outNode
       pkg.outNode = 0;
     }
@@ -667,8 +670,11 @@
           // lock the flow
           pkg.locked = 1;
         }
+        // if this node has daat configs...
+        if (node.data.length) {
         // scope data for this node
         node.scopeData();
+        }
       break;
 
       case 2: // out
