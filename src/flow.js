@@ -325,10 +325,15 @@
         node.fncs[0] = node.value;
       }
     });
+    // set owner to default
+    pkg.owner = 0;
     // if there is an active flow...
     if (activeFlow) {
-      // assign owner, based on whether the program has an _owner attribute
-      pkg.owner = childWantsToBind ? activeFlow : 0;
+      // if this program allows an owner...
+      if (childWantsToBind) {
+        // assign owner
+        pkg.owner = activeFlow;
+      }
     }
     // if the cfg has a host key...
     if (cfg.hasOwnProperty('hostKey')) {
