@@ -169,6 +169,36 @@
     return name != null && /\w/.test(name);
   }
 
+  // edits store configuration based on given value
+  function addStoreConfig(store, value, givenType) {
+    // based on the attribute value type...
+    switch (givenType || typeof value) {
+
+      // filter/capture matching state/path (based on presence of forward-slash)
+      case 'string':
+        // add value to array
+        store[~value.indexOf('/') ? 'paths' : 'states'].push(value);
+      break;
+
+      // filter/capture up to given limit
+      case 'number':
+        // ensure limit is rounded and absolute
+        store.limit = Math.abs(~~value);
+      break;
+
+      case 'object':
+          // add this program to the filter
+          store.prgms.push(value);
+      break;
+
+      // declare new collection with blanket capture or ignore
+      case 'boolean':
+        // set capture to boolean - indicates whether this state captures or not
+        store.capture = value;
+      break;
+    }
+  }
+
   // collection of active package-trees - exposed to support package integration
   corePkgDef.actives = [];
 
@@ -214,6 +244,8 @@
     pkg.data = {};
     // init delay object
     pkg.delay = {};
+    // collection of stores
+    pkg.stores = [];
     // collection of cached values
     pkg.cache = {
       indexOf: {} // token query cache
@@ -280,6 +312,95 @@
           node.upPath = parent.upPath;
         }
       }
+
+      // if this node has a _store attribute...
+      if (attributes.hasOwnProperty('_store')) {
+        // init store configuration object
+        node.store = {
+          // filter/capture instances with these programs
+          prgms: [],
+          // filter/capture instances with these paths
+          paths: [],
+          // filter/capture instances at these states
+          states: [],
+          // limit store to this number of captured instances
+          limit: 0,
+          // specify that this config does not capture (by default)
+          capture: 0,
+          // set filtering to true (overriden when capture is falsy, ignored when capture is truthy)
+          filter: 1,
+          // specify when a new collection should be created
+          scope: 1
+        };
+        // if the attribute is an object...
+        if (typeof attributes._store == 'object') {
+          // if an array...
+          if (attributes._store instanceof Array) {
+            // with each element...
+            attributes._store.forEach(function (filter) {
+              // add to the store config
+              addStoreConfig(node.store, filter);
+            });
+          } else { // otherwise, when an object literal (or any other object)...
+            // if there is a programs key...
+            if (attributes._store.hasOwnProperty('programs')) {
+              // add collection of programs
+              node.store.prgms = [].concat(attributes._store.programs);
+            }
+            // if there is a states key...
+            if (attributes._store.hasOwnProperty('states')) {
+              // add collection of states
+              node.store.states = [].concat(attributes._store.states);
+            }
+            // if there is a paths key...
+            if (attributes._store.hasOwnProperty('paths')) {
+              // add collection of paths
+              node.store.paths = [].concat(attributes._store.paths);
+            }
+            // if limit is present and numeric...
+            if (attributes._store.hasOwnProperty('limit') && typeof attributes._store.limit == 'number') {
+              // add to config - specify type
+              addStoreConfig(node.store, attributes._store.limit, 'number');
+            }
+            // if the capture property is given...
+            if (attributes._store.hasOwnProperty('capture')) {
+              // add to config
+              node.store.capture = !!attributes._store.capture;
+            }
+            // if the scope property is given...
+            if (attributes._store.hasOwnProperty('scope')) {
+              // add boolean equivalent to config
+              node.store.scope = !!attributes._store.scope;
+            }
+          }
+        } else { // otherwise, when the attribute is not an object...
+          // add to config
+          addStoreConfig(node.store, attributes._store);
+        }
+        // flag that this state has the first store config
+        node.firstStore = 1;
+        // if capture was set...
+        if (node.store.capture !== 0) {
+          // set filtering to false
+          node.store.filter = 0;
+        }
+        // if filter and capture are false...
+        if (!node.store.capture && !node.store.filter) {
+          // set scope to true
+          node.store.scope = 1;
+        }
+        // if this is the first store config...
+        if (!parent.firstStore) {
+          // force capture and scope if this is the first store for this branch of the program
+          node.store.capture = node.store.scope = 1;
+        }
+      } else { // otherwise, when there is no _store attribute...
+        // flag that this node does not have a store configuration
+        node.store = 0;
+        // pass thru the first-store config
+        node.firstStore = parent ? parent.firstStore : 0;
+      }
+
       // capture when the parent lock property is true
       node.plock = parent ? parent.lock : 0;
       // define map function - a curried call to .target()
@@ -334,6 +455,11 @@
         // assign owner
         pkg.owner = activeFlow;
       }
+      // if there is an active store...
+      if (activeFlow.stores.length && activeFlow.stores[0].active[0]) {
+        // pass instance to the active flow for storing
+        activeFlow.store(pkg);
+      }
     }
     // if the cfg has a host key...
     if (cfg.hasOwnProperty('hostKey')) {
@@ -361,6 +487,75 @@
 
   // define prototype of any package instances
   corePkgDef.prototype = {
+    // vet and capture instances to the current store - auto-accept flow-instances
+    store: function (inst) {
+      var
+        // alias self
+        pkg = this,
+        // alias the current store
+        currentStore = pkg.stores[0],
+        // generate random delimited
+        randomDelimiter = Math.random(),
+        // capture paths
+        instPaths = Object.keys(inst.nodeIds).join(randomDelimiter),
+        // capture states
+        instStates = inst.nodes.map(function (node) {
+          return node.name;
+        }).join(randomDelimiter)
+      ;
+      // if the instance meets the store criteria...
+      if (
+        // the instance matches the required program (if any)...
+        (
+          !currentStore.prgms.length ||
+          currentStore.prgms.some(function (prgm) {
+            return inst.nodes[0].value === prgm
+          })
+        ) &&
+        // the instance contains or matches the require path (if any)...
+        (
+          !currentStore.paths.length ||
+          currentStore.paths.some(function (storePath) {
+            // return true when the test path is within the available paths
+            return ~instPaths.indexOf(storePath);
+          })
+        ) &&
+        // the instance contains or matches the required state (if any)...
+        (
+          !currentStore.states.length ||
+          currentStore.states.some(function (storeState) {
+            // return true when the test path is within the available paths
+            return ~instStates.indexOf(storeState);
+          })
+        )
+      ) {
+        // add the instance to this store
+        currentStore.items.push(inst);
+        // if at limit for this store...
+        if (currentStore.limits[0] < currentStore.items.length) {
+          // remove oldest item
+          currentStore.items.shift();
+        }
+      }
+    },
+    // adds store tracking object to this package's stores array
+    addStore: function (storeConfig) {
+      // prepend store tracking object
+      this.stores.unshift({
+        // copy capture details
+        prgms: storeConfig.prgms.concat(),
+        paths: storeConfig.paths.concat(),
+        states: storeConfig.states.concat(),
+        // begin with initial limit
+        limits: [storeConfig.limit],
+        // collection of captured instances
+        items: [],
+        // collection of (view) filters
+        filters: [],
+        // collection of on/off states - on by default
+        active: [storeConfig.capture]
+      });
+    },
     // return index of the node resolved from a node reference
     /*
     qry - (string|function.toString()|number|object.index) which points to a node
@@ -661,8 +856,13 @@
     if (pkg.outNode) {
       // if this node has data configs...
       if (node.data.length) {
-      // descope data in the outNode
-      pkg.outNode.scopeData(1);
+        // descope data in the outNode
+        pkg.outNode.scopeData(1);
+      }
+      // if this node has a store configuration...
+      if (pkg.outNode.store) {
+        // remove store configs
+        pkg.outNode.setStore(1);
       }
       // clear the outNode
       pkg.outNode = 0;
@@ -677,8 +877,13 @@
         }
         // if this node has daat configs...
         if (node.data.length) {
-        // scope data for this node
-        node.scopeData();
+          // scope data for this node
+          node.scopeData();
+        }
+        // if this node has a store configuration...
+        if (node.store) {
+          // apply store configs
+          node.setStore();
         }
       break;
 
@@ -866,6 +1071,88 @@
     });
   };
 
+  // add method to apply/remove store conifguration
+  corePkgDef.node.setStore = function (remove) {
+    var
+      // alias self (for closures)
+      node = this,
+      // alias this node's store config
+      storeConfig = node.store,
+      // alias package containing this node
+      pkg = node.pkg,
+      // capture the current store tracking object (if any)
+      store = pkg.stores[0],
+      // placeholder array, for temporary store configs
+      ary = []
+    ;
+    // if removing this node's store configuration...
+    if (remove) {
+      // if the store config is capturing...
+      if (storeConfig.capture) {
+        // if the capture was scoped...
+        if (storeConfig.scope) {
+          // remove the current store from the package
+          pkg.stores.shift();
+        } else { // otherwise, when this capture added to the last...
+          // remove capture params from the current store criteria
+          store.programs.length -= storeConfig.programs.length;
+          store.paths.length -= storeConfig.paths.length;
+          store.states.length -= storeConfig.states.length;
+          // if this store config had a limit...
+          if (storeConfig.limit) {
+            // remove this config's limit
+            store.limits.shift();
+          }
+        }
+      } else if(storeConfig.filter) { // or, when this config is filtering...
+        // remove this configuration from the current store's filters
+        pkg.stores[0].filters.pop();
+      } else if (storeConfig.scope) { // or, when not filtering or capturing, but scoped...
+        // remove the current store from the package
+        pkg.stores.shift();
+      } else { // otherwise, when not filtering or capturing, and not scoped...
+        // remove the active flag from the current store tracker
+        store.active.shift();
+      }
+    } else { // otherwise, apply this node's store configuration...
+      // if this store config captures...
+      if (storeConfig.capture) {
+        // if capture is scoped...
+        if (storeConfig.scope) {
+          // create new store tracker with this config
+          pkg.addStore(storeConfig);
+        } else { // otherwise, when capture is not scoped...
+          // append capture criteria
+          store.prgms = store.prgms.concat(storeConfig.prgms);
+          store.paths = store.paths.concat(storeConfig.paths);
+          store.states = store.states.concat(storeConfig.states);
+          // add this configs limit
+          store.limits.unshift(storeConfig.limit);
+        }
+      } else if (storeConfig.filter) { // or, when this config is filtering...
+        // add this config to the current store's filters
+        store.filters.push(storeConfig);
+      } else if (storeConfig.scope) { // or, when not filtering or capturing, but scoped...
+        // create new store tracker that does not capture
+        pkg.addStore({
+          prgms: ary,
+          paths: ary,
+          states: ary,
+          limit: 0,
+          capture: 0
+        });
+      } else { // otherwise, when not filtering or capturing, and not scoped...
+        // disable capturing in the current store tracker
+        store.active.unshift(0);
+      }
+    }
+    // if the remaining store tracker has more items than it's limit...
+    if (pkg.stores.length && pkg.stores[0].limits[0] && pkg.stores[0].limits[0] < pkg.stores[0].items.length) {
+      // reduce the number of items in the store
+      pkg.stores[0].items = pkg.stores[0].items.slice(-pkg.stores[0].limits[0]);
+    }
+  };
+
   // add method to determine when this node is a descendant of the given/current node
   corePkgDef.node.within = function (nodeRef) {
     var
@@ -1017,34 +1304,34 @@
         case 'boolean':
           // if only given one truthy argument...
           if (name && argCnt == 1) {
-              // with each data config, declared in the data authority...
-              rtn = pkg.nodes[pkg.tank.currentIndex].dataAuth.map(function (dataConfig) {
-                // capture name
-                return dataConfig.name;
-              });
+            // with each data config, declared in the data authority...
+            rtn = pkg.nodes[pkg.tank.currentIndex].dataAuth.map(function (dataConfig) {
+              // capture name
+              return dataConfig.name;
+            });
           }
         break;
 
         case 'object':
           // if object is not null...
           if (name) {
-          // capture keys
-          d = Object.keys(name);
-          // if every name is valid...
-          if (
-            d.every(function (key) {
-              // test name in batch
-              return isDataNameValid(key);
-            })
-          ) {
-            // with each name/value pair...
-            d.forEach(function (key) {
-              // make recursive call to set this name/value pair
-              pkg.proxy.data(key, name[key]);
-            });
-            // flag batch success
-            rtn = true;
-          }
+            // capture keys
+            d = Object.keys(name);
+            // if every name is valid...
+            if (
+              d.every(function (key) {
+                // test name in batch
+                return isDataNameValid(key);
+              })
+            ) {
+              // with each name/value pair...
+              d.forEach(function (key) {
+                // make recursive call to set this name/value pair
+                pkg.proxy.data(key, name[key]);
+              });
+              // flag batch success
+              rtn = true;
+            }
           }
         break;
       }
@@ -1258,6 +1545,42 @@
     ;
     // return the owning flow's proxy or true when external, otherwise return false when not owned
     return pkg.owner && (pkg.allowed() ? pkg.owner.proxy : true) || false;
+  };
+
+  /*
+  query, add or delete flows from the current store
+
+  */
+  corePkgDef.proxy.store = function () {
+    // var
+    //   // get arguments as an array
+    //   args = [].slice.call(arguments),
+    //   // alias this flow's core-instance
+    //   pkg = corePkgDef(this),
+    //   // flag when deleting the given flows
+    //   delMode = 0
+    // ;
+    // // if allowed...
+    // if (pkg.allowed()) {
+    //   // if arguments were given...
+    //   if (args.length) {
+    //     // if the last value is boolean false...
+    //     if (args.slice(-1)[0] === false) {
+    //       // remove last value
+    //       args.pop();
+    //       // flag that this function is in delete mode
+    //       delMode = 1;
+    //     }
+    //     // if every argument passed is a flow instance...
+    //     if (args.every(function (arg) {
+    //       return arg instanceof Flow
+    //     })) {
+
+    //     }
+    //   }
+    // }
+    // // (otherwise) return false to untrusted calls unless there are no arguments
+    // return !args.length && pkg.store.concat();
   };
 
   // return an object with status information about the flow and it's current state
