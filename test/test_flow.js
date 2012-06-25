@@ -1452,8 +1452,8 @@ test('.data()', function () {
       zog: 'pop'
     };
   ok(
-    ['.', '', 0, 1, null, undefined, function () {}, NaN, [], {}].every(function (arg) {
-      return !flow.data(arg);
+    ['.', '', 0, 1, undefined, function () {}, null, NaN].every(function (arg) {
+      return flow.data(arg) === false;
     }),
     'Returns false when the first argument is not a valid string or an empty/invalid object.'
   );

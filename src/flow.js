@@ -993,7 +993,7 @@
       switch (typeof name) {
         case 'string':
           // if the name is valid...
-          if (/\w/.test(name)) {
+          if (isDataNameValid(name)) {
             // resolve data tracker
             d = pkg.getData(name);
             // if a value was passed...
@@ -1009,25 +1009,20 @@
           }
         break;
 
-        case 'number':
         case 'boolean':
-          // if only given one argument...
-          if (argCnt == 1) {
-            // if the only argument is truthy...
-            if (name) {
+          // if only given one truthy argument...
+          if (name && argCnt == 1) {
               // with each data config, declared in the data authority...
               rtn = pkg.nodes[pkg.tank.currentIndex].dataAuth.map(function (dataConfig) {
                 // capture name
                 return dataConfig.name;
               });
-            } else { // otherwise, when the only argument is falsy...
-              // return result of this function, called with no arguments
-              rtn = this.data();
-            }
           }
         break;
 
         case 'object':
+          // if object is not null...
+          if (name) {
           // capture keys
           d = Object.keys(name);
           // if every name is valid...
@@ -1044,6 +1039,7 @@
             });
             // flag batch success
             rtn = true;
+          }
           }
         break;
       }
