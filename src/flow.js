@@ -1585,7 +1585,9 @@
       // the current store
       store = pkg.stores[0],
       // flows instances to return
-      flows = []
+      flows = [],
+      // collection of cached stated indexes
+      cachedStateIndice
     ;
     // if given arguments...
     if (args.length) {
@@ -1608,51 +1610,74 @@
       // (otherwise) fail write/delete attempt
       return false;
     } else if (store) { // or, when no arguments and there is a store...
+      // if...
+      if (
+        // there is a cache of package instances
+        store.cache &&
+        // any instance has a new state
+        store.cache[0].some(function (pkgInst, idx) {
+          // flag true when the current state index does not match the cached state index
+          return pkgInst.tank.currentIndex != store.cache[1][idx];
+        })
+      ) {
+        // clear the cache
+        store.cache = 0;
+      }
       // if there is no cache...
       if (!store.cache) {
-        // capture and cache instances...
-        store.cache = store.items
-          // reduce to instances that match all filters
-          .filter(function (pkgInst) {
-            var
-              // get the current state
-              curState = pkgInst.nodes[pkgInst.tank.currentIndex],
-              // alias package-instance properties (performance boost?)
-              prgm = pkgInst.nodes[0].value,
-              path = curState.path,
-              state = curState.name
-            ;
-            return store.filters.every(function (filterSet) {
-              // when there are no filters...
-              return !(
-                  filterSet.prgms.length +
-                  filterSet.paths.length +
-                  filterSet.states.length
-                ) ||
-                // when the flow has this program
-                filterSet.prgms.some(function (storePgrm) {
-                  return prgm === storePgrm;
-                }) ||
-                // when the flow is at this path
-                filterSet.paths.some(function (storePath) {
-                  return ~path.indexOf(storePath);
-                }) ||
-                // when the flow is at this state
-                filterSet.states.some(function (storeState) {
-                  return ~state.indexOf(storeState);
-                });
-            });
-          })
-          // limit to correct number of recent instances
-          .slice(-store.limits[0])
-          // get proxy of all package instances
-          .map(function (pkgInst) {
+        // init cachedStateIndice array
+        cachedStateIndice = [];
+        // capture and cache this query
+        store.cache = [
+          // [0] the matching set of package instances
+          store.items
+            // reduce to instances that match all filters
+            .filter(function (pkgInst) {
+              var
+                // get the current state
+                curState = pkgInst.nodes[pkgInst.tank.currentIndex],
+                // alias package-instance properties (performance boost?)
+                prgm = pkgInst.nodes[0].value,
+                path = curState.path,
+                state = curState.name
+              ;
+              // include this instance...
+              return store.filters.every(
+                function (filterSet) {
+                  // when there are no filters...
+                  return !(
+                      filterSet.prgms.length +
+                      filterSet.paths.length +
+                      filterSet.states.length
+                    ) ||
+                    // or, when the flow has this program
+                    filterSet.prgms.some(function (storePgrm) {
+                      return prgm === storePgrm;
+                    }) ||
+                    // or, when the flow is at this path
+                    filterSet.paths.some(function (storePath) {
+                      return ~path.indexOf(storePath);
+                    }) ||
+                    // or, when the flow is at this state
+                    filterSet.states.some(function (storeState) {
+                      return ~state.indexOf(storeState);
+                    });
+                }) &&
+                // capture this matching instance's current state index
+                cachedStateIndice.push(curState.index);
+            })
+            // limit to correct number of recent instances
+            .slice(-store.limits[0]),
+          // [1] the cache of instance state indexes
+          cachedStateIndice.slice(-store.limits[0])
+        ];
+        // [2] the proxies of the matching package instances
+        store.cache[2] = store.cache[0].map(function (pkgInst) {
             return pkgInst.proxy;
-          })
-        ;
+          });
       }
-      // copy cached collection of flow instances
-      flows = store.cache.concat();
+      // copy cached collection of instance proxies
+      flows = store.cache[2].concat();
     }
     // (otherwise) return found/filtered flows
     return flows;
