@@ -265,6 +265,8 @@
     pkg.pendees = [];
     // collection of targeted nodes
     pkg.targets = [];
+    // stack of defined variables (begin with faux def stack)
+    pkg.defStack = [[]];
     // identify the initial phase for this flow, 0 by default
     pkg.phase = 0;
     // flags when the _in or _out phases have notified the owning flow (if any)
@@ -443,14 +445,6 @@
       };
       // add definition configurations for this node
       node.defs = generateDataConfigurationObjects(attributes._def);
-      // if definition configs exist...
-      if (node.defs.length) {
-        // capture own definition member as the def authority
-        node.defAuth = node.defs;
-      } else { // otherwise, when no definition objects are resolved for this state...
-        // capture the parent's definition authority or an empty array
-        node.defAuth = parent ? parent.defAuth : [];
-      }
       // if this node's index is not 0...
       if (node.index) {
         // append to parent's map function
@@ -1070,26 +1064,37 @@
       // alias the package containing this node
       pkg = node.pkg
     ;
-    // with each definition configuration object in this node...
-    node.defs.forEach(function (defCfg) {
-      var
-        // get the definition tracking object with this name
-        dto = pkg.getDef(defCfg.name)
-      ;
+    // if there are defined variables...
+    if (node.defs.length) {
       // if descoping defined variables...
       if (descope) {
-        // remove current value from values
-        dto.values.shift();
-        // if no other values exist...
-        if (!dto.values.length) {
-          // remove the definition tracking object
-          delete pkg.defs[defCfg.name];
-        }
-      } else { // otherwise, when scoping a definition tracking object...
-        // add new or copied value, based on the config
-        dto.values.unshift(defCfg.use ? defCfg.value : dto.values[0]);
+        // remove set of definitions from the stack
+        pkg.defStack.shift();
+      } else { // otherwise, when adding defined variables...
+        // capture names defined by this node
+        pkg.defStack.unshift(node.defs);
       }
-    });
+      // with each definition configuration object in this node...
+      node.defs.forEach(function (defCfg) {
+        var
+          // get the definition tracking object with this name
+          dto = pkg.getDef(defCfg.name)
+        ;
+        // if descoping defined variables...
+        if (descope) {
+          // remove current value from values
+          dto.values.shift();
+          // if no other values exist...
+          if (!dto.values.length) {
+            // remove the definition tracking object
+            delete pkg.defs[defCfg.name];
+          }
+        } else { // otherwise, when scoping a definition tracking object...
+          // add new or copied value, based on the config
+          dto.values.unshift(defCfg.use ? defCfg.value : dto.values[0]);
+        }
+      });
+    }
   };
 
   // add method to apply/remove store conifguration
@@ -1330,10 +1335,10 @@
         case 'boolean':
           // if only given one truthy argument...
           if (name && argCnt == 1) {
-            // with each definition configuration, declared in the definition authority...
-            rtn = pkg.nodes[pkg.tank.currentIndex].defAuth.map(function (defConfig) {
+            // with each definition configuration from the last scoped node...
+            rtn = pkg.defStack[0].map(function (definedVariableConfiguration) {
               // capture name
-              return defConfig.name;
+              return definedVariableConfiguration.name;
             });
           }
         break;
