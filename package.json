@@ -3,8 +3,8 @@
   , "version": "0.3.4"
   , "description": "A semantic JavaScript framework, for unparalled code organization and execution control."
   , "dependencies" : {
-    "Panzer": ">=0.2.5"
-    , "genData": "2"
+    "Panzer": ">=0.3.0"
+    , "genData": "2.0.1"
   }
   , "keywords": [
     "asynchronous"

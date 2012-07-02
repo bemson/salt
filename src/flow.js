@@ -1,10 +1,10 @@
 /*!
- * Flow v0.3.5-a
+ * Flow v0.3.6
  * http://github.com/bemson/Flow/
  *
  * Dependencies:
- * - Panzer v0.2.5 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
- * - genData v2.0.0 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/genData/)
+ * - Panzer v0.3.0 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
+ * - genData v2.0.1 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/genData/)
  *
  * Copyright 2012, Bemi Faison
  * Released under the MIT License
@@ -157,7 +157,7 @@
   ;
 
   // version string
-  Flow.version = '0.3.5-a';
+  Flow.version = '0.3.6';
 
   // return a given namespace, based on whether in a browser or CommonJS environment
   function getFromEnvironment(namespace) {
