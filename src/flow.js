@@ -1672,7 +1672,7 @@
             if (delMode && pkgIndex) {
               // remove from store
               store.items.splice(pkgIndex, 1);
-            } else if (!delMode && !~pkgIndex)) { // or, when adding to the store and not already present...
+            } else if (!delMode && !~pkgIndex) { // or, when adding to the store and not already present...
               // add to store
               store.items.push(pkgInst);
             }
