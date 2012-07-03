@@ -1641,18 +1641,46 @@
     if (args.length) {
       // if allowed...
       if (pkg.allowed()) {
-        // if the last value is boolean false...
+        // if the first is an array...
+        if (args[0] instanceof Array) {
+          // set args to the first array plus the second argument - if any
+          args = args[0].concat(args[1] || []);
+        }
+        // if the last value is false...
         if (args.slice(-1)[0] === false) {
-          // remove last value
+          // remove the last value
           args.pop();
           // flag that this function is in delete mode
           delMode = 1;
         }
-        // if every argument passed is a flow instance...
-        if (args.every(function (arg) {
-          return arg instanceof Flow;
-        })) {
-
+        // if every (remaining) argument is a flow (proxy) instance...
+        if (
+          args.length &&
+          args.every(function (arg) {
+            return arg instanceof Flow;
+          })
+        ) {
+          // with each instance passed...
+          args.forEach(function (flow) {
+            var
+              // retrieve the core-instance corresponding this flow instance
+              pkgInst = corePkgDef(flow),
+              // get index of this instance
+              pkgIndex = store.items.indexOf(pkgInst)
+            ;
+            // if removing from the store...
+            if (delMode && pkgIndex) {
+              // remove from store
+              store.items.splice(pkgIndex, 1);
+            } else if (!delMode && !~pkgIndex)) { // or, when adding to the store and not already present...
+              // add to store
+              store.items.push(pkgInst);
+            }
+          });
+          // reset store cache
+          store.cache = 0;
+          // flag success with add/remove of flow instances
+          return true;
         }
       }
       // (otherwise) fail write/delete attempt
