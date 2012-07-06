@@ -864,8 +864,8 @@
         // alias self
         pkg = this
       ;
-      // return the result of targeting the owner when present - pass the proxy and it's current status
-      return pkg.owner && pkg.owner.proxy.target(stateQuery, pkg.proxy, pkg.proxy.status());
+      // return the result of targeting the owner when present and the path is valid - pass the proxy and it's current status
+      return pkg.owner && (stateQuery !== '' || stateQuery !== -1) && pkg.owner.proxy.target(stateQuery, pkg.proxy, pkg.proxy.status());
     },
     // search store with the given criteria
     inStore: function (criteriaSet) {
