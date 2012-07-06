@@ -2169,7 +2169,6 @@ test('.phase', function () {
   equal(pend.status().phase, 'in', 'Is not empty when a flow is pended.');
 });
 
-
 test('.state', function () {
   var flow = new Flow({
     a: {
