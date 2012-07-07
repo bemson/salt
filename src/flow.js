@@ -805,7 +805,7 @@
     //  return index of the resolved node reference, or -1 when it's invalid or unavailable from the given/current node
     vetIndexOf: function (qry, node) {
       var
-        // alias self
+        // alias self`
         pkg = this,
         // get the index of the target node
         targetIdx = pkg.indexOf(qry, node)
@@ -906,7 +906,7 @@
                     // flag when this criteria matches the comparison value
                     return ~comparisonValue.indexOf(criteria);
                   } :
-                  // match evertything else
+                  // match everything else
                   function (criteria) {
                     // flag when this criteria matches the comparison value
                     return criteria === comparisonValue;
