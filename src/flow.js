@@ -152,8 +152,8 @@
     }),
     // collection of active flows
     activeFlows = [],
-    // tests when the string of an extends attribute is valid
-    validExtendAttribute = /^\/\/(?:\w+\/)+/
+    // tests when the string of an import attribute is valid
+    validImportTag = /^\/\/(?:\w+\/)+/
   ;
 
   // version string
@@ -217,24 +217,24 @@
   // tests each state for the import pattern, and performs substitution when necessary
   corePkgDef.prepNode = function (state, program) {
     var
-      // the state whose child states should be used, based on the _extends attribute
+      // the state whose child states should be used, based on the _import attribute
       resolvedState = program,
       // determine whether this state is extensible, based on it's attribute or value
-      extendsTargetPath = typeof state == 'string' ? state : (typeof state == 'object' && typeof state._extends == 'string' ? state._extends : '')
+      importTarget = typeof state == 'string' ? state : (typeof state == 'object' && typeof state._import == 'string' ? state._import : '')
     ;
     // if the resolved string is a state-path...
-    if (validExtendAttribute.test(extendsTargetPath)) {
-      // with each state in this _extends path...
-      extendsTargetPath.slice(2,-1).split('/').every(function (childPath) {
+    if (validImportTag.test(importTarget)) {
+      // with each state in this _import path...
+      importTarget.slice(2,-1).split('/').every(function (childPath) {
         // capture this local member of the currently resolved state
         return (resolvedState = resolvedState.hasOwnProperty(childPath) && resolvedState[childPath]);
       });
       // if the resolved state is a function...
       if (typeof resolvedState == 'function') {
         // enclose in an object
-        extendsTargetPath = {};
-        extendsTargetPath['_' + corePkgDef.events[0]] = resolvedState;
-        resolvedState = extendsTargetPath;
+        importTarget = {};
+        importTarget['_' + corePkgDef.events[0]] = resolvedState;
+        resolvedState = importTarget;
       }
       // return the final state (when truthy), or `undefined` otherwise
       return resolvedState || undefined;
@@ -310,10 +310,10 @@
         // multiple use variable
         dynamicVariable
       ;
-      // if this node's value or _extends property is a valid path...
-      if (validExtendAttribute.test(typeof node.value == 'string' ? node.value : (typeof node.value == 'object' ? node.value._extends : ''))) {
-        // flag that this is a (valid) extends and extended state
-        node.extends = node.extended = 1;
+      // if this node's value or _import property is a valid path...
+      if (validImportTag.test(typeof node.value == 'string' ? node.value : (typeof node.value == 'object' ? node.value._import : ''))) {
+        // flag that this is a (valid) imports and imported state
+        node.imports = node.imported = 1;
         // if the node's value is a valid object...
         if (node.value && typeof node.value == 'object') {
           // with each attribute...
@@ -325,11 +325,11 @@
             }
           }
         }
-      } else { // otherwise, when this node is not extended...
-        // set extends to a falsy value
-        node.extends = 0;
-        // flag whether this state's parent is part of an extended branch
-        node.extended = parent ? parent.extended : 0;
+      } else { // otherwise, when this node is not imported...
+        // set imports to a falsy value
+        node.imports = 0;
+        // flag whether this state's parent is part of an imported branch
+        node.imported = parent ? parent.imported : 0;
       }
       // cache this nodes index by it's unique path
       pkg.nodeIds[node.path] = idx;
