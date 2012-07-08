@@ -605,15 +605,12 @@
     if (cfg.cedeHosts instanceof Array) {
       // override .allowed() method
       pkg.allowed = function () {
-        // flag when...
-        return pkg
-          // this flow is in a trusted state (i.e., executing)
-          .trust ||
-          // or,
+        // flag when original method passes, or...
+        return corePkgDef.prototype.allowed.apply(pkg, arguments) ||
           (
-            // this flow is dormant but being checked by another flow...
+            // there are active flows
             activeFlows.length &&
-            // which has permission...
+            // the current flow has permission to control this one...
             ~cfg.cedeHosts.indexOf(activeFlows[0].hostKey)
           );
       };
@@ -853,10 +850,10 @@
         pkg.delay.timer = 0;
       }
     },
-    // returns current trust state - can be overriden when the parent flow's hostkey matches an item in the called flow's cedeHosts array
-    // this method is overriden at intialization
+    // flag when the flow is allowed to perform trusted executions
     allowed: function () {
-      return this.trust;
+      // flag true when the current flow, or when active and unlocked
+      return activeFlows[0] === this || (this.trust && !this.locked);
     },
     // calls .target() on the owning flow
     upOwner: function (stateQuery) {
@@ -1314,7 +1311,7 @@
       // if allowed to change the lock status...
       if (pkg.allowed()) {
         // set new lock state
-        pkg.locked = !!set;
+        pkg.locked = set ? 1 : 0;
         // flag success in changing the locked property of this flow
         return true;
       }
@@ -1338,15 +1335,29 @@
           var
             // capture initial trust value
             currentTrustValue = pkg.trust,
+            // capture initial lock value
+            currentLockValue = pkg.locked,
+            // flag when we're already in a blessed function by testing type of the locked property
+            alreadyInBlessedFunction = typeof pkg.locked === 'boolean',
             // placeholder to capture execution result
             rslt
           ;
           // ensure we're executing in a trusted environment
           pkg.trust = 1;
+          // if not already in a blessed function, and we're currently locked...
+          if (!alreadyInBlessedFunction && currentLockValue) {
+            // ensure we're unlocked - set to boolean, since it's not set like this anywhere else
+            pkg.locked = false;
+          }
           // call and capture function result, pass along scope and args
           rslt = fnc.apply(this, arguments);
           // restore trust value
           pkg.trust = currentTrustValue;
+          // if not already in a blessed function and the lock value is still a boolean (which means lock() was not called)...
+          if (!alreadyInBlessedFunction && typeof pkg.locked === 'boolean') {
+            // restore original lock value
+            pkg.locked = currentLockValue;
+          }
           // return result of function call
           return rslt;
         }
