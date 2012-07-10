@@ -783,6 +783,60 @@ test('_def', function () {
   );
 });
 
+test('_store', function () {
+
+});
+
+test('_import', function () {
+  var
+    corePkgDef = Flow.pkg('core'),
+    value = {},
+    tick = 0,
+    prgm = {
+      a: {
+        _lock: 1,
+        c: function () {
+          tick++;
+          return value;
+        }
+      },
+      b: 1
+    },
+    importPath = '//a/',
+    compiledPath = '//b/c/',
+    flow = new Flow(prgm),
+    pkgInst = corePkgDef(flow),
+    shortFlow, longFlow, tagFlow
+  ;
+
+  prgm.b = {
+    _import: importPath
+  };
+  longFlow = new Flow(prgm);
+  equal(longFlow.query(compiledPath), compiledPath, 'Assigning an absolute state-query, includes the targeted branch as part of compiled program.');
+
+  prgm.b = importPath;
+  shortFlow = new Flow(prgm);
+  equal(shortFlow.query(compiledPath), compiledPath, 'Directly pairing a program-state with a query has the same effect.');
+
+  prgm.b = {
+    _import: importPath,
+    _lock: 0
+  };
+  tagFlow = new Flow(prgm);
+  ok(
+    tagFlow.target(compiledPath) === longFlow.target(compiledPath) &&
+      tick === 2,
+    'The imported branch shares the same structure as the original.'
+  );
+
+  ok(
+    tagFlow.lock() === false &&
+      longFlow.lock() === true,
+    'Attributes of an importing state override attributes of the imported state.'
+  );
+});
+
 module('Core-Package');
 
 test('.actives', 8, function () {
