@@ -547,7 +547,7 @@
         // there is a storage tracking object...
         activeFlow.stores.length &&
         // it captures
-        (activeFlowStoreCfg = (activeFlowStore = activeFlow.stores[0]).cfgs[0])[0] &&
+        (activeFlowStoreCfg = (activeFlowStore = activeFlow.stores[0])[1][0])[0] &&
         // the capture criteria is satisfied
         (
           // meets program criteria
@@ -586,13 +586,13 @@
         )
       ) {
         // add this instance to the parent's storage
-        activeFlowStore.items.push(pkg);
+        activeFlowStore[0].push(pkg);
         // clear the store's cache
-        activeFlowStore.cache = 0;
+        activeFlowStore[2] = [];
         // if there are now more items than allowed...
-        if (activeFlowStoreCfg[2] && activeFlowStore.items.length > activeFlowStoreCfg[2]) {
+        if (activeFlowStoreCfg[2] && activeFlowStore[0].length > activeFlowStoreCfg[2]) {
           // remove oldest store item
-          activeFlowStore.items.shift();
+          activeFlowStore[0].shift();
         }
       }
     }
