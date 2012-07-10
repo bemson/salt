@@ -1729,6 +1729,33 @@
   /*
   query, add or delete flows from the current store
 
+  This method has a command syntax, when given one or two arguments.
+
+    # Simple Query
+
+        this.store()
+
+      Returns the currently filtered items in the store.
+
+    # Add/Remove Flows
+
+        this.store(storeItems, removeFlag)
+
+      Where _storeItems_ is an array or one flow instances.
+      This command is prohibited externally.
+      If an array or one flow instance is given, they will be added to the master store.
+      Returns true/false.
+
+    # Filter Stored Items
+        
+        this.store(criteria, searchMaster)
+
+      Only returns number of items when called externally.
+      Where _criteria_ is an object or array that is not all flow instances.
+      Searching the master is prohibited externally.
+      If a non-flow instance or array of mixed items is given, they will be used to filter the local store.
+      Returns an array of flow instances.
+
   */
   corePkgDef.proxy.store = function () {
     var
@@ -1736,141 +1763,130 @@
       args = [].slice.call(arguments),
       // alias this flow's core-instance
       pkg = corePkgDef(this),
-      // flag when deleting the given flows
-      delMode = 0,
+      // number of custom filter packages
+      pkgs,
       // the current store
       store = pkg.stores[0],
       // placeholder for user criteria
       userCriteria,
-      // the current store configuration
-      storeConfig,
-      // flow instances to return
-      flows = [],
-      // result from inStore call
-      inStoreResult
+      // caches result of pkg.allowed()
+      isAllowed = pkg.allowed(),
+      // number of changes made to the master store
+      storeChanged = 0,
+      // the flag for the given command - default is false
+      commandFlag = 0
     ;
     // if given arguments...
     if (args.length) {
-      // if allowed...
-      if (pkg.allowed()) {
-        // if the first argument is an array...
-        if (args[0] instanceof Array) {
-          // flatten array
-          args = [].concat(args[0], args.slice(1));
-        }
-        // if the last value is boolean false...
-        if (args.slice(-1)[0] === false) {
-          // remove the last value
-          args.pop();
-          // flag that this function is in delete mode
-          delMode = 1;
-        }
-        // if every (remaining) argument is a flow (proxy) instance...
-        if (
-          args.length &&
-          args.every(function (arg) {
-            return arg instanceof Flow;
-          })
-        ) {
-          // alias the current store configuration
-          storeConfig = store.cfgs[0];
-          // if deleting instances...
-          if (delMode) {
+      // if the first argument is an array, or there are two arguments and the second is a boolean....
+      if (args[0] instanceof Array || (args.length === 2 && typeof args[1] === 'boolean')) {
+        // set command flag to absence or value of second argument
+        commandFlag = !!args[1];
+        // use first argument as command set - flattens array
+        args = [].concat(args[0]);
+      }
+      // if all args are flow instances...
+      if (
+        args.length &&
+        args.every(function (arg) {
+          return arg instanceof Flow;
+        })
+      ) {
+        // if allowed to add/remove flow instances...
+        if (isAllowed) {
+          // if deleting...
+          if (commandFlag) {
             // with each instance...
             args.forEach(function (flow) {
               var
-                // retrieve the core-instance corresponding this flow instance
+                // retrieve this flow's corresponding core-instance
                 pkgInst = corePkgDef(flow),
                 // get index of this instance (if any)
-                pkgIndex = store.items.indexOf(pkgInst)
+                pkgIndex = store[0].indexOf(pkgInst)
               ;
-              // if already an item...
+              // if in the store...
               if (~pkgIndex) {
                 // remove from store
-                store.items.splice(pkgIndex, 1);
+                store[0].splice(pkgIndex, 1);
+                // flag that a store item changed
+                storeChanged++;
               }
             });
-          } else { // otherwise, when adding instances...
+          } else { // otherwise, when adding...
             // with each instance...
             args.forEach(function (flow) {
               var
-                // retrieve the core-instance corresponding this flow instance
+                // retrieve this flow's corresponding core-instance
                 pkgInst = corePkgDef(flow),
                 // get index of this instance (if any)
-                pkgIndex = store.items.indexOf(pkgInst)
+                pkgIndex = store[0].indexOf(pkgInst)
               ;
               // if not already in items...
               if (!~pkgIndex) {
                 // add to store
-                store.items.push(pkgInst);
+                store[0].push(pkgInst);
+                // flag that a store item changed
+                storeChanged++;
               }
             });
-            // if there are now more items than allowed...
-            if (storeConfig[2] && store.items.length > storeConfig[2]) {
-              // reduce number of items
-              store.items = store.items.slice(-storeConfig[2]);
-            }
           }
-          // reset store cache
-          store.cache = 0;
-          // flag success with add/remove of flow instances
+          // if anything changed, reset all caches...
+          if (storeChanged) {
+            // clear all caches
+            store[2] = [];
+          }
+          // flag success with executing action (regardless of whether store items changed)
           return true;
-        } else { // otherwise, when there are no args left or all of them are not flow instances...
-          // add false back to args (???)
-          // args.push(false);
-          // define user criteria sets
-          userCriteria = [[], [], [], []];
-          // with each argument...
-          args.forEach(function (arg) {
-            // update user criteria
-            setStoreCriteria(userCriteria, arg);
-          });
-          // capture proxies of custom filtered store items
-          flows = pkg.inStore(userCriteria).map(function (pkgInst) {
+        } else { // otherwise, when prohibited...
+          // flag denial of action - throw?
+          return false;
+        }
+      } else if (store) { // or, when filtering and there is a store...
+        // if not filtering from the master store...
+        if (!commandFlag) {
+          // update caches
+          pkg.upStore();
+        } else if (!isAllowed) { // or, when filtering from the master store and not allowed...
+          // flag denial of action - throw?
+          return false;
+        }
+        // define user criteria sets
+        userCriteria = [ [], [], [], [] ];
+        // with each argument...
+        args.forEach(function (arg) {
+          // update user criteria
+          setStoreCriteria(userCriteria, arg);
+        });
+        // capture proxies of instances filtered from the master or cached store...
+        pkgs = pkg.inStore(userCriteria, commandFlag ? store[0] : store[2][0][0]);
+        // if allowed...
+        if (isAllowed) {
+          // return proxies
+          return pkgs.map(function (pkgInst) {
             return pkgInst.proxy;
           });
+        } else { // otherwise, when not allowed access to flows
+          // return count of filtered items
+          return pkgs.length;
         }
-      } else { // otherwise, when not allowed...
-        // flag denial to add/remove/filter store items
+      } else if (!isAllowed && commandFlag) { // or, when filtering and there is no store...
+        // flag denial of filter
         return false;
       }
-    } else if (store) { // or, when no arguments and there is a store...
-      // if any flows have changed their current state...
-      if (
-        // there is a cache of package instances
-        store.cache &&
-        // any instance has a new state
-        store.cache[0].some(function (pkgInst, idx) {
-          // flag true when the current state index does not match the cached state index
-          return pkgInst.tank.currentIndex != store.cache[1][idx];
-        })
-      ) {
-        // clear the cache
-        store.cache = 0;
+    } else if (store) { // or, when given no arguments and there is a store...
+      // check and update store caches
+      pkg.upStore();
+      // if allowed...
+      if (isAllowed) {
+        // return copy of proxies
+        return store[2][0][2].concat();
+      } else { // otherwise, when not allowed access to flows
+        // return count of proxies
+        return store[2][0][2].length;
       }
-      // if there is no cache...
-      if (!store.cache) {
-        // get matching store instance
-        inStoreResult = pkg.inStore(store.cfgs[0][1]);
-        // capture results to cache
-        store.cache = [
-          // 0 - the matching set of package instances
-          inStoreResult,
-          // 1 - the cache of instance state indexes
-          inStoreResult.map(function (pkgInst) {
-            return pkgInst.tank.currentIndex;
-          }),
-          // 2 - the proxies of the matching package instances
-          inStoreResult.map(function (pkgInst) {
-            return pkgInst.proxy;
-          })
-        ];
-      }
-      // copy cached collection of instance proxies
-      flows = store.cache[2].concat();
     }
-    // (otherwise) return found/filtered flows
-    return flows;
+    // (otherwise) when not passed arguments and there is no store, return 0 (this would only occur when called externally)
+    return isAllowed ? [] : 0;
   };
 
   // return an object with status information about the flow and it's current state
