@@ -1301,24 +1301,27 @@
         pkg.stores.shift();
       } else { // otherwise, when this configuration was added to an existing store tracking object...
         // remove this configuration from the store tracking object
-        currentStorageTracker.cfgs.shift();
-        // reset the store's cache
-        currentStorageTracker.cache = 0;
+        currentStorageTracker[1].shift();
+        // remove this configurations results from the cache
+        currentStorageTracker[2].shift();
       }
     } else { // otherwise, apply this node's store configuration...
       // if creating a new store...
       if (storeConfig[3]) {
         // prepend a new storage tracker
-        pkg.stores.unshift({
-          cfgs: [storeConfig],
-          items: [],
-          cache: 0
-        });
+        pkg.stores.unshift([
+          // 0 - master set of items
+          [],
+          // 1 - store configurations (the first is the capture criteria, the rest are filter criteria)
+          [storeConfig],
+          // 2 - cache of results from each config - starting with 0
+          []
+        ]);
       } else { // otherwise, when adding to the current store tracker...
-        // prepend this config
-        currentStorageTracker.cfgs.unshift(storeConfig);
-        // reset the store's cache
-        currentStorageTracker.cache = 0;
+        // prepend this config (will serve as a filter)
+        currentStorageTracker[1].unshift(storeConfig);
+        // set empty cache for this filter configuration
+        currentStorageTracker[2].unshift(0);
       }
     }
   };
