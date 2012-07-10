@@ -1247,6 +1247,38 @@
     }
   };
 
+  /*
+  Each store tracker is an array with the following structure:
+  [
+    [..]      // 0 : master items, collection of package instances
+    [         // 1 : store configurations
+      [       // 1 - 0 : store configuration
+        [     // 1 - 0 - 0 : capture criteria
+          [], // 1 - 0 - 0 - 0 : program criteria
+          [], // 1 - 0 - 0 - 1 : paths criteria
+          [], // 1 - 0 - 0 - 2 : state names criteria
+          []  // 1 - 0 - 0 - 3 : state index criteria
+        ],
+        [     // 1 - 0 - 1 : filter criteria
+          [], // 1 - 0 - 1 - 0 : program criteria
+          [], // 1 - 0 - 1 - 1 : paths criteria
+          [], // 1 - 0 - 1 - 2 : state names criteria
+          []  // 1 - 0 - 1 - 3 : state index criteria
+        ],
+        0,    // 1 - 0 - 2 : capture limit
+        1     // 1 - 0 - 3 : new store flag
+      ]
+    ],
+    [         // 2 : cached results, collection of package instances, from corresponding filter configurations
+      [       // 2 - 0 : cache set
+        [..], // 2 - 0 - 0 : filtered package instances
+        [..], // 2 - 0 - 1 : cached index of states for the filtered package instances
+        [..]  // 2 - 0 - 2 : cached proxy objects for the filtered package instances
+      ]
+    ]
+  ]
+  */
+
   // add method to apply/remove store conifguration
   corePkgDef.node.setStore = function (remove) {
     var
