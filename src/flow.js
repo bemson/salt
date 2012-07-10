@@ -3,7 +3,7 @@
  * http://github.com/bemson/Flow/
  *
  * Dependencies:
- * - Panzer v0.3.0 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
+ * - Panzer v0.3.5 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
  * - genData v2.0.1 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/genData/)
  *
  * Copyright 2012, Bemi Faison
@@ -208,11 +208,11 @@
     'bover'
   ];
 
-  // pattern for identifying attribute keys
-  corePkgDef.attributeKey = /^_/;
+  // pattern for identifying tag keys
+  corePkgDef.tagKey = /^_/;
 
   // pattern for identifying invalid keys
-  corePkgDef.invalidKey = /^\W+$|^toString$|^[@\[]|[\/\|]/;
+  corePkgDef.badKey = /^\W+$|^toString$|^[@\[]|[\/\|]/;
 
   // tests each state for the import pattern, and performs substitution when necessary
   corePkgDef.prepNode = function (state, program) {
@@ -305,8 +305,8 @@
       var
         // capture parent (undefined for the first node)
         parent = pkg.nodes[node.parentIndex],
-        // alias node attributes
-        attributes = node.attributes,
+        // alias node tags
+        tags = node.tags,
         // multiple use variable
         dynamicVariable
       ;
@@ -317,11 +317,11 @@
         // if the node's value is a valid object...
         if (node.value && typeof node.value == 'object') {
           // with each attribute...
-          for (dynamicVariable in attributes) {
+          for (dynamicVariable in tags) {
             // if present in the node's value and not inherited...
             if (node.value.hasOwnProperty(dynamicVariable)) {
               // override with the node's value
-              attributes[dynamicVariable] = node.value[dynamicVariable];
+              tags[dynamicVariable] = node.value[dynamicVariable];
             }
           }
         }
@@ -343,27 +343,27 @@
       // add reference to the package-instance containing this node
       node.pkg = pkg;
       // set pendable flag, (true by default, and otherwise inherited when the parent is not pendable)
-      node.pendable = (parent && !parent.pendable) ? 0 : (attributes.hasOwnProperty('_pendable') ? !!node.attributes._pendable : 1);
+      node.pendable = (parent && !parent.pendable) ? 0 : (tags.hasOwnProperty('_pendable') ? !!node.tags._pendable : 1);
       // set root to default index or self, based on _root attribute
-      node.root = idx < 2 ? 1 : attributes._root && node.index || parent.root;
+      node.root = idx < 2 ? 1 : tags._root && node.index || parent.root;
       // set restrict node index, based on the "_restrict" attribute or the parent's existing restriction
-      node.restrict = attributes.hasOwnProperty('_restrict') ? attributes._restrict && node.index || -1 : parent && parent.restrict || -1;
+      node.restrict = tags.hasOwnProperty('_restrict') ? tags._restrict && node.index || -1 : parent && parent.restrict || -1;
       // set lock to boolean equivalent of attribute
-      node.lock = !!attributes._lock;
+      node.lock = !!tags._lock;
       // set default for whether this node updates or is an update gate
       node.upOwn = node.upGate = 0;
       // if an owning flow is available...
       if (activeFlow) {
         // if there is a valid _owner attribute...
-        if (attributes.hasOwnProperty('_owner')) {
+        if (tags.hasOwnProperty('_owner')) {
           // if the attribute is valid...
-          if (typeof attributes._owner == 'string' || typeof attributes._owner == 'number') {
+          if (typeof tags._owner == 'string' || typeof tags._owner == 'number') {
             // flag that this child flow wants an owner
             childWantsToBind = 1;
             // flag that this node is should update an owning package, also when it's entered and exited
             node.upOwn = node.upGate = 1;
             // set (new) owner callback path
-            node.upPath = attributes._owner;
+            node.upPath = tags._owner;
           }
         } else if (parent && parent.hasOwnProperty('upPath')) { // or, if the parent exists and has an upPath property...
           // flag that this is an update state
@@ -374,7 +374,7 @@
       }
 
       // if this node has a _store attribute...
-      if (attributes.hasOwnProperty('_store')) {
+      if (tags.hasOwnProperty('_store')) {
         // init store configuration
         node.store = [
           [     // 0 capture criteria
@@ -393,21 +393,21 @@
           !parent.lastStore  // 3 - new store flag - false by default, unless first store configuration in this branch
         ];
         // if the value is truthy...
-        if (attributes._store) {
+        if (tags._store) {
           // get type of store value
-          dynamicVariable = typeof attributes._store;
+          dynamicVariable = typeof tags._store;
           // if a string or array...
-          if (dynamicVariable == 'string' || attributes._store instanceof Array) {
+          if (dynamicVariable == 'string' || tags._store instanceof Array) {
             // flag whether the criteria is for filtering or capturing
             dynamicVariable = node.store[3] ? 0 : 1;
             // with each filter/capture criteria...
-            [].slice.call(attributes._store).forEach(function (filter) {
+            [].slice.call(tags._store).forEach(function (filter) {
               // add to capture criteria
               setStoreCriteria(node.store[dynamicVariable], filter);
             });
           } else if (dynamicVariable == 'object') {
             // flag whether this configuration belongs to the (0) capture or (1) filter criteria
-            dynamicVariable = (attributes._store.hasOwnProperty('capture') && attributes._store.capture) ? 0 : 1;
+            dynamicVariable = (tags._store.hasOwnProperty('capture') && tags._store.capture) ? 0 : 1;
             // if we should use the previous store...
             if (
               // there is a previous store configuration, and...
@@ -416,7 +416,7 @@
                 // this configuration is capturing (dynamicVariable is 0)...
                 !dynamicVariable ||
                 // the scope property is set and false...
-                (attributes._store.hasOwnProperty('scope') && !attributes._store.scope)
+                (tags._store.hasOwnProperty('scope') && !tags._store.scope)
               )
             ) {
               // set scope to falsy
@@ -440,20 +440,20 @@
               node.store[3] = 0;
             } else { // otherwise, when creating a new store...
               // if there is a valid limit property...
-              if (attributes._store.hasOwnProperty('limit') && attributes._store.limit > 0) {
+              if (tags._store.hasOwnProperty('limit') && tags._store.limit > 0) {
                 // set capture limit
-                node.store[2] = ~~attributes._store.limit;
+                node.store[2] = ~~tags._store.limit;
               }
             }
             // if there is a programs key...
-            if (attributes._store.hasOwnProperty('programs')) {
+            if (tags._store.hasOwnProperty('programs')) {
               // add to programs criteria
-              node.store[dynamicVariable][0] = node.store[dynamicVariable][0].concat(attributes._store.programs);
+              node.store[dynamicVariable][0] = node.store[dynamicVariable][0].concat(tags._store.programs);
             }
             // if there is a states key...
-            if (attributes._store.hasOwnProperty('states')) {
+            if (tags._store.hasOwnProperty('states')) {
               // place state criteria...
-              [].slice.call(attributes._store.states).forEach(function (stateCriteria) {
+              [].slice.call(tags._store.states).forEach(function (stateCriteria) {
                 var
                   // capture the store indice to target, based on whether this is a number or string
                   stateNameOrIndex = typeof stateCriteria == 'number' ? 3 : 2
@@ -463,9 +463,9 @@
               });
             }
             // if there is a paths key...
-            if (attributes._store.hasOwnProperty('paths')) {
+            if (tags._store.hasOwnProperty('paths')) {
               // add to paths criteria
-              node.store[dynamicVariable][1] = node.store[dynamicVariable][1].concat(attributes._store.paths);
+              node.store[dynamicVariable][1] = node.store[dynamicVariable][1].concat(tags._store.paths);
             }
           }
           // sort capture and store index criteria, so the smallest number is the first
@@ -511,7 +511,7 @@
         return node.path;
       };
       // add definition configurations for this node
-      node.defs = generateDataConfigurationObjects(attributes._def);
+      node.defs = generateDataConfigurationObjects(tags._def);
       // if this node's index is not 0...
       if (node.index) {
         // append to parent's map function
@@ -521,7 +521,7 @@
       node.fncs = corePkgDef.events.map(function (name) {
         name = '_' + name;
         //  set traversal function to 0 or the corresponding attribute key (when a function)
-        return typeof attributes[name] === 'function' ? attributes[name] : 0;
+        return typeof tags[name] === 'function' ? tags[name] : 0;
       });
       // if there is no _on[0] function and this node's value is a function...
       if (!node.fncs[0] && typeof node.value === 'function') {

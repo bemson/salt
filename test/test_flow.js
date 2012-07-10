@@ -131,9 +131,9 @@ test('Valid Keys', function () {
     'Keys with at least one alphanumeric character become states.'
   );
   deepEqual(
-    corePkgDef(new Flow(validAttrs)).nodes[1].attributes,
+    corePkgDef(new Flow(validAttrs)).nodes[1].tags,
     validAttrs,
-    'Keys beginning with underscores become state attributes.'
+    'Keys beginning with underscores become state tags.'
   );
 });
 
@@ -145,7 +145,7 @@ test('State values', function () {
   equal(coreInst.nodes[1].fncs[0], fnc, 'Paired functions become the on-behavior of a state.');
 });
 
-module('Attribute');
+module('Tag');
 
 test('_on', function () {
   var corePkgDef = Flow.pkg('core'),
@@ -196,11 +196,11 @@ test('_root', function () {
         _root: 0
       }
     })).nodes;
-  ok(!states[2].attributes.hasOwnProperty('_root') && states[2].root === 1, 'When omitted, <Core-State>.root points to the program\'s root state index, by default.');
-  ok(states[5].attributes.hasOwnProperty('_root') && states[5].root === 1, 'Setting a falsy value is the same as omission.');
+  ok(!states[2].tags.hasOwnProperty('_root') && states[2].root === 1, 'When omitted, <Core-State>.root points to the program\'s root state index, by default.');
+  ok(states[5].tags.hasOwnProperty('_root') && states[5].root === 1, 'Setting a falsy value is the same as omission.');
   equal(states[3].root, 3, "A rooted state references it's own index.");
   equal(states[4].root, 3, 'Descendents of a rooted state point to the first rooted ancestor state\'s index.');
-  ok(states[1].attributes.hasOwnProperty('_root') && !states[1].attributes._root && states[1].root === 1, 'The program state ignores the _root attribute.');
+  ok(states[1].tags.hasOwnProperty('_root') && !states[1].tags._root && states[1].root === 1, 'The program state ignores the _root attribute.');
 });
 
 test('_lock', 4, function () {
@@ -705,10 +705,10 @@ test('_pendable', function () {
         _pendable: 1
       }
     })).nodes;
-  ok(!states[2].attributes.hasOwnProperty('_pendable') && states[2].pendable, 'When omitted, <Core-State>.pendable is truthy, by default.');
-  ok(states[5].attributes._pendable && states[5].pendable, 'Setting a truthy value is the same as omission.');
-  ok(states[3].attributes.hasOwnProperty('_pendable') && !states[3].pendable, 'When falsy, <Core-State>.pendable is falsy.');
-  ok(states[4].attributes._pendable && !states[3].pendable && !states[4].pendable, 'Descendants of non-pending states ignore the _pendable attribute, and are also non-pending.');
+  ok(!states[2].tags.hasOwnProperty('_pendable') && states[2].pendable, 'When omitted, <Core-State>.pendable is truthy, by default.');
+  ok(states[5].tags._pendable && states[5].pendable, 'Setting a truthy value is the same as omission.');
+  ok(states[3].tags.hasOwnProperty('_pendable') && !states[3].pendable, 'When falsy, <Core-State>.pendable is falsy.');
+  ok(states[4].tags._pendable && !states[3].pendable && !states[4].pendable, 'Descendants of non-pending states ignore the _pendable attribute, and are also non-pending.');
 });
 
 test('_restrict', function () {
@@ -727,11 +727,11 @@ test('_restrict', function () {
       }
     }),
     states = Flow.pkg('core')(flow).nodes;
-  ok(!states[2].attributes.hasOwnProperty('_restrict') && !~states[2].restrict, 'When omitted, <Core-State>.restrict is -1, by default.');
-  ok(states[6].attributes.hasOwnProperty('_restrict') && !~states[5].restrict, 'Setting a falsy value is the same as omission.');
-  ok(states[3].attributes._restrict && states[3].restrict === 3, 'When truthy, <Core-State>.restrict is the node index.');
-  ok(!states[4].attributes.hasOwnProperty('_restrict') && states[4].restrict === 3, 'When ommited, ancestor state restrictions are adopted.');
-  ok(states[5].attributes.hasOwnProperty('_restrict') && !states[5].attributes._restrict && !~states[5].restrict, 'When falsy, ancestor state restrictions are ignored.');
+  ok(!states[2].tags.hasOwnProperty('_restrict') && !~states[2].restrict, 'When omitted, <Core-State>.restrict is -1, by default.');
+  ok(states[6].tags.hasOwnProperty('_restrict') && !~states[5].restrict, 'Setting a falsy value is the same as omission.');
+  ok(states[3].tags._restrict && states[3].restrict === 3, 'When truthy, <Core-State>.restrict is the node index.');
+  ok(!states[4].tags.hasOwnProperty('_restrict') && states[4].restrict === 3, 'When ommited, ancestor state restrictions are adopted.');
+  ok(states[5].tags.hasOwnProperty('_restrict') && !states[5].tags._restrict && !~states[5].restrict, 'When falsy, ancestor state restrictions are ignored.');
   flow.target('//b3/');
   equal(flow.target(0), false, 'A restricted state can not navigate outside it\'s own branch of the program tree.');
   flow.target('//c4/');
