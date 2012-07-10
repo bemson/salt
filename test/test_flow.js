@@ -1631,11 +1631,15 @@ test('.store()', function () {
   var
     ary,
     prgm = {},
-    inst,
-    children = [],
+    testAry = [1, 0, null, {}, function () {}, /h/, undefined, '', 'foo', true, false, [], [{}, 1, 0, 'foo', /h/]],
+    flowAry = [new Flow(), new Flow()],
     flow = new Flow({
       _store: 1,
       _in: function () {
+        var
+          children = [],
+          ary
+        ;
         var kid1 = new Flow({
           a: 1
         });
@@ -1647,11 +1651,34 @@ test('.store()', function () {
         kid2.go(1);
         children.push(kid2);
         children.push((inst = new Flow(prgm)));
+        ary = this.store();
+        ok(
+          ary.every(function (inst, idx) {
+            return inst === children[idx];
+          }),
+          'Internal calls return an array of instances captured while executing a state-callback.'
+        );
+        ok(
+          ary !== this.store(),
+          'Each internal call returns a new array.'
+        );
+        ok(
+          this.store('a')[0] === kid1,
+          'Internal calls may filter instances with one or more (or an array of) filter parameters.'
+        );
+        ok(
+          this.store()[0] === kid1,
+          'The first stored instance is the earliest flow initialized.'
+        );
+        ok(
+          this.store().slice(-1)[0] === inst,
+          'The last stored instance is the most recently initialized flow.'
+        );
       },
-      filter: {
+      sub: {
         _store: 'a'
       },
-      internal: {
+      nested: {
         _store: 0,
         _on: function () {
           var
@@ -1659,60 +1686,56 @@ test('.store()', function () {
             storeLength = this.store().length,
             inst = new Flow()
           ;
+          strictEqual(this.store(inst), true, 'Internal calls may add flow instances to the store (manually).');
+          ok(this.store(inst) === true && storeLength + 1 == this.store().length, 'Existing items are not added to the store (but still return `true`).');
+          ok(~this.store().indexOf(inst) && this.store(inst, true) && !this.store().length, 'Internal calls can remove store item by reference.');
+          strictEqual(this.store(inst, true), true, 'Attempting to remove a missing item does nothing (but still returns `true`).');
           ok(
-            [1, 0, null, [], {}, function () {}, /h/, undefined, '', 'foo', true, false].every(function (arg) {
-              return self.store(arg) instanceof Array;
-            }),
-            'Returns an array when called internally with arguments other than a flow instance.'
+            this.store([new Flow(), new Flow()]) === true &&
+              this.store(new Flow(), new Flow()) === true,
+            'Returns `true` when adding or removing items.'
           );
-          equal(storeLength, 0, 'The store is empty when a state\'s _store attribute is falsy.');
-          strictEqual(this.store(inst), true, 'Returns `true` when passed a flow instance.');
-          equal(storeLength + 1, this.store().length, 'Passing a flow instance adds to the number of stored flows.');
-          strictEqual(this.store(inst), true, 'Returns `true` when passed a flow instance that is already stored.');
-          equal(storeLength + 1, this.store().length, 'Adding the same flow instance does not change the number of stored flows.');
-          equal(this.store().indexOf(inst), this.store().length - 1, 'The last instance added is placed at the end of the array.');
-          strictEqual(this.store(inst, false), true, 'Passing an instance followed by false, removes the instance from the store and returns `true`.');
-          strictEqual(this.store(inst, false), true, 'Attempting to remove the same item, does nothing but also returns `true`.');
           ok(
-            [1, 0, null, [], {}, function () {}, /h/, undefined, '', 'foo', true].every(function (arg) {
-              return self.store(new Flow(), arg, new Flow()) instanceof Array;
-            }),
-            'Unless the last option is false, passing multiple instances followed by any other value results in an array.'
+            this.store([inst], 0, new Flow(), true, false, function () {}) === true &&
+              ~this.store().indexOf(inst),
+            'When the first parameter is an array, the second parameter becomes truthy and remaining parameters are ignored.'
           );
-          strictEqual(this.store([new Flow(), new Flow()]), true, 'The first argument can be an array of flow instances.');
-          strictEqual(this.store(this.store(), false), true, 'Can accept the result of proxy.store() as the first argument.');
-          equal(this.store().length, 0, 'Passing the proxy.store() result, then `false`, will clean the store\'s available items.');
-          this.go('/finding');
-        }
-      },
-      finding: {
-        _store: 'a',
-        _on: function () {
-          ok(this.store(prgm)[0] === inst, 'Passing an object filters instances created with that object.');
-          equal(this.store('_program').length, 1, 'Passing a string filters instances on the state with the same name.');
-          equal(this.store(1).length, 1, 'Passing a number filters instances on the state with the same index.');
-          equal(this.store('/').length, 3, 'Passing a string with a forward-slash filters instances on a state who\'s path contains that string.');
-          ok(this.store('/').length > this.store().length, 'Passing arguments filters the entire store, which is greater than the local store\'s filter-set.');
+          ok(
+            this.store(this.store(), true) &&
+              !this.store().length,
+            'Passing core-proxy.store() as the first parameter, then `true`, cleans all store items.'
+          );
         }
       }
     })
   ;
   equal(flow.store.length, 0, 'Expects zero parameters.');
+  equal(typeof flow.store(), 'number', 'External calls get the number of items in the current store, not references.');
+  equal(flow.store(), 0, 'The store is empty when the flow is initilized.');
   ok(
-    [1, 0, null, [], {}, function () {}, /h/, undefined, '', 'foo', true, false, new Flow(), [{}], [new Flow()]].every(function (param) {
-      return flow.store(param) === false;
-    }),
-    'Returns `false` when called externally with any arguments.'
+    !(
+      flow.store(new Flow()) ||
+      flow.store(new Flow(), true) ||
+      flow.store(new Flow(), false) ||
+      flow.store([new Flow(), new Flow()]) ||
+      flow.store([new Flow(), new Flow()], true) ||
+      flow.store([new Flow(), new Flow()], false)
+    ),
+    'External calls may not add or remove stored items.'
   );
-  ok(flow.store() instanceof Array, 'Returns an array when called externally with no arguments.');
-  equal(flow.store().length, 0, 'The returned array is empty initially.');
-  flow.go(1);
-  ary = flow.store();
-  ok(ary[0] === children[0] && ary[1] === children[1], 'Returns an array of instances created during traversal, in their creation order.');
-  ok(flow.store() !== ary, 'Returns a new array with every call.');
-  flow.go('//filter/');
-  equal(flow.store().length, 1, 'Returns instances filtered by the current state\'s store configuration.');
-  flow.go('//internal/');
+  flow.go('//');
+  ok(
+    flow.store('foo', true) === false &&
+    flow.store(testAry, true) === false,
+    'External calls can not filter on the master item store.'
+  );
+  equal(flow.store(), 3, 'External calls receive the number of items added/removed by a program.');
+  equal(flow.store('a'), 1, 'External calls may filter the current store of items, by state name.');
+  equal(flow.store('//'), 3, 'External calls may filter items by path string.');
+  equal(flow.store(prgm), 1, 'External calls may filter items by program object.');
+  flow.go('//sub/');
+  equal(flow.store(), 1, 'External calls filter on items already filtered by a state\'s _store configuration.');
+  flow.go('//nested/');
 });
 
 module('&lt;Proxy&gt;.status()');
