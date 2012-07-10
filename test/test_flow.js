@@ -25,7 +25,7 @@ test('Package', function () {
   var
     corePkgDef = Flow.pkg('core');
   'actives|events'.split('|').forEach(function (prop) {
-    ok(corePkgDef[prop] instanceof Array, 'CorePkgDef.' + prop + ' is an array.');
+    ok(corePkgDef[prop] instanceof Array, 'corePkgDef.' + prop + ' is an array.');
   });
 });
 
