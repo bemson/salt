@@ -912,6 +912,59 @@
             }
           );
         });
+    },
+    // rebuilds store caches after testing whether instance states have changed
+    upStore: function () {
+      var
+        // alias self
+        pkg = this,
+        // the current storage tracking object
+        store = pkg.stores[0],
+        // loop var
+        i
+      ;
+      if (store) {
+        // if any flows have changed their current state...
+        if (
+          // there is a cache of package instances, and...
+          store[2][0] &&
+          // any instance states have changed
+          store[2][0][0].some(function (pkgInst, idx) {
+            // flag true when the current state index does not match the cached state index
+            return pkgInst.tank.currentIndex != store[2][0][1][idx];
+          })
+        ) {
+          // clear the cache
+          store[2][0] = 0;
+        }
+        // if there is no cache for this config...
+        if (!store[2][0]) {
+          // starting from the last config and working backwards...
+          for (i = store[1].length - 1; i > -1; i--) {
+            // build cache set
+            store[2][i] = [
+              // 0 - instances that match this configs filter criteria
+              pkg.inStore(
+                // the filter criteria of this config
+                store[1][i][1],
+                // against the earlier config's cache or all items
+                (store[2][i + 1] || store)[0]
+              )
+            ];
+            // add remaining cache items
+            store[2][i].push(
+              // 1 - cache of indexes, for comparison later
+              store[2][i][0].map(function (pkgInst) {
+                return pkgInst.tank.currentIndex;
+              }),
+              // 2 - cache of instance proxies, when returning
+              store[2][i][0].map(function (pkgInst) {
+                return pkgInst.proxy;
+              })
+            );
+          }
+        }
+      }
     }
   };
 
