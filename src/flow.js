@@ -401,7 +401,7 @@
             // flag whether the criteria is for filtering or capturing
             dynamicVariable = node.store[3] ? 0 : 1;
             // with each filter/capture criteria...
-            [].slice.call(tags._store).forEach(function (filter) {
+            [].concat(tags._store).forEach(function (filter) {
               // add to capture criteria
               setStoreCriteria(node.store[dynamicVariable], filter);
             });
@@ -453,7 +453,7 @@
             // if there is a states key...
             if (tags._store.hasOwnProperty('states')) {
               // place state criteria...
-              [].slice.call(tags._store.states).forEach(function (stateCriteria) {
+              [].concat(tags._store.states).forEach(function (stateCriteria) {
                 var
                   // capture the store indice to target, based on whether this is a number or string
                   stateNameOrIndex = typeof stateCriteria == 'number' ? 3 : 2
