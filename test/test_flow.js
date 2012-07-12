@@ -1439,7 +1439,7 @@ test('.walk()', function () {
           this.walk();
           this.walk();
           this.walk();
-          equal(this.status().targets.length, 2, 'Multiple sequential calls are ignored.');
+          equal(this.status().targets.length, 2, 'From a state callback, multiple calls are applied once.');
         },
         a: 1,
         b: 1
