@@ -1637,7 +1637,7 @@
       // if there are waypoints...
       if (waypoints.length) {
         // if the last waypoint matches the first target...
-        if (waypoints.slice(-1)[0] === pkg.targets[0]) {
+        while (waypoints[waypoints.length - 1] === pkg.targets[0]) {
           // remove the last waypoint
           waypoints.pop();
         }

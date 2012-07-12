@@ -1383,6 +1383,24 @@ test('.go()', function () {
   equal(flow.go('//nonpending/'), true, 'Unpends parent flows.');
   pendFlow.go();
   equal(pendTic, 1, 'Did not fire the _on function of a pending state!');
+  tic = 0;
+  equal(
+    (new Flow({
+      _on: function () {
+        this.go(2, 'goal');
+        this.go(2);
+        this.go(2, 'child', 2, 'child', 2);
+      },
+      child: function () {
+        tic++;
+      },
+      goal: function () {
+        return tic;
+      }
+    })).target(1),
+    1,
+    'From within a program, targeting the same state multiple times is applied once.'
+  );
 });
 
 test('.walk()', function () {
