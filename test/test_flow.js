@@ -1385,6 +1385,43 @@ test('.go()', function () {
   equal(pendTic, 1, 'Did not fire the _on function of a pending state!');
 });
 
+test('.walk()', function () {
+  var
+    corePkgDef = Flow.pkg('core'),
+    tick = 0,
+    flow = new Flow({
+      _on: function () {
+        this.walk();
+        equal(this.status().targets.length, corePkgDef(this).nodes[1].children.length, 'Equivalent to calling go for every child of the current state.');
+        this.lock(1);
+      },
+      a: function () {
+        tick++;
+      },
+      b: '//a/',
+      c: '//a/',
+      d: '//a/',
+      e: '//a/',
+      f: '//a/',
+      g: {
+        _on: function () {
+          equal(tick, 6, 'Directs a flow to child states.');
+          this.walk();
+        },
+        a: function () {
+          tick = 0;
+        }
+      },
+      h: function () {
+        equal(tick, 0, 'Nested calls execute before the parent call completes.');
+      }
+    })
+  ;
+
+  flow.go(1);
+  strictEqual(flow.walk(), false, 'Respects locked flows like any other traversal method.');
+});
+
 test('.wait()', function () {
   var tic = 0,
     tgtTics = 9,

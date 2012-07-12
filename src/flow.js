@@ -1658,6 +1658,16 @@
     return !!result;
   };
 
+  // traverse all child states
+  corePkgDef.proxy.walk = function () {
+    var
+      // get package
+      pkg = corePkgDef(this)
+    ;
+    // return result of calling go with each child index
+    return this.go.apply(this, pkg.nodes[pkg.tank.currentIndex].children);
+  };
+
   // delay traversing
   corePkgDef.proxy.wait = function () {
     var
