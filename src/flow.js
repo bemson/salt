@@ -1655,10 +1655,17 @@
   corePkgDef.proxy.walk = function () {
     var
       // get package
-      pkg = corePkgDef(this)
+      pkg = corePkgDef(this),
+      // child states to traverse
+      children = pkg.nodes[pkg.tank.currentIndex].children
     ;
-    // return result of calling go with each child index
-    return this.go.apply(this, pkg.nodes[pkg.tank.currentIndex].children);
+    // if the targets are not already queued...
+    if (pkg.targets.slice(0, children.length).join() !== children.join()) {
+      // return result of calling go with each child's state-index
+      return this.go.apply(this, children);
+    }
+    // (otherwise) flag failure
+    return false;
   };
 
   // delay traversing

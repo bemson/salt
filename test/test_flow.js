@@ -1412,8 +1412,19 @@ test('.walk()', function () {
           tick = 0;
         }
       },
-      h: function () {
+      nests: function () {
         equal(tick, 0, 'Nested calls execute before the parent call completes.');
+      },
+      multiple: {
+        _on: function () {
+          this.walk();
+          this.walk();
+          this.walk();
+          this.walk();
+          equal(this.status().targets.length, 2, 'Multiple sequential calls are ignored.');
+        },
+        a: 1,
+        b: 1
       }
     })
   ;
