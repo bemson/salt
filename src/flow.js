@@ -299,7 +299,7 @@
     // set name of second node
     pkg.nodes[1].name = '_program';
     // init collection of store search strings
-    pkg.storeStrs = [ '' , '' ];
+    pkg.storeStrs = [ '|' , '|' ];
     // initialize each node...
     pkg.nodes.forEach(function (node, idx) {
       var
@@ -569,19 +569,12 @@
             // has no state name or index criteria, or...
             !(activeFlowStoreCfg[0][2].length + activeFlowStoreCfg[0][3].length) ||
             // meets name criteria, or...
-            (
-              !activeFlowStoreCfg[0][2].length ||
-              activeFlowStoreCfg[0][2].some(function (stateCriteria) {
-                // the required state exists
-                return ~pkg.storeStrs[0].indexOf(stateCriteria);
-              })
-            ) ||
-            // meets state index criteria...
-            (
-              !activeFlowStoreCfg[0][3].length ||
-              // this newly created instance meets the minimum state index
-              pkg.nodes.length > activeFlowStoreCfg[0][3][0]
-            )
+            activeFlowStoreCfg[0][2].some(function (stateCriteria) {
+              // the required state exists
+              return ~pkg.storeStrs[1].indexOf('|' + stateCriteria + '|');
+            }) ||
+            // this newly created instance meets the minimum state index
+            pkg.nodes.length > activeFlowStoreCfg[0][3][0]
           )
         )
       ) {
