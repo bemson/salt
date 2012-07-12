@@ -407,7 +407,7 @@
             });
           } else if (dynamicVariable == 'object') {
             // flag whether this configuration belongs to the (0) capture or (1) filter criteria
-            dynamicVariable = (tags._store.hasOwnProperty('capture') && tags._store.capture) ? 0 : 1;
+            dynamicVariable = (node.store[3] || (tags._store.hasOwnProperty('capture') && tags._store.capture)) ? 0 : 1;
             // if we should use the previous store...
             if (
               // there is a previous store configuration, and...
