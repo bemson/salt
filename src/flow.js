@@ -298,8 +298,12 @@
     pkg.nodes[0].name = '_flow';
     // set name of second node
     pkg.nodes[1].name = '_program';
-    // init collection of store search strings
-    pkg.storeStrs = [ '|' , '|' ];
+    // init collection of precompiled values
+    pkg.pc = {};
+      // init cache of paths string
+      pkg.pc[0] = '|';
+      // init cache of state name string
+      pkg.pc[1] = '|';
     // initialize each node...
     pkg.nodes.forEach(function (node, idx) {
       var
@@ -310,6 +314,10 @@
         // multiple use variable
         dynamicVariable
       ;
+      // init collection of precompilation values for this node
+      node.pc = {};
+      // begin precompiled descendents index - starting with this node's children
+      node.pc[0] = [];//node.children.slice(0);
       // if this node's value or _import property is a valid path...
       if (validImportTag.test(typeof node.value == 'string' ? node.value : (typeof node.value == 'object' ? node.value._import : ''))) {
         // flag that this is a (valid) imports and imported state
@@ -333,12 +341,14 @@
       }
       // cache this nodes index by it's unique path
       pkg.nodeIds[node.path] = idx;
-      // if not the parent (flow) node...
+      // if there is a parent state...
       if (parent) {
         // add to paths
-        pkg.storeStrs[0] += node.path + '|';
+        pkg.pc[0] += node.path + '|';
         // add to states
-        pkg.storeStrs[1] += node.name + '|';
+        pkg.pc[1] += node.name + '|';
+        // add to the parent's descendents collection
+        parent.pc[0].push(node.index, node.pc[0]);
       }
       // add reference to the package-instance containing this node
       node.pkg = pkg;
@@ -561,7 +571,7 @@
           (
             !activeFlowStoreCfg[0][1].length ||
             activeFlowStoreCfg[0][1].some(function (pathCriteria) {
-              return ~pkg.storeStrs[0].indexOf(pathCriteria);
+              return ~pkg.pc[0].indexOf(pathCriteria);
             })
           ) &&
           // meets state and index criteria...
@@ -571,7 +581,7 @@
             // meets name criteria, or...
             activeFlowStoreCfg[0][2].some(function (stateCriteria) {
               // the required state exists
-              return ~pkg.storeStrs[1].indexOf('|' + stateCriteria + '|');
+              return ~pkg.pc[1].indexOf('|' + stateCriteria + '|');
             }) ||
             // this newly created instance meets the minimum state index
             pkg.nodes.length > activeFlowStoreCfg[0][3][0]
