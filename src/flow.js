@@ -907,28 +907,50 @@
             ]
           ;
           // flag whether this core-instance satisfies the given criteria
-          return criteriaSet.every(
-            function (criterias, idx) {
-              var
-                // the value to compare against each criteria option
-                comparisonValue = comparisonValues[idx]
-              ;
-              // for each filter criteria...
-              return !criterias.length ||
-                criterias.some(idx == 1 ?
-                  // search paths
-                  function (criteria) {
-                    // flag when this criteria matches the comparison value
-                    return ~comparisonValue.indexOf(criteria);
-                  } :
-                  // match everything else
-                  function (criteria) {
-                    // flag when this criteria matches the comparison value
-                    return criteria === comparisonValue;
-                  }
-                );
-            }
-          );
+          return criteriaSet.slice(0, 2).every(
+              function (criterias, idx) {
+                var
+                  // the value to compare against each criteria option
+                  comparisonValue = comparisonValues[idx]
+                ;
+                // for each filter criteria...
+                return !criterias.length ||
+                  criterias.some(idx == 1 ?
+                    // search paths
+                    function (criteria) {
+                      // flag when this criteria matches the comparison value
+                      return ~comparisonValue.indexOf(criteria);
+                    } :
+                    // match everything else
+                    function (criteria) {
+                      // flag when this criteria matches the comparison value
+                      return criteria === comparisonValue;
+                    }
+                  );
+              }
+            ) && (
+              // handle name/index testing separately
+              !(criteriaSet[2].length || criteriaSet[3].length) ||
+              [[], [], criteriaSet[2], criteriaSet[3]].some(function (criterias, idx) {
+                var
+                  // the value to compare against each criteria option
+                  comparisonValue = comparisonValues[idx]
+                ;
+                // for each filter criteria...
+                return criterias.some(idx == 1 ?
+                    // search paths
+                    function (criteria) {
+                      // flag when this criteria matches the comparison value
+                      return ~comparisonValue.indexOf(criteria);
+                    } :
+                    // match everything else
+                    function (criteria) {
+                      // flag when this criteria matches the comparison value
+                      return criteria === comparisonValue;
+                    }
+                  );
+              })
+            );
         });
     },
     // rebuilds store caches after testing whether instance states have changed
