@@ -150,6 +150,18 @@
         flags.omit = 1;
       }
     }),
+    // return non-array values
+    flattenArrays = genData.spawn(function (name, value, parent, dataset, flags) {
+      // don't inclue any data objects
+      flags.omit = 1;
+      // if this value is not an array...
+      if (!(value instanceof Array)) {
+        // don't scan this value further
+        flags.scan = 0;
+        // add this value to the returned dataset
+        dataset[dataset.length] = value;
+      }
+    }),
     // collection of active flows
     activeFlows = [],
     // tests when the string of an import attribute is valid
