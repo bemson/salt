@@ -539,9 +539,12 @@
         node.fncs[0] = node.value;
       }
     });
-    // clean up compilation support/tracking properties
+    // clean up/finalize compilation support/tracking properties
     pkg.nodes.forEach(function (node) {
+      // remove lastStore - no longer needed
       delete node.lastStore;
+      // flatten the precompiled collection into an array of values
+      node.pc[0] = flattenArrays(node.pc[0]);
     });
     // set owner to default
     pkg.owner = 0;
@@ -1662,12 +1665,15 @@
   };
 
   // traverse all child states
-  corePkgDef.proxy.walk = function () {
+  // TODO - accept arbitrary state query
+  corePkgDef.proxy.walk = function (entireBranch) {
     var
       // get package
       pkg = corePkgDef(this),
+      // get the current state
+      curState = pkg.nodes[pkg.tank.currentIndex],
       // child states to traverse
-      children = pkg.nodes[pkg.tank.currentIndex].children
+      children = entireBranch ? curState.pc[0] : curState.children
     ;
     // if the targets are not already queued...
     if (pkg.targets.slice(0, children.length).join() !== children.join()) {

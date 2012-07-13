@@ -1435,14 +1435,33 @@ test('.walk()', function () {
       },
       multiple: {
         _on: function () {
+          var
+            initialTargetCount = this.status().targets.length
+          ;
           this.walk();
           this.walk();
           this.walk();
           this.walk();
-          equal(this.status().targets.length, 2, 'From a state callback, multiple calls are applied once.');
+          equal(this.status().targets.length - initialTargetCount, 2, 'From a state callback, multiple calls are applied once.');
         },
         a: 1,
         b: 1
+      },
+      deep: {
+        _on: function () {
+          tick = 0;
+          this.walk(1);
+        },
+        a: {
+          b: {
+            c: function () {
+              tick++;
+            }
+          }
+        },
+        d: function () {
+          equal(tick, 1, 'Passing a truthy value walks an entire branch.');
+        }
       }
     })
   ;
