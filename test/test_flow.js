@@ -784,7 +784,411 @@ test('_def', function () {
 });
 
 test('_store', function () {
+  var
+    prgm = {jits: 1},
+    prgmValue = 1,
+    tick = 0,
+    corePkgDef = Flow.pkg('core'),
+    flow = new Flow({
+      _on: function () {
+        this.walk(1);
+      },
+      capture: {
+        forced: {
+          _on: function () {
+            tick = 0;
+          },
+          configured: {
+            _store: {
+              capture: false
+            },
+            _on: function () {
+              createFlows();
+              if (this.store().length == 12) {
+                tick++;
+              }
+            }
+          },
+          shorthand: {
+            _store: {},
+            _on: function () {
+              createFlows();
+              if (this.store().length == 12) {
+                tick++;
+              }
+            }
+          },
+          empty: {
+            _store: 0,
+            _on: function () {
+              createFlows();
+              equal(this.store().length, 0, 'Instances are not collected when the _store tag is falsy.');
+            }
+          },
+          result: function () {
+            equal(tick, 2, 'The capture option is ignored for the first truthy/object _store tag of a branch.');
+          }
+        },
+        configuration: {
+          programs: {
+            _on: function () {
+              tick = 0;
+            },
+            object: {
+              _store: {
+                programs: prgm
+              },
+              _on: function () {
+                createFlows();
+                if (this.store().length === 2) {
+                  tick++;
+                }
+              }
+            },
+            value: {
+              _store: {
+                programs: prgmValue
+              },
+              _on: function () {
+                createFlows();
+                if (this.store().length === 2) {
+                  tick++;
+                }
+              }
+            },
+            array: {
+              _store: {
+                programs: [prgmValue, prgm]
+              },
+              _on: function () {
+                createFlows();
+                equal(this.store().length + tick, 6, 'The `programs` option captures flows compiled from the paired value or array of values.');
+              }
+            }
+          },
+          paths: {
+            _on: function () {
+              tick = 0;
+            },
+            partial: {
+              _store: {
+                paths: 'ar'
+              },
+              _on: function () {
+                createFlows();
+                if (this.store().length === 2) {
+                  tick++;
+                }
+              }
+            },
+            array: {
+              _store: {
+                paths: ['ar', 'e/']
+              },
+              _on: function () {
+                createFlows();
+                equal(this.store().length + tick, 5, 'The `path` option captures flows with paths containing the paired string or array of strings.');
+              }
+            }
+          },
+          states: {
+            _on: function () {
+              tick = 0;
+            },
+            name: {
+              _store: {
+                states: 'unique'
+              },
+              _on: function () {
+                createFlows();
+                if (this.store().length === 1) {
+                  tick++;
+                }
+              }
+            },
+            index: {
+              _store: {
+                states: 3
+              },
+              _on: function () {
+                createFlows();
+                if (this.store().length === 4) {
+                  tick++;
+                }
+              }
+            },
+            array: {
+              _store: {
+                states: ['tar','bat']
+              },
+              _on: function () {
+                createFlows();
+                if (this.store().length === 2) {
+                  tick++;
+                }
+              }
+            },
+            mix: {
+              _store: {
+                states: ['tar', 'bat', 3]
+              },
+              _on: function () {
+                createFlows();
+                equal(this.store().length + tick, 9, 'The `states` option captures flows with state names or indexes.');
+              }
+            }
+          },
+          limit: {
+            _on: function () {
+              tick = 0;
+            },
+            number: {
+              _store: {
+                limit: 5
+              },
+              _on: function () {
+                createFlows();
+                equal(this.store().length, 5, 'The `limit` option sets the max number of store items');
+              }
+            },
+            zero: {
+              _store: {
+                limit: 0
+              },
+              _on: function () {
+                createFlows();
+                equal(this.store().length, 12, 'A zero `limit` does not limit the number of store items.');
+              }
+            }
+          }
+        },
+        shortform: {
+          truthy: {
+            _store: 1,
+            _on: function () {
+              createFlows();
+              equal(this.store().length, 12, 'When the first tag is truthy, all flows are captured.');
+            }
+          },
+          slashString: {
+            _store: 'e/',
+            _on: function () {
+              createFlows();
+              equal(this.store().length, 2, 'When the first tag is a string containing a forward-slash, it act as `paths` criteria.');
+            }
+          },
+          stateString: {
+            _store: 'bat',
+            _on: function () {
+              createFlows();
+              equal(this.store().length, 1, 'When the first tag is a string with no forward-slashes, it act as `states` criteria.')
+            }
+          },
+          array: {
+            objects: {
+              _store: [prgm],
+              _on: function () {
+                createFlows();
+                equal(this.store().length, 2, 'When the first tag is an array, objects act as `programs` criteria.');
+              }
+            },
+            numbers: {
+              _store: [3],
+              _on: function () {
+                createFlows();
+                equal(this.store().length, 4, 'When the first tag is an array, numbers act as `states` (index) criteria.');
+              }
+            }
+          }
+        }
+      },
+      filter: {
+        _store: 1,
+        _on: function () {
+          createFlows();
+        },
+        configuration: {
+          empty: {
+            _store: {},
+            _on: function () {
+              equal(this.store().length, 12, 'An empty configuration filters zero store items.');
+            }
+          },
+          programs: {
+            _on: function () {
+              tick = 0;
+            },
+            single: {
+              _store: {
+                programs: prgm
+              },
+              _on: function () {
+                if (this.store().length == 2) {
+                  tick++;
+                }
+              }
+            },
+            array: {
+              _store: {
+                programs: [prgm]
+              },
+              _on: function () {
+                if (this.store().length == 2) {
+                  tick++;
+                }
+              }
+            },
+            result: function () {
+              equal(tick, 2, 'The `programs` option filters flows compiled from the paired value or array of values.');
+            }
+          },
+          paths: {
+            _on: function () {
+              tick = 0;
+            },
+            single: {
+              _store: {
+                paths: 'ar'
+              },
+              _on: function () {
+                if (this.store().length == 3) {
+                  tick++;
+                }
+              }
+            },
+            array: {
+              _store: {
+                paths: ['ar']
+              },
+              _on: function () {
+                if (this.store().length == 3) {
+                  tick++;
+                }
+              }
+            },
+            result: function () {
+              equal(tick, 2, 'The `paths` option filters flows where the current path contains the paired string value (or array of values).');
+            }
+          },
+          states: {
+            _on: function () {
+              tick = 0;
+            },
+            name: {
+              _store: {
+                states: 'unique'
+              },
+              _on: function () {
+                if (this.store().length == 1) {
+                  tick++;
+                }
+              }
+            },
+            index: {
+              _store: {
+                states: 0
+              },
+              _on: function () {
+                if (this.store().length == 4) {
+                  tick++;
+                }
+              }
+            },
+            array: {
+              _store: {
+                states: ['unique', 0]
+              },
+              _on: function () {
+                if (this.store().length == 5) {
+                  tick++;
+                }
+              }
+            },
+            result: function () {
+              equal(tick, 3, 'The `states` option filters flows where the current state name or index matches the paired value (or array of values).');
+            }
+          },
+          limit: {
+            _store: {
+              limit: 3
+            },
+            _on: function () {
+              equal(this.store().length, 12, 'The `limit` option has no effect on filter criteria.');
+            }
+          }
+        },
+        shortform: {
+          _on: function () {
+            tick = 0;
+          },
+          truthy: {
+            _store: 1,
+            _on: function () {
+              equal(this.store().length, 12, 'For nested tags, a truthy value filters zero store items.');
+            }
+          },
+          slashString: {
+            _store: '/b',
+            _on: function () {
+              equal(this.store().length, 1, 'For nested tags, strings containing forward-slashes, filter items where the current path contains the paired value.');
+            }
+          },
+          stateString: {
+            _store: 'unique',
+            _on: function () {
+              equal(this.store().length, 1, 'For nested tags, strinsg without forward-slashes, filter items where the current state matches the paired value.')
+            }
+          },
+          array: {
+            objects: {
+              _store: [prgm],
+              _on: function () {
+                equal(this.store().length, 2, 'For nested tags, objects of a paired array are treated like `programs` filter criteria.');
+              }
+            },
+            numbers: {
+              _store: [0],
+              _on: function () {
+                equal(this.store().length, 4, 'For nested tags, numbers of a paired array are treated like `states` (index) filter criteria.');
+              }
+            }
+          }
+        },
+        nested: {
+          _store: 'r/',
+          filter: {
+            _store: '/t',
+            _on: function () {
+              equal(this.store().length, 1, 'Each nested tags filters the items filtered by the ancestor tag.');
+            }
+          }
+        }
+      },
+      done: function () {
+        equal(corePkgDef(this).stores.length + this.store().length, 0, 'Outside of the tag, store items are dereferenced.');
+      }
+    })
+  ;
+  flow.go(1);
 
+  function createFlows() {
+    // on state 2
+    (new Flow({unique:1})).go(2);
+    (new Flow({bar:1})).go(2);
+    new Flow({bat:1});
+    (new Flow({tar:1})).go(2);
+    // on state 3
+    (new Flow({zoo:{red:1}})).go(3);
+    new Flow({cat:{blue:1}});
+    (new Flow({tart:{job:1}})).go(3);
+    (new Flow({red:{pop:1}})).go(3);
+    // on state 0
+    new Flow(prgm);
+    new Flow(prgm);
+    // on state 1
+    (new Flow(prgmValue)).go(1);
+    (new Flow(prgmValue)).go(1);
+  }
 });
 
 test('_import', function () {
