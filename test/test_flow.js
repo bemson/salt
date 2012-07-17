@@ -2200,6 +2200,7 @@ test('.store()', function () {
       _in: function () {
         var
           children = [],
+          inst,
           ary
         ;
         var kid1 = new Flow({
