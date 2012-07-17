@@ -50,7 +50,7 @@ test('State', function () {
   var
     states = Flow.pkg('core')(new Flow({foo: 'bar'})).nodes,
     state = states[2];
-  'pendable,1|root|restrict|map|defs|fncs|upOwn,0'.split('|').forEach(function (mbrSet) {
+  'pendable,1|root|restrict|cb|defs|fncs|upOwn,0'.split('|').forEach(function (mbrSet) {
       var
         split = mbrSet.split(','),
         mbr = split[0],
@@ -75,7 +75,7 @@ test('State', function () {
 
 test('Proxy', function () {
   var flow = new Flow();
-  'map|query|lock|def|args|target|go|wait|status|bless|owner'.split('|').forEach(function (mbr) {
+  'cb|query|lock|def|args|target|go|wait|status|bless|owner'.split('|').forEach(function (mbr) {
     equal(typeof flow[mbr], 'function', '<Core-Proxy>.' + mbr + '() is a method.');
   });
 });
@@ -261,7 +261,7 @@ test('_owner', function () {
       _in: function () {
         (new Flow({
           _owner: '//detour/'
-        })).map()();
+        })).cb()();
       },
       originalTarget: 'never hits this state',
       detour: function () {
@@ -292,11 +292,11 @@ test('_owner', function () {
                 b: {
                   _owner: '//monitorB/'
                 }
-              })).map().b();
+              })).cb().b();
             }
           }
           , monitorB: defaultOwnerUpdateAction
-        })).map().a();
+        })).cb().a();
       },
       monitorA: defaultOwnerUpdateAction
     })
@@ -498,7 +498,7 @@ test('_owner', function () {
         child = new Flow(ownPrograms[idx]);
       },
       updates: defaultOwnerUpdateAction
-    })).map()
+    })).cb()
   ;
 
   function defaultOwnerUpdateAction(childFlow, childStatus) {
@@ -516,7 +516,7 @@ test('_owner', function () {
           }
         }
       });
-      child.map().foo();
+      child.cb().foo();
     },
     monitor: function (childFlow, childStatus) {
       var status = childFlow.status();
@@ -533,7 +533,7 @@ test('_owner', function () {
       equal(childStatus.trust, false, 'The child status is untrusted when the update is triggered.');
       ok(status.index < childStatus.index, 'The child flow can have a different status values than the one passed to the owning flow\'s update state.');
     }
-  })).map()()
+  })).cb()()
 
   equal(internalUpdate.target('//originalTarget'), internalUpdate.target('//detour'), 'Child flows update their owner with a target call.');
 
@@ -2029,7 +2029,7 @@ test('.args()', function () {
         this.wait();
       }
     }),
-    map = flow.map();
+    cb = flow.cb();
   equal(T.type(flow.args()), 'array', 'Returns an array when passed no parameters.');
   ok(flow.args() !== flow.args(), 'The array returned is unique.');
   equal(flow.args(1), undefined, 'Returns "undefined" when passed a valid index.');
@@ -2040,9 +2040,9 @@ test('.args()', function () {
   equal(flow.args()[valAry.length - 1], valAry[valAry.length - 1], 'Passing an array replaces the flow arguments.');
   valAry.push(val1);
   ok(flow.args().length !== valAry.length, 'Returns a cloned array.');
-  map.none();
+  cb.none();
   equal(flow.args().length, 0, 'There are no arguments when a flow completes navigating.');
-  map.paused(val1);
+  cb.paused(val1);
   equal(flow.args()[0], val1, 'Arguments are available when the flow is paused.');
   equal(flow.args(1, val2), true, 'Returns true when passed a valid index and second argument.');
   flow.args(1, undefined);
@@ -2094,7 +2094,7 @@ test('.owner()', function () {
   });
 });
 
-test('.map()', function () {
+test('.cb()', function () {
   var rtnVal = {},
     program = {
       a: {
@@ -2114,48 +2114,67 @@ test('.map()', function () {
         return a + b;
       },
       redirect: function () {
-        equal(map.rtnVal(), true, 'Returns true when invoked within a component function.');
+        equal(cb.rtnVal(), true, 'Returns true when invoked within a component function.');
         return false;
       }
     },
     flow = new Flow(program),
     coreInst = Flow.pkg('core')(flow),
     initialIndex = coreInst.tank.currentIndex,
-    map;
-  equal(flow.map.length, 1, 'Accepts one parameter.');
-  ok(
-    [1, 0, false, true, '', 'foo', {}, [], -1, /s/, function () {}].every(function (param) {
-      return typeof flow.map(param) == 'function';
-    }) &&
-    typeof flow.map() == 'function',
-    'Returns a function regardless of the argument count or value.'
-  );
-  map = flow.map();
-  ok(map.hasOwnProperty('toString'), 'The returned function has a custom .toString function.');
+    cb;
+  equal(flow.cb.length, 1, 'Accepts at least one parameter.');
+  cb = flow.cb();
+  equal(typeof cb, 'function', 'Returns a function, when called with no arguments.');
+  ok(cb.hasOwnProperty('toString'), 'The returned function has a custom .toString function.');
   ok(
     coreInst.nodes.every(function (node) {
       flow.go(node.index);
-      return flow.map() === map;
+      return flow.cb() === cb;
     }),
     'Returns the same function when called with no arguments, regardless of the current state.'
   );
-  equal(map, coreInst.nodes[1].map, 'When called with no arguments, the function returned is the ".map" member of the _program state.');
+  equal(cb, coreInst.nodes[1].cb, 'The returned function is the ".cb" member of the _program state.');
+  ok(cb.a && cb.a.b && cb.a.c, 'The returned function has member functions which match the order and heirarchy of the flow\'s program.');
   ok(
     coreInst.nodes.slice(2, -1).every(function (node) {
       flow.go(node.index);
-      return flow.map(true) !== map && flow.map(true) === node.map;
+      return flow.cb(true) !== cb && flow.cb(true) === node.cb;
     }),
-    'Returns the current state\'s ".map" member, when passed a truthy value.'
+    'Returns a function matching the `.cb` member of the current state, when passed `true`.'
   );
-  ok(map.a && map.a.b && map.a.c, 'The returned map-function has member functions that match the order and heirarchy of the original program.');
   ok(
-    map() === true && // returns true when there is no _on callback
-    map.undef() === true && // returns true when the _on callback returns undefined
-    map.delayed() === false && // returns false when a state halts traversal
-    map.rtnVal() === rtnVal && // returns the value returned by the _on callback
-    map.redirect() === rtnVal && // returns result of final state, when redirected
-    flow.go(initialIndex) && map.redirect() && initialIndex !== coreInst.tank.currentIndex // changes the current state
-    , 'The returned map-function behaves like a curried call to flow.target().'
+    cb() === true && // returns true when there is no _on callback
+    cb.undef() === true && // returns true when the _on callback returns undefined
+    cb.delayed() === false && // returns false when a state halts traversal
+    cb.rtnVal() === rtnVal && // returns the value returned by the _on callback
+    cb.redirect() === rtnVal && // returns result of final state, when redirected
+    flow.go(initialIndex) && cb.redirect() && initialIndex !== coreInst.tank.currentIndex, // changes the current state
+    'The returned callback-functions behave like curried calls of flow.target().'
+  );
+  ok(
+    [false, '', -1, -.01, {}, [], /s/, function () {}].every(function (param) {
+      return flow.cb(param) === false;
+    }) &&
+    [true, 1, 0, 'foo', flow.cb()].every(function (param) {
+      return typeof flow.cb(param) === 'function';
+    }),
+    'Returns `false` when passed anything besides a state-query or `true`.'
+  );
+  equal(
+    flow.cb('foo').hasOwnProperty('toString'),
+    false,
+    'Functions from state-queries do not have a local .toString() method.'
+  );
+  flow.go('/delayed');
+  ok(
+    flow.cb(0) === coreInst.nodes[0].cb,
+    'If a state query matches a state\'s path or index exactly, the corresponding node\'s `.cb` function is returned.'
+  );
+  cb = flow.cb('@next');
+  strictEqual(
+    cb(),
+    flow.target('//rtnVal/'),
+    'Functions non-absolute queries are invoked relative to the flow\'s current state.'
   );
 });
 
@@ -2337,7 +2356,7 @@ test('.loops', function () {
         this.wait();
       },
       reset: 1
-    })).map(),
+    })).cb(),
     flow = new Flow({
       _on: function () {
         var loops = this.status().loops;
@@ -2425,20 +2444,20 @@ test('.pending', function () {
         this.wait();
       },
       reset: 1
-    })).map(),
+    })).cb(),
     nestedPender = (new Flow({
       _on: function () {
         pend();
       },
       reset: 1
-    })).map(),
+    })).cb(),
     doublePender = (new Flow({
       _on: function () {
         pend();
         this.wait();
       },
       reset: 1
-    })).map(),
+    })).cb(),
     flow = new Flow({
       _on: function () {
         pend();
@@ -2496,7 +2515,7 @@ test('.targets', function () {
         this.wait();
       },
       reset: 1
-    })).map(),
+    })).cb(),
     flow = new Flow({
       _in: function () {
         ok(this.status().targets.length, 'status.targets is not empty for the _in component function.');
@@ -2567,7 +2586,7 @@ test('.route', function () {
         this.wait();
       },
       reset: 1
-    })).map(),
+    })).cb(),
     flow = new Flow({
       _in: function () {
         var stat = this.status();
@@ -2707,7 +2726,7 @@ test('.phase', function () {
       _in: function () {
         (new Flow(function () {
           this.wait();
-        })).map()();
+        })).cb()();
       }
     })
   ;
@@ -2844,7 +2863,7 @@ test('Buffered execution, after numerous calls.', function () {
         start();
       }
     }),
-    eventHandlerCallBack = eventHandlerFlow.map();
+    eventHandlerCallBack = eventHandlerFlow.cb();
   for (; i < callCnt; i++) {
     eventHandlerCallBack(arbitraryEventData);
   }
@@ -2892,7 +2911,7 @@ test('Calculate the fibonacci number of 1000 without causing a stack-overflow.',
     } else {
       return currentNumber;
     }
-  })).map();
+  })).cb();
   equal(fibonacci(10), 89,'The "fibonacci" flow works as expected.');
   fibonacci(1000);
 });
@@ -2903,7 +2922,7 @@ test('Prevent consecutive execution for the same state.', function () {
       _in: function () {
         tic++;
       }
-    })).map();
+    })).cb();
   doImportantThing();
   doImportantThing();
   equal(tic, 1, 'Function executed once!');
@@ -2983,7 +3002,7 @@ test('Automatic execution of prerequisite functions.', function () {
         equal(prereqs, 4, 'Earlier states self-executed using the _over component.');
       }
     }),
-    app = appFlow.map();
+    app = appFlow.cb();
   app.start();
 });
 
@@ -2996,7 +3015,7 @@ test('Alter arguments before executing a function.', function () {
         this.args(0, this.args(0).split('').reverse().join(''));
       },
       _on: echo
-    })).map(),
+    })).cb(),
     input = 'hello',
     invertEchoOutput = input.split('').reverse().join('');
   equal(echo(input), input, 'The raw function works as expected.');

@@ -181,6 +181,21 @@
     return name != null && /\w/.test(name);
   }
 
+  // flag when the given argument is a state query
+  function smellsLikeAStateQuery(val) {
+    var
+      valType = typeof val
+    ;
+    // flag when val is...
+    return (
+      // a positive number
+      valType === 'number' && val >= 0) ||
+      // a string of any length
+      (valType === 'string' && val) ||
+      // a function that resolves into a flow path
+      (valType === 'function' && (val + '').charAt(0) === '/');
+  }
+
   // edits store configuration based on given value
   function setStoreCriteria(criteria, value, givenType) {
     // based on the attribute value type...
@@ -271,6 +286,8 @@
       // delimiter for stored strings
       randomDelimiter = Math.random()
     ;
+    // collection of custom callback queries
+    pkg.cbs = {};
     // collection of arguments for traversal functions
     pkg.args = [];
     // collection of node calls made while traversing
@@ -516,8 +533,8 @@
 
       // capture when the parent lock property is true
       node.plock = parent ? parent.lock : 0;
-      // define map function - a curried call to .target()
-      node.map = function () {
+      // define callback function - a curried call to .target()
+      node.cb = function () {
         var
           // capture any arguments
           args = [].slice.call(arguments)
@@ -527,17 +544,17 @@
         // invoke the proxies target method, pass along arguments
         return pkg.proxy.target.apply(pkg.proxy, args);
       };
-      // override toString method of map
-      node.map.toString = function () {
+      // override toString method of .cb
+      node.cb.toString = function () {
         // return thes node's index
         return node.path;
       };
       // add definition configurations for this node
       node.defs = generateDataConfigurationObjects(tags._def);
-      // if this node's index is not 0...
-      if (node.index) {
-        // append to parent's map function
-        parent.map[node.name] = node.map;
+      // if there is a parent...
+      if (parent) {
+        // append to parent's cb function
+        parent.cb[node.name] = node.cb;
       }
       // define array to hold traversal functions for each traversal name...
       node.fncs = corePkgDef.events.map(function (name) {
@@ -1376,22 +1393,42 @@
     return parentNode ? parentNode !== this && (!parentNode.index || !this.path.indexOf(parentNode.path)) : false;
   };
 
-  // add method to return map of this flow's nodes
-  corePkgDef.proxy.map = function (fromCurrentState) {
+  // add method to return callbacks to this flow's states
+  corePkgDef.proxy.cb = function (arg) {
     var
       // get core package instance
       pkg = corePkgDef(this),
       // alias nodes
-      states = pkg.nodes
+      states = pkg.nodes,
+      // the type of the given argument
+      argType = typeof arg
     ;
-    // if targeting the current state...
-    if (fromCurrentState) {
-      // return map of the current state
-      return states[pkg.tank.currentIndex].map;
-    } else { // otherwise, when not targeting the current state...
-      // return map of the program (root) state
-      return states[1].map;
+    // if not passed anything...
+    if (!arguments.length) {
+      // return callback for the program (root) state
+      return states[1].cb;
+    } else if (arg === true) { // or, when passed `true`...
+      // return callback for the current state
+      return states[pkg.tank.currentIndex].cb;
+    } else if (smellsLikeAStateQuery(arg)) { // or, when passed something like a state query...
+      // if the query is a valid path or index...
+      if (pkg.nodeIds.hasOwnProperty(arg) || (argType === 'number' && pkg.nodes[arg])) {
+        // return the matched cb member
+        return pkg.nodes[argType === 'number' ? arg : pkg.nodeIds[arg]].cb;
+      }
+      // if there is no callback with for this query...
+      if (!pkg.cbs.hasOwnProperty(arg)) {
+        // add callback to cache
+        pkg.cbs[arg] = function () {
+          // target the query path with the given arguments
+          return pkg.proxy.target.apply(pkg.proxy, [arg].concat(arguments));
+        };
+      }
+      // return callback from cache
+      return pkg.cbs[arg];
     }
+    // (otherwise) flag bad arguments
+    return false;
   };
 
   // add method to 
@@ -1958,7 +1995,7 @@
       currentNode = pkg.nodes[pkg.tank.currentIndex]
     ;
 
-    // map-function for retrieving the node index
+    // callback-function for retrieving the node index
     function getPathFromIndex(idx) {
       return pkg.nodes[idx].path;
     }
