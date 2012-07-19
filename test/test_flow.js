@@ -34,7 +34,7 @@ test('Instance', function () {
   'allowed|indexOf|vetIndexOf|getDef|go|upOwner'.split('|').forEach(function (mbr) {
     equal(typeof coreInst[mbr], 'function', '<Core-Instance>.' + mbr + ' is a  method.');
   });
-  'trust,0|args|calls|route|defs|delay|cache|locked,0|nodeIds|pending,0|pendees|targets|phase,0|owner'.split('|').forEach(function (mbrSet) {
+  'trust,0|args|calls|route|data|delay|cache|locked,0|nodeIds|pending,0|pendees|targets|phase,0|owner'.split('|').forEach(function (mbrSet) {
       var
         split = mbrSet.split(','),
         mbr = split[0],
@@ -50,7 +50,7 @@ test('State', function () {
   var
     states = Flow.pkg('core')(new Flow({foo: 'bar'})).nodes,
     state = states[2];
-  'pendable,1|root|restrict|cb|defs|fncs|upOwn,0'.split('|').forEach(function (mbrSet) {
+  'pendable,1|root|restrict|cb|data|fncs|upOwn,0'.split('|').forEach(function (mbrSet) {
       var
         split = mbrSet.split(','),
         mbr = split[0],
@@ -65,7 +65,7 @@ test('State', function () {
   equal(state.root, 1, '<Core-State>.root is 1, by default.');
   equal(state.restrict, -1, '<Core-State>.restrict is -1, by default.');
   equal(state.root, 1, '<Core-State>.root is 1 by default.');
-  'scopeDefs|canTgt|within'.split('|').forEach(function (mbr) {
+  'scopeData|canTgt|within'.split('|').forEach(function (mbr) {
     equal(typeof state[mbr], 'function', '<Core-State>.' + mbr + '() is a method.');
   });
   equal(states[0].name, '_flow', 'The first state is named "_flow".');
@@ -75,7 +75,7 @@ test('State', function () {
 
 test('Proxy', function () {
   var flow = new Flow();
-  'cb|query|lock|def|args|target|go|wait|status|bless|owner'.split('|').forEach(function (mbr) {
+  'cb|query|lock|data|args|target|go|wait|status|bless|owner'.split('|').forEach(function (mbr) {
     equal(typeof flow[mbr], 'function', '<Core-Proxy>.' + mbr + '() is a method.');
   });
 });
@@ -741,22 +741,22 @@ test('_restrict', function () {
   equal(flow.target(0), true, 'Descendents of restricted states that are not restricted may navigate anywhere in the program.');
 });
 
-test('_def', function () {
+test('_data', function () {
   var
     corePkgDef = Flow.pkg('core'),
     states = corePkgDef(new Flow({
-      _def: 'foo',
+      _data: 'foo',
       a: {
-        _def: ['foo','bar']
+        _data: ['foo','bar']
       },
       b: {
-        _def: {foo:{a:1,b:{c:1}}, bar: 1}
+        _data: {foo:{a:1,b:{c:1}}, bar: 1}
       },
       c: {
-        _def: ['foo',['bar'], {baz:1}]
+        _data: ['foo',['bar'], {baz:1}]
       },
       d: {
-        _def: 1
+        _data: 1
       }
     })).nodes;
   'string,foo|array of strings,foo,bar|object,foo,bar|mixed array,foo,bar,baz|number,1'.split('|').forEach(function (keySet, idx) {
@@ -765,21 +765,21 @@ test('_def', function () {
       type = keys.splice(0, 1)[0],
       state = states[idx + 1];
     ok(
-      state.defs.length === keys.length && state.defs.every(function (def, defIdx) {
-        return def.hasOwnProperty('name') && def.hasOwnProperty('use') && def.hasOwnProperty('value') && def.name === keys[defIdx];
+      state.data.length === keys.length && state.data.every(function (data, defIdx) {
+        return data.hasOwnProperty('name') && data.hasOwnProperty('use') && data.hasOwnProperty('value') && data.name === keys[defIdx];
       }),
-      'When set to a ' + type + ' the expected definition configuration objects are compiled.'
+      'When set to a ' + type + ' the expected data configuration objects are compiled.'
     );
   });
   equal(
-    corePkgDef(new Flow({_def:null})).nodes[1].defs.length,
+    corePkgDef(new Flow({_data:null})).nodes[1].data.length,
     0,
-    'When set to null, no definition configuration objects are compiled.'
+    'When set to null, no data configuration objects are compiled.'
   );
   equal(
-    corePkgDef(new Flow({_def:undefined})).nodes[1].defs.length,
+    corePkgDef(new Flow({_data:undefined})).nodes[1].data.length,
     0,
-    'When set to undefined, no def configuration objects are compiled.'
+    'When set to undefined, no data configuration objects are compiled.'
   );
 });
 
@@ -1387,7 +1387,7 @@ test('.getDef()', function () {
   var corePkgDef = Flow.pkg('core'),
     pkgInst = corePkgDef(new Flow()),
     keyName = 'foo',
-    instDefs = pkgInst.defs,
+    instDefs = pkgInst.data,
     defTrackingObject;
   [[null,'"null"'], [undefined,'"undefined"'],['','an empty string'],['!@#$%^&*()','a non-alphanumeric string']].forEach(
     function (argSet) {
@@ -1398,14 +1398,14 @@ test('.getDef()', function () {
     !instDefs.hasOwnProperty(keyName)
     && (defTrackingObject = pkgInst.getDef(keyName))
     && instDefs.hasOwnProperty(keyName),
-    'Creates and returns a definition tracking object in <Core-Instance>.defs with the given alphanumeric string.'
+    'Creates and returns a data tracking object in <Core-Instance>.data with the given alphanumeric string.'
   );
-  deepEqual(pkgInst.getDef(keyName), defTrackingObject, 'Passing an existing key returns the same definition tracking object.');
+  deepEqual(pkgInst.getDef(keyName), defTrackingObject, 'Passing an existing key returns the same data tracking object.');
   ok(defTrackingObject.hasOwnProperty('name'), '<DTO>.name is a string.');
   equal(T.type(defTrackingObject.values), 'array', '<DTO>.values is an array.');
-  equal(pkgInst.getDef('bar', keyName).values[0], keyName, 'The second argument becomes the first entry in the definition tracking object\'s values array.');
+  equal(pkgInst.getDef('bar', keyName).values[0], keyName, 'The second argument becomes the first entry in the data tracking object\'s values array.');
   pkgInst.getDef(keyName, 1);
-  equal(defTrackingObject.values.length, 0, 'Passing a second argument for an existing definition tracking object does nothing.');
+  equal(defTrackingObject.values.length, 0, 'Passing a second argument for an existing data tracking object does nothing.');
 });
 
 test('.go()', function () {
@@ -1482,37 +1482,37 @@ test('.vetIndexOf()', function () {
 
 module('Core-State');
 
-test('.scopeDefs()', function () {
+test('.scopeData()', function () {
   var corePkgDef = Flow.pkg('core'),
     value = 'bar',
     value2 = 'woz',
     coreInst = corePkgDef(new Flow({
-      _def: {
+      _data: {
         foo: value,
         bar: value
       },
       a: {
-        _def: {foo: value2}
+        _data: {foo: value2}
       },
       b: {
-        _def: 'bar'
+        _data: 'bar'
       },
       c: {}
     })),
-    dtos = coreInst.defs,
+    dtos = coreInst.data,
     states = coreInst.nodes;
-  equal(states[1].scopeDefs(), undefined, 'Returns "undefined".');
+  equal(states[1].scopeData(), undefined, 'Returns "undefined".');
   ok(
-    states[1].defs.every(function (dco) {return dtos.hasOwnProperty(dco.name);}),
-    'Adds definition tracking objects for each definition configuration declared by a state\'s _def attribute.'
+    states[1].data.every(function (dco) {return dtos.hasOwnProperty(dco.name);}),
+    'Adds data tracking objects for each data configuration declared by a state\'s _data attribute.'
   );
-  states[2].scopeDefs();
-  equal(dtos.foo.values.length, 2, 'Scoping a state with an existing definition configuration, increments the .values array of the corresponding tracking object.');
-  equal(dtos.foo.values[0], value2, 'The first item of a definition tracking object matches the last value scoped.');
-  states[3].scopeDefs();
-  equal(dtos.bar.values[0], dtos.bar.values[1], 'Scoping a definition configuration with no value, duplicates the last value scoped.');
-  states[4].scopeDefs();
-  equal(dtos.bar.values.length, 2, 'Scoping a state that does not have defined variable configurations for existing definition tracking objects, does not increment their .values array.');
+  states[2].scopeData();
+  equal(dtos.foo.values.length, 2, 'Scoping a state with an existing data configuration, increments the .values array of the corresponding tracking object.');
+  equal(dtos.foo.values[0], value2, 'The first item of a data tracking object matches the last value scoped.');
+  states[3].scopeData();
+  equal(dtos.bar.values[0], dtos.bar.values[1], 'Scoping a data configuration with no value, duplicates the last value scoped.');
+  states[4].scopeData();
+  equal(dtos.bar.values.length, 2, 'Scoping a state that does not have defined variable configurations for existing data tracking objects, does not increment their .values array.');
 });
 
 test('.within()', function () {
@@ -2068,7 +2068,7 @@ test('.bless()', function  () {
   );
 });
 
-test('.def()', function () {
+test('.data()', function () {
   var flow = new Flow(),
     name = 'foo',
     value = 1,
@@ -2078,16 +2078,16 @@ test('.def()', function () {
     };
   ok(
     ['.', '', 0, 1, undefined, function () {}, null, NaN].every(function (arg) {
-      return flow.def(arg) === false;
+      return flow.data(arg) === false;
     }),
     'Returns false when the first argument is not a valid string or an empty/invalid object.'
   );
-  equal(flow.def(name), undefined, 'The value of undeclared variables is "undefined".');
-  deepEqual(flow.def(), [name], 'Returns an array of declared variables, when called without arguments.');
-  equal(flow.def(name, value), true, 'Returns true when setting a variable.');
-  equal(flow.def(name), value, 'Returns the last set value of a variable.');
-  equal(flow.def(batch), true, 'Returns true when given an object with one or more key/value pairs.');
-  equal(flow.def('bar'), 'baz', 'Passing an object allows batch addition of defined variable keys and values.');
+  equal(flow.data(name), undefined, 'The value of undeclared variables is "undefined".');
+  deepEqual(flow.data(), [name], 'Returns an array of declared variables, when called without arguments.');
+  equal(flow.data(name, value), true, 'Returns true when setting a variable.');
+  equal(flow.data(name), value, 'Returns the last set value of a variable.');
+  equal(flow.data(batch), true, 'Returns true when given an object with one or more key/value pairs.');
+  equal(flow.data('bar'), 'baz', 'Passing an object allows batch addition of defined variable keys and values.');
 });
 
 test('.args()', function () {
@@ -2906,7 +2906,7 @@ test('Traversal method behavior on a locked flow.', function () {
     equal(this.go(0), true, 'proxy.go() works internally.');
     equal(this.target(0, 'foo'), true, 'proxy.target() works internally.');
     equal(this.args(0), 'foo', 'Using proxy.target() internally does change arguments.');
-    equal(this.def('hello', 'chicken'), true, 'proxy.def() works internally.');
+    equal(this.data('hello', 'chicken'), true, 'proxy.data() works internally.');
     this.wait(function () {
         this.lock(0);
         equal(this.lock(), false, 'The flow is now unlocked.');
@@ -2920,8 +2920,8 @@ test('Traversal method behavior on a locked flow.', function () {
   equal(flow.lock(), true, 'Externally, after pausing navigation, proxy.lock() returns true.');
   equal(flow.args(0), 'foo', 'proxy.args() can get arguments externally.');
   equal(flow.args(0, 'bar'), false, 'proxy.args() will not set arguments externally.');
-  equal(flow.def('hello'), 'chicken', 'proxy.def() can get variables externally.');
-  equal(flow.def('hello', 'world'), true, 'proxy.def() can set variables externally.');
+  equal(flow.data('hello'), 'chicken', 'proxy.data() can get variables externally.');
+  equal(flow.data('hello', 'world'), true, 'proxy.data() can set variables externally.');
   equal(flow.go(0), false, 'pkg.go() does not work externally.');
   equal(flow.target(0, 'bar'), false, 'pkg.target() does not work externally.');
   equal(flow.args(0), 'foo', 'Using pkg.target() externally does not change arguments.');
@@ -2934,14 +2934,14 @@ test('Buffered execution, after numerous calls.', function () {
   var i = 0, callCnt = 100,
     arbitraryEventData = {},
     eventHandlerFlow = new Flow({
-      _def: {bufferCount: 0},
+      _data: {bufferCount: 0},
       _on: function (evtData) {
-        this.def('bufferCount', this.def('bufferCount') + 1);
+        this.data('bufferCount', this.data('bufferCount') + 1);
         this.go('//handleEvent/');
         this.wait(0);
       },
       handleEvent: function (eventData) {
-        equal(this.def('bufferCount'), callCnt, 'The flow was called ' + callCnt + ' times, and the target behavior executed once.');
+        equal(this.data('bufferCount'), callCnt, 'The flow was called ' + callCnt + ' times, and the target behavior executed once.');
         strictEqual(eventData, arbitraryEventData, 'The execution recieved the original arguments.');
         start();
       }

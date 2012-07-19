@@ -24,16 +24,16 @@
     // define the "core" package
     corePkgDef = Flow.pkg('core'),
     /*
-    this generator handles any nesting and combination of _def component values...
+    this generator handles any nesting and combination of _data component values...
     ...strings
-      > _def: 'foo'
+      > _data: 'foo'
     ...objects
-      > _def: {foo: 'bar'}
+      > _data: {foo: 'bar'}
     ...arrays of strings, arrays and objects
-      > _def: ['f', 'o', 'b']
-      > _def: [['f'], ['o'], ['b]]
-      > _def: [{foo: 'bar'}, {hello: 'world'}]
-      > _def: [['g',{foo: 'bar'}], 'alpha', {accts: 9}] // mixed
+      > _data: ['f', 'o', 'b']
+      > _data: [['f'], ['o'], ['b]]
+      > _data: [{foo: 'bar'}, {hello: 'world'}]
+      > _data: [['g',{foo: 'bar'}], 'alpha', {accts: 9}] // mixed
     */
     generateDataConfigurationObjects = genData.spawn(function (name, value, parent, dataset, flags, shared) {
       var
@@ -67,7 +67,7 @@
             keep = 0;
           }
         } else { // otherwise, when the parent is not an array (assume the parent is an object)...
-          // don't scan the children of this object (because it's the value of this _def config, not a new one)
+          // don't scan the children of this object (because it's the value of this _data config, not a new one)
           flags.scan = 0;
         }
       } else { // otherwise, when there is no parent...
@@ -176,7 +176,7 @@
     return inCommonJsEnv ? require(namespace) : window;
   }
 
-  // returns true when the argument is a valid def name
+  // returns true when the argument is a valid data name
   function isDefNameValid(name) {
     return name != null && /\w/.test(name);
   }
@@ -295,7 +295,7 @@
     // collection of nodes encountered while traversing
     pkg.route = [];
     // collection of defined variables
-    pkg.defs = {};
+    pkg.data = {};
     // init delay object
     pkg.delay = {};
     // collection of stores
@@ -317,8 +317,8 @@
     pkg.pendees = [];
     // collection of targeted nodes
     pkg.targets = [];
-    // stack of defined variables (begin with faux def stack)
-    pkg.defStack = [[]];
+    // stack of defined variables (begin with faux data stack)
+    pkg.dataStack = [[]];
     // identify the initial phase for this flow, 0 by default
     pkg.phase = 0;
     // flags when the _in or _out phases have notified the owning flow (if any)
@@ -553,8 +553,8 @@
         // return thes node's index
         return node.path;
       };
-      // add definition configurations for this node
-      node.defs = generateDataConfigurationObjects(tags._def);
+      // add data configurations for this node
+      node.data = generateDataConfigurationObjects(tags._data);
       // if there is a parent...
       if (parent) {
         // append to parent's cb function
@@ -860,14 +860,14 @@
         return -1;
       }
     },
-    // add a definition-tracking-object to this package
+    // add a data-tracking-object to this package
     getDef: function (name, initialValue) {
       var
         // alias self
         pkg = this
       ;
-      // return false when name is invalid or an existing or new definition tracking object
-      return isDefNameValid(name) && (pkg.defs.hasOwnProperty(name) ? pkg.defs[name] : (pkg.defs[name] = {
+      // return false when name is invalid or an existing or new data tracking object
+      return isDefNameValid(name) && (pkg.data.hasOwnProperty(name) ? pkg.data[name] : (pkg.data[name] = {
         name: name,
         values: arguments.length > 1 ? [initialValue] : []
       }));
@@ -1093,10 +1093,10 @@
     ;
     // if there is an out node...
     if (pkg.outNode) {
-      // if this node has definition configurations...
-      if (node.defs.length) {
-        // descope definitions in the outNode
-        pkg.outNode.scopeDefs(1);
+      // if this node has data configurations...
+      if (node.data.length) {
+        // descope datas in the outNode
+        pkg.outNode.scopeData(1);
       }
       // if this node has a store configuration...
       if (pkg.outNode.store) {
@@ -1115,9 +1115,9 @@
           pkg.locked = 1;
         }
         // if this node has daat configs...
-        if (node.defs.length) {
+        if (node.data.length) {
           // scope defined variables for this node
-          node.scopeDefs();
+          node.scopeData();
         }
         // if this node has a store configuration...
         if (node.store) {
@@ -1281,7 +1281,7 @@
   };
 
   // add method to de/scope defined variables
-  corePkgDef.node.scopeDefs = function (descope) {
+  corePkgDef.node.scopeData = function (descope) {
     var
       // alias self (for closure)
       node = this,
@@ -1289,19 +1289,19 @@
       pkg = node.pkg
     ;
     // if there are defined variables...
-    if (node.defs.length) {
+    if (node.data.length) {
       // if descoping defined variables...
       if (descope) {
-        // remove set of definitions from the stack
-        pkg.defStack.shift();
+        // remove set of datas from the stack
+        pkg.dataStack.shift();
       } else { // otherwise, when adding defined variables...
         // capture names defined by this node
-        pkg.defStack.unshift(node.defs);
+        pkg.dataStack.unshift(node.data);
       }
-      // with each definition configuration object in this node...
-      node.defs.forEach(function (defCfg) {
+      // with each data configuration object in this node...
+      node.data.forEach(function (defCfg) {
         var
-          // get the definition tracking object with this name
+          // get the data tracking object with this name
           dto = pkg.getDef(defCfg.name)
         ;
         // if descoping defined variables...
@@ -1310,10 +1310,10 @@
           dto.values.shift();
           // if no other values exist...
           if (!dto.values.length) {
-            // remove the definition tracking object
-            delete pkg.defs[defCfg.name];
+            // remove the data tracking object
+            delete pkg.data[defCfg.name];
           }
-        } else { // otherwise, when scoping a definition tracking object...
+        } else { // otherwise, when scoping a data tracking object...
           // add new or copied value, based on the config
           dto.values.unshift(defCfg.use ? defCfg.value : dto.values[0]);
         }
@@ -1548,14 +1548,14 @@
     return false;
   };
 
-  // access and edit scoped definition variables for a node
-  corePkgDef.proxy.def = function (name, value) {
+  // access and edit scoped data variables for a node
+  corePkgDef.proxy.data = function (name, value) {
     var
       // get package
       pkg = corePkgDef(this),
       // get number of arguments passed
       argCnt = arguments.length,
-      // loop definition
+      // loop data
       d,
       // value to return (default is false)
       rtn = false
@@ -1567,7 +1567,7 @@
         case 'string':
           // if the name is valid...
           if (isDefNameValid(name)) {
-            // resolve definition tracker
+            // resolve data tracker
             d = pkg.getDef(name);
             // if a value was passed...
             if (argCnt > 1) {
@@ -1585,8 +1585,8 @@
         case 'boolean':
           // if only given one truthy argument...
           if (name && argCnt == 1) {
-            // with each definition configuration from the last scoped node...
-            rtn = pkg.defStack[0].map(function (definedVariableConfiguration) {
+            // with each data configuration from the last scoped node...
+            rtn = pkg.dataStack[0].map(function (definedVariableConfiguration) {
               // capture name
               return definedVariableConfiguration.name;
             });
@@ -1608,7 +1608,7 @@
               // with each name/value pair...
               d.forEach(function (key) {
                 // make recursive call to set this name/value pair
-                pkg.proxy.def(key, name[key]);
+                pkg.proxy.data(key, name[key]);
               });
               // flag batch success
               rtn = true;
@@ -1618,7 +1618,7 @@
       }
     } else { // otherwise, when passed no arguments...
       // prepare to return an array
-      rtn = Object.keys(pkg.defs);
+      rtn = Object.keys(pkg.data);
       // sort defined variable names
       rtn.sort();
     }
