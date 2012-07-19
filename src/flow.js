@@ -985,11 +985,15 @@
         if (
           // there is a cache of package instances, and...
           store[2][0] &&
-          // any instance states have changed
-          store[2][0][0].some(function (pkgInst, idx) {
-            // flag true when the current state index does not match the cached state index
-            return pkgInst.tank.currentIndex != store[2][0][1][idx];
-          })
+          (
+            // there are no instances, or...
+            !store[2][0][0].length ||
+            // any instance states have changed
+            store[2][0][0].some(function (pkgInst, idx) {
+              // flag true when the current state index does not match the cached state index
+              return pkgInst.tank.currentIndex != store[2][0][1][idx];
+            })
+          )
         ) {
           // clear the cache
           store[2][0] = 0;
