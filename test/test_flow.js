@@ -791,7 +791,7 @@ test('_store', function () {
     corePkgDef = Flow.pkg('core'),
     flow = new Flow({
       _on: function () {
-        this.walk(1);
+        this.walk(true);
       },
       capture: {
         forced: {
@@ -1861,7 +1861,7 @@ test('.walk()', function () {
       deep: {
         _on: function () {
           tick = 0;
-          this.walk(1);
+          this.walk(true);
         },
         a: {
           b: {
@@ -1871,7 +1871,82 @@ test('.walk()', function () {
           }
         },
         d: function () {
-          equal(tick, 1, 'Passing a truthy value walks an entire branch.');
+          equal(tick, 1, 'Passing `true` walks an entire branch.');
+        }
+      },
+      direct: {
+        _root: 1,
+        _on: function () {
+          tick = 0;
+          this.walk('/jump/to/state');
+        },
+        jump: {
+          _on: function () {
+            tick++;
+          },
+          to: {
+            _on: function () {
+              tick++;
+            },
+            state: {
+              _on: function () {
+                var
+                  targetCount = this.status().targets.length;
+                ok(1, 'The walk target is traversed.');
+                this.walk();
+                equal(targetCount, this.status().targets.length, 'Ignores calls to walk children already being walked.');
+                tick++;
+              },
+              a: function () {
+                tick++;
+              },
+              b: '//direct/jump/to/state/a/',
+              c: '//direct/jump/to/state/a/',
+              d: '//direct/jump/to/state/a/',
+              end: function () {
+                equal(tick, 5, 'Passing a state-query, walks the target state and children.');
+                this.walk('/jump/to/branch', true);
+              }
+            },
+            branch: {
+              _on: function () {
+                var
+                  targetCount = this.status().targets.length;
+                tick = 0;
+                this.walk(true);
+                equal(targetCount, this.status().targets.length, 'Ignores calls to walk descendents already being walked.');
+              },
+              a: {
+                _on: function () {
+                  tick++;
+                },
+                a: {
+                  _on: function () {
+                    tick++;
+                  },
+                  end: function () {
+                    equal(tick, 2, 'Passing a state-query, walks the target state and descendents.');
+                    this.go('/jump/to/self');
+                  }
+                }
+              }
+            },
+            self: {
+              _in: function () {
+                tick = 0;
+              },
+              _on: function () {
+                if (!this.status().loops) {
+                  this.walk('.');
+                }
+                tick++;
+              },
+              child: 1,
+              child2: function () {
+                equal(tick, 1, 'If targeting the current state via a query, the current state is not repeated.');
+              }
+            }
+          }
         }
       }
     })

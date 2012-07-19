@@ -1746,24 +1746,40 @@
     return !!result;
   };
 
-  // traverse all child states
-  // TODO - accept arbitrary state query
-  corePkgDef.proxy.walk = function (entireBranch) {
+  // traverse a state and it's child or descendent state
+  corePkgDef.proxy.walk = function () {
     var
       // get package
       pkg = corePkgDef(this),
-      // get the current state
-      curState = pkg.nodes[pkg.tank.currentIndex],
-      // child states to traverse
-      children = entireBranch ? curState.pc[0] : curState.children
-    ;
-    // if the targets are not already queued...
-    if (pkg.targets.slice(0, children.length).join() !== children.join()) {
-      // return result of calling go with each child's state-index
-      return this.go.apply(this, children);
+      // get the current index
+      currentIndex = pkg.tank.currentIndex,
+      // flag when the first argument is a state-query
+      isStateQuery = arguments.length > 1 || smellsLikeAStateQuery(arguments[0]),
+      // get the state index to walk
+      walkTarget = isStateQuery ? pkg.vetIndexOf(arguments[0]) : currentIndex,
+      // states to traverse - begin with the target
+      allTargets = [];
+
+    // if there is a valid index to walk...
+    if (~walkTarget) {
+      // if the walk target is not the current index or the next target...
+      if (walkTarget !== currentIndex && pkg.targets[0] !== walkTarget) {
+        // add to states to traverse
+        allTargets[0] = walkTarget;
+      }
+      // resolve state
+      walkTarget = pkg.nodes[walkTarget];
+      // add child or descendent targets
+      allTargets = allTargets.concat(arguments[1] === true || (arguments[0] === true && arguments.length < 2) ? walkTarget.pc[0] : walkTarget.children);
+      // if these targets are not already queued...
+      if (pkg.targets.slice(0, allTargets.length).join() !== allTargets.join()) {
+        // return result of adding prepending these targets
+        return this.go.apply(this, allTargets);
+      }
     }
     // (otherwise) flag failure
     return false;
+
   };
 
   // delay traversing
