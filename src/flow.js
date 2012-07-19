@@ -1421,7 +1421,7 @@
         // add callback to cache
         pkg.cbs[arg] = function () {
           // target the query path with the given arguments
-          return pkg.proxy.target.apply(pkg.proxy, [arg].concat(arguments));
+          return pkg.proxy.target.apply(pkg.proxy, [arg].concat([].slice.call(arguments)));
         };
       }
       // return callback from cache
