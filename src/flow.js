@@ -844,15 +844,21 @@
     //  return index of the resolved node reference, or -1 when it's invalid or unavailable from the given/current node
     vetIndexOf: function (qry, node) {
       var
-        // alias self`
+        // alias self
         pkg = this,
         // get the index of the target node
         targetIdx = pkg.indexOf(qry, node)
       ;
-      // use the current node, when node is omitted
-      node = node || pkg.nodes[pkg.tank.currentIndex];
-      // return the target index or -1, based on whether the target is valid, given the trust status of the package or the restrictions of the current node
-      return (~targetIdx && (pkg.allowed() || node.canTgt(pkg.nodes[targetIdx]))) ? targetIdx : -1;
+      // if the target index exists (speed?)...
+      if (~targetIdx) {
+        // use the current node, when node is omitted
+        node = node || pkg.nodes[pkg.tank.currentIndex];
+        // return the target index or -1, based on whether the target is valid, given the trust status of the package or the restrictions of the current node
+        return pkg.allowed() || node.canTgt(pkg.nodes[targetIdx]) ? targetIdx : -1;
+      } else { // otherwise, when the index is invalid...
+        // return faux no-index result
+        return -1;
+      }
     },
     // add a definition-tracking-object to this package
     getDef: function (name, initialValue) {
