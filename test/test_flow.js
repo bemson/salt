@@ -1225,7 +1225,8 @@ test('_import', function () {
 
   prgm.b = {
     _import: importPath,
-    _lock: 0
+    _lock: 0,
+    _pendable: 0
   };
   tagFlow = new Flow(prgm);
   ok(
@@ -1238,6 +1239,12 @@ test('_import', function () {
     tagFlow.lock() === false &&
       longFlow.lock() === true,
     'Attributes of an importing state override attributes of the imported state.'
+  );
+
+  equal(
+    tagFlow.status().pendable,
+    false,
+    'Attributes from the importing state are compiled as if present in the imported state.'
   );
 });
 

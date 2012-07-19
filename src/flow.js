@@ -353,11 +353,11 @@
         node.imports = node.imported = 1;
         // if the node's value is a valid object...
         if (node.value && typeof node.value == 'object') {
-          // with each attribute...
-          for (dynamicVariable in tags) {
-            // if present in the node's value and not inherited...
-            if (node.value.hasOwnProperty(dynamicVariable)) {
-              // override with the node's value
+          // with each member of the real value...
+          for (dynamicVariable in node.value) {
+            // if a valid tag...
+            if (node.value.hasOwnProperty(dynamicVariable) && corePkgDef.tagKey.test(dynamicVariable) && !corePkgDef.badKey.test(dynamicVariable)) {
+              // add new or override existing tag - previously parsed by panzer
               tags[dynamicVariable] = node.value[dynamicVariable];
             }
           }
