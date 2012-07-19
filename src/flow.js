@@ -345,8 +345,10 @@
       ;
       // init collection of precompilation values for this node
       node.pc = {};
-      // begin precompiled descendents index - starting with this node's children
-      node.pc[0] = [];//node.children.slice(0);
+      // begin precompiled descendents index
+      node.pc[0] = [];
+      // init child index
+      node.pc[1] = '|';
       // if this node's value or _import property is a valid path...
       if (validImportTag.test(typeof node.value == 'string' ? node.value : (typeof node.value == 'object' ? node.value._import : ''))) {
         // flag that this is a (valid) imports and imported state
@@ -372,12 +374,14 @@
       pkg.nodeIds[node.path] = idx;
       // if there is a parent state...
       if (parent) {
-        // add to paths
+        // add to known paths
         pkg.pc[0] += node.path + '|';
-        // add to states
+        // add to known states
         pkg.pc[1] += node.name + '|';
         // add to the parent's descendents collection
         parent.pc[0].push(node.index, node.pc[0]);
+        // add to parent's children collection
+        parent.pc[1] += node.name + '|';
       }
       // add reference to the package-instance containing this node
       node.pkg = pkg;
@@ -785,8 +789,11 @@
                       break;
 
                       default:
-                        // if the token is not empty..
-                        if (token.value) {
+                        // if the token is a child state...
+                        if (~qryNode.pc[1].indexOf('|' + token.value + '|')) {
+                          // set idx to the matching child state
+                          idx = pkg.nodeIds[qryNode.path + token.value + '/'];
+                        } else if (token.value) { // or, when the token is not an empty string...
                           // fail parsing due to unrecognized token
                           idx = -1;
                         }
