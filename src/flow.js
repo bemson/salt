@@ -1152,7 +1152,7 @@
       // note that we are calling this program function
       pkg.calls.push(node.index + '.' + phase);
       // execute function, in scope of the proxy - pass arguments when there are no more targets
-      pkg.result = node.fncs[phase].apply(pkg.proxy, (pkg.targets.length) ? [] : pkg.args);
+      pkg.result = node.fncs[phase].apply(pkg.proxy, (pkg.targets.length ? [] : pkg.args));
       // untrust api calls
       pkg.trust = 0;
     }
