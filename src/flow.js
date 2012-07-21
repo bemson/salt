@@ -903,7 +903,7 @@
         pkg = this
       ;
       // return the result of targeting the owner when present and the path is valid - pass the proxy and it's current status
-      return pkg.owner && (stateQuery !== '' || stateQuery !== -1) && pkg.owner.proxy.target(stateQuery, pkg.proxy, pkg.proxy.status());
+      return pkg.owner && stateQuery !== '' && stateQuery !== -1 && pkg.owner.proxy.target(stateQuery, pkg.proxy, pkg.proxy.status());
     },
     // search store (or given store items) with the given criteria
     inStore: function (criteriaSet, itemStore) {
