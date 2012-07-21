@@ -351,8 +351,6 @@
       node.pc[1] = '|';
       // if this node's value or _import property is a valid path...
       if (validImportTag.test(typeof node.value == 'string' ? node.value : (typeof node.value == 'object' ? node.value._import : ''))) {
-        // flag that this is a (valid) imports and imported state
-        node.imports = node.imported = 1;
         // if the node's value is a valid object...
         if (node.value && typeof node.value == 'object') {
           // with each member of the real value...
@@ -364,11 +362,6 @@
             }
           }
         }
-      } else { // otherwise, when this node is not imported...
-        // set imports to a falsy value
-        node.imports = 0;
-        // flag whether this state's parent is part of an imported branch
-        node.imported = parent ? parent.imported : 0;
       }
       // cache this nodes index by it's unique path
       pkg.nodeIds[node.path] = idx;
