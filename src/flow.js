@@ -272,8 +272,8 @@
       // flag indicates when the program wants an owner
       childWantsToBind,
       // delimiter for stored strings
-      randomDelimiter = Math.random()
-    ;
+      randomDelimiter = Math.random();
+
     // collection of custom callback queries
     pkg.cbs = {};
     // collection of arguments for traversal functions
@@ -329,8 +329,8 @@
         // alias node tags
         tags = node.tags,
         // multiple use variable
-        dynamicVariable
-      ;
+        dynamicVariable;
+
       // init collection of precompilation values for this node
       node.pc = {};
       // collection of pre-compiled child state names
@@ -1533,8 +1533,8 @@
       // loop data
       d,
       // value to return (default is false)
-      rtn = false
-    ;
+      rtn = false;
+
     // if passed arguments...
     if (argCnt) {
       // based on the type of name...
@@ -1611,8 +1611,8 @@
       // get number of arguments passed
       argCnt = arguments.length,
       // get type of first argument
-      idxType = typeof idx
-    ;
+      idxType = typeof idx;
+
     // if getting a single value, or setting arguments on a permitted or unlocked flow...
     if (argCnt === 1 || (argCnt && (pkg.allowed() || !pkg.locked))) {
       // if idx is an array...
@@ -1652,8 +1652,8 @@
      // alias this package
       pkg = corePkgDef(this),
       // resolve a node index from qry, or nothing if allowed or unlocked
-      tgtIdx = (pkg.allowed() || !pkg.locked) ? pkg.vetIndexOf(qry) : -1
-    ;
+      tgtIdx = (pkg.allowed() || !pkg.locked) ? pkg.vetIndexOf(qry) : -1;
+
     // if the destination node is valid, and the flow can move...
     if (~tgtIdx) {
       // capture arguments after the tgt
@@ -1692,8 +1692,8 @@
       // collection of targets to add to targets
       waypoints = [],
       // success status for this call
-      result = 0
-    ;
+      result = 0;
+
     // if...
     if (
       // allowed or unlocked and ...
