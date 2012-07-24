@@ -511,6 +511,24 @@
         node.lastStore = parent ? parent.lastStore : 0;
       }
 
+      // if this node has a _walk tag...
+      if (tags.hasOwnProperty('_walk')) {
+        // set walk to a new or copied array, based on the booly value
+        node.walk = tags._walk ? [] : 0;
+        // set last walk to this state's walk
+        node.lastWalk = node.walk;
+      } else {
+        // set walk property to nil
+        node.walk = 0;
+        // pass thru the last walk array defined - if any
+        node.lastWalk = parent && parent.lastWalk || 0;
+        // if there is a lastWalk array...
+        if (node.lastWalk) {
+          // add this node's index to the array
+          node.lastWalk[node.lastWalk.length] = node.index;
+        }
+      }
+
       // capture when the parent lock property is true
       node.plock = parent ? parent.lock : 0;
       // define callback function - a curried call to .target()
@@ -550,8 +568,9 @@
     });
     // clean up/finalize compilation support/tracking properties
     pkg.nodes.forEach(function (node) {
-      // remove lastStore - no longer needed
+      // remove parse tracking members
       delete node.lastStore;
+      delete node.lastWalk;
     });
     // set owner to default
     pkg.owner = 0;
@@ -1125,6 +1144,17 @@
     if (!~tank.targetIndex) {
       // remove this target node
       pkg.targets.shift();
+    }
+    // if traversing "on" a walk state...
+    if (node.walk && !pkg.phase) {
+      // if the last walk state matches the next target (if any)...
+      if (pkg.targets[0] && pkg.targets[0] === node.walk.slice( -1 )[0]) {
+        // prepend all but the last state in this node's walk sequence
+        pkg.targets = node.walk.slice( 0, -1 ).concat( pkg.targets );
+      } else { // otherwise, when merging will not cause adjacent duplicates...
+        // prepend this node's walk sequence
+        pkg.targets = node.walk.concat( pkg.targets );
+      }
     }
     // if there is a function for this phase...
     if (node.fncs[phase]) {
