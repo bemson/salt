@@ -150,18 +150,6 @@
         flags.omit = 1;
       }
     }),
-    // return non-array values
-    flattenArrays = genData.spawn(function (name, value, parent, dataset, flags) {
-      // don't inclue any data objects
-      flags.omit = 1;
-      // if this value is not an array...
-      if (!(value instanceof Array)) {
-        // don't scan this value further
-        flags.scan = 0;
-        // add this value to the returned dataset
-        dataset[dataset.length] = value;
-      }
-    }),
     // collection of active flows
     activeFlows = [],
     // tests when the string of an import attribute is valid
@@ -345,10 +333,8 @@
       ;
       // init collection of precompilation values for this node
       node.pc = {};
-      // begin precompiled descendents index
-      node.pc[0] = [];
-      // init child index
-      node.pc[1] = '|';
+      // collection of pre-compiled child state names
+      node.pc[0] = '|';
       // if this node's value or _import property is a valid path...
       if (validImportTag.test(typeof node.value == 'string' ? node.value : (typeof node.value == 'object' ? node.value._import : ''))) {
         // if the node's value is a valid object...
@@ -371,10 +357,8 @@
         pkg.pc[0] += node.path + '|';
         // add to known states
         pkg.pc[1] += node.name + '|';
-        // add to the parent's descendents collection
-        parent.pc[0].push(node.index, node.pc[0]);
-        // add to parent's children collection
-        parent.pc[1] += node.name + '|';
+        // add to parent's collection of child names
+        parent.pc[0] += node.name + '|';
       }
       // add reference to the package-instance containing this node
       node.pkg = pkg;
@@ -569,8 +553,6 @@
     pkg.nodes.forEach(function (node) {
       // remove lastStore - no longer needed
       delete node.lastStore;
-      // flatten the precompiled collection into an array of values
-      node.pc[0] = flattenArrays(node.pc[0]);
     });
     // set owner to default
     pkg.owner = 0;
@@ -782,8 +764,8 @@
                       break;
 
                       default:
-                        // if the token is a child state...
-                        if (~qryNode.pc[1].indexOf('|' + token.value + '|')) {
+                        // if the token is the name of a child state...
+                        if (~qryNode.pc[0].indexOf('|' + token.value + '|')) {
                           // set idx to the matching child state
                           idx = pkg.nodeIds[qryNode.path + token.value + '/'];
                         } else if (token.value) { // or, when the token is not an empty string...
@@ -1743,42 +1725,6 @@
     }
     // return result as boolean
     return !!result;
-  };
-
-  // traverse a state and it's child or descendent state
-  corePkgDef.proxy.walk = function () {
-    var
-      // get package
-      pkg = corePkgDef(this),
-      // get the current index
-      currentIndex = pkg.tank.currentIndex,
-      // flag when the first argument is a state-query
-      isStateQuery = arguments.length > 1 || smellsLikeAStateQuery(arguments[0]),
-      // get the state index to walk
-      walkTarget = isStateQuery ? pkg.vetIndexOf(arguments[0]) : currentIndex,
-      // states to traverse - begin with the target
-      allTargets = [];
-
-    // if there is a valid index to walk...
-    if (~walkTarget) {
-      // if the walk target is not the current index or the next target...
-      if (walkTarget !== currentIndex && pkg.targets[0] !== walkTarget) {
-        // add to states to traverse
-        allTargets[0] = walkTarget;
-      }
-      // resolve state
-      walkTarget = pkg.nodes[walkTarget];
-      // add child or descendent targets
-      allTargets = allTargets.concat(arguments[1] === true || (arguments[0] === true && arguments.length < 2) ? walkTarget.pc[0] : walkTarget.children);
-      // if these targets are not already queued...
-      if (pkg.targets.slice(0, allTargets.length).join() !== allTargets.join()) {
-        // return result of adding prepending these targets
-        return this.go.apply(this, allTargets);
-      }
-    }
-    // (otherwise) flag failure
-    return false;
-
   };
 
   // delay traversing
