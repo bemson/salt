@@ -259,7 +259,6 @@
   // initialize the package instance with custom properties
   // only argument is the object passed after the program when calling "new Flow(program, extraArg)"
   corePkgDef.init = function (cfg) {
-    // init vars
     var
       // alias self
       pkg = this,
