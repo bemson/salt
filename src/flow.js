@@ -49,8 +49,8 @@
           value: data.value,
           // flag to use this value (true by default)
           use: 1
-        }
-      ;
+        };
+
       // omit everything
       flags.omit = 1;
       // flag when this is an object
@@ -113,8 +113,8 @@
         // alias self
         data = this,
         // shorthand forward-slash character
-        slash = '/'
-      ;
+        slash = '/';
+
       // init set property (default is false, or "not a set")
       data.set = 0;
       // capture parent
@@ -153,8 +153,7 @@
     // collection of active flows
     activeFlows = [],
     // tests when the string of an import attribute is valid
-    r_validPath = /^\/\/(?:\w+\/)+/
-  ;
+    r_validPath = /^\/\/(?:\w+\/)+/;
 
   // version string
   Flow.version = '0.4.0';
@@ -172,8 +171,8 @@
   // flag when the given argument is a state query
   function smellsLikeAStateQuery(val) {
     var
-      valType = typeof val
-    ;
+      valType = typeof val;
+
     // flag when val is...
     return (
       // a positive number
@@ -629,8 +628,8 @@
               [].concat(tags._store.states).forEach(function (stateCriteria) {
                 var
                   // capture the store indice to target, based on whether this is a number or string
-                  stateNameOrIndex = typeof stateCriteria == 'number' ? 3 : 2
-                ;
+                  stateNameOrIndex = typeof stateCriteria == 'number' ? 3 : 2;
+
                 // add to index or name criteria, based on the type of value
                 node.store[dynamicVariable][stateNameOrIndex] = node.store[dynamicVariable][stateNameOrIndex].concat(stateCriteria);
               });
@@ -689,8 +688,8 @@
       node.cb = function () {
         var
           // capture any arguments
-          args = [].slice.call(arguments)
-        ;
+          args = [].slice.call(arguments);
+
         // prepend this node's index as the target
         args.unshift(idx);
         // invoke the proxies target method, pass along arguments
@@ -829,8 +828,8 @@
         // the token being parsed
         token,
         // the index to return for the resolved node (default is -1, indicates when the node could not be found)
-        idx = -1
-      ;
+        idx = -1;
+
       // use the current node, when node is omitted
       node = node || pkg.nodes[pkg.tank.currentIndex];
       // based on the type of qry...
@@ -994,8 +993,8 @@
         // alias self
         pkg = this,
         // get the index of the target node
-        targetIdx = pkg.indexOf(qry, node)
-      ;
+        targetIdx = pkg.indexOf(qry, node);
+
       // if the target index exists (speed?)...
       if (~targetIdx) {
         // use the current node, when node is omitted
@@ -1011,8 +1010,8 @@
     getDef: function (name, initialValue) {
       var
         // alias self
-        pkg = this
-      ;
+        pkg = this;
+
       // return false when name is invalid or an existing or new data tracking object
       return isDefNameValid(name) && (pkg.data.hasOwnProperty(name) ? pkg.data[name] : (pkg.data[name] = {
         name: name,
@@ -1023,8 +1022,8 @@
     go: function () {
       var
         // alias self
-        pkg = this
-      ;
+        pkg = this;
+
       // unpause this flow
       pkg.pause = 0;
       // clear the timer
@@ -1035,8 +1034,8 @@
     delTimer: function () {
       var
         // alias self
-        pkg = this
-      ;
+        pkg = this;
+
       // if there is an existing timer...
       if (pkg.delay.timer) {
         // clear any existing delay
@@ -1054,16 +1053,16 @@
     upOwner: function (stateQuery) {
       var
         // alias self
-        pkg = this
-      ;
+        pkg = this;
+
       // return the result of targeting the owner when present and the path is valid - pass the proxy and it's current status
       return pkg.owner && stateQuery !== '' && stateQuery !== -1 && pkg.owner.proxy.target(stateQuery, pkg.proxy, pkg.proxy.status());
     },
     // search store (or given store items) with the given criteria
     inStore: function (criteriaSet, itemStore) {
       var
-        pkg = this
-      ;
+        pkg = this;
+
       // with instances in the current store...
       return (itemStore || pkg.stores[0][0])
         // reduce to instances that match the given criteria
@@ -1081,15 +1080,15 @@
               curState.name,
               // 3 - state index
               curState.index
-            ]
-          ;
+            ];
+
           // flag whether this core-instance satisfies the given criteria
           return criteriaSet.slice(0, 2).every(
               function (criterias, idx) {
                 var
                   // the value to compare against each criteria option
-                  comparisonValue = comparisonValues[idx]
-                ;
+                  comparisonValue = comparisonValues[idx];
+
                 // for each filter criteria...
                 return !criterias.length ||
                   criterias.some(idx == 1 ?
@@ -1111,8 +1110,8 @@
               [[], [], criteriaSet[2], criteriaSet[3]].some(function (criterias, idx) {
                 var
                   // the value to compare against each criteria option
-                  comparisonValue = comparisonValues[idx]
-                ;
+                  comparisonValue = comparisonValues[idx];
+
                 // for each filter criteria...
                 return criterias.some(idx == 1 ?
                     // search paths
@@ -1138,8 +1137,8 @@
         // the current storage tracking object
         store = pkg.stores[0],
         // loop var
-        i
-      ;
+        i;
+
       if (store) {
         // if any flows have changed their current state...
         if (
@@ -1197,8 +1196,8 @@
       // capture the delay callback (if any)
       delayFnc = pkg.delay.callback,
       // placeholder for node inquiries (if any)
-      node
-    ;
+      node;
+
     // add this package to the private collection
     activeFlows.unshift(pkg);
     // add proxy to the public collection
@@ -1236,8 +1235,8 @@
       // alias tank
       tank = pkg.tank,
       // the node being traversed (prototyped, read-only value)
-      node = pkg.nodes[tank.currentIndex]
-    ;
+      node = pkg.nodes[tank.currentIndex];
+
     // if there is an out node...
     if (pkg.outNode) {
       // if this node has data configurations...
@@ -1347,8 +1346,7 @@
       // flag when this flow is paused, pending, or not at the _on phase
       blocked = pkg.pause || pkg.pending || pkg.phase,
       // placeholder - the node navigation is ending on
-      node = pkg.nodes[tank.currentIndex]
-    ;
+      node = pkg.nodes[tank.currentIndex];
 
     // if not blocked and there are more targets...
     if (!blocked && pkg.targets.length) {
@@ -1432,8 +1430,8 @@
   corePkgDef.node.canTgt = function (targetNode) {
     var
       // alias the restrict node (if any)
-      restrictingNode = this.pkg.nodes[this.restrict]
-    ;
+      restrictingNode = this.pkg.nodes[this.restrict];
+
     // return true if this node is not restricted, or when the targetNode is within the restricting node's path
     return !restrictingNode || targetNode.within(restrictingNode);
   };
@@ -1444,8 +1442,8 @@
       // alias self (for closure)
       node = this,
       // alias the package containing this node
-      pkg = node.pkg
-    ;
+      pkg = node.pkg;
+
     // if there are defined variables...
     if (node.data.length) {
       // if descoping defined variables...
@@ -1460,8 +1458,8 @@
       node.data.forEach(function (defCfg) {
         var
           // get the data tracking object with this name
-          dto = pkg.getDef(defCfg.name)
-        ;
+          dto = pkg.getDef(defCfg.name);
+
         // if descoping defined variables...
         if (descope) {
           // remove current value from values
@@ -1523,8 +1521,8 @@
       // capture the current store tracking object (if any)
       currentStorageTracker = pkg.stores[0],
       // placeholder array, for temporary store configs
-      ary = []
-    ;
+      ary = [];
+
     // if removing this node's store configuration...
     if (remove) {
       // if this configuration created a store...
@@ -1562,8 +1560,8 @@
   corePkgDef.node.within = function (nodeRef) {
     var
       // resolve the parent node to check
-      parentNode = arguments.length ? (typeof nodeRef === 'object' ? nodeRef : this.pkg.nodes[nodeRef]) : this.pkg.nodes[this.pkg.tank.currentIndex]
-    ;
+      parentNode = arguments.length ? (typeof nodeRef === 'object' ? nodeRef : this.pkg.nodes[nodeRef]) : this.pkg.nodes[this.pkg.tank.currentIndex];
+
     // return whether the current node is within the parent node - auto-pass when parentNode is the flow state
     return parentNode ? parentNode !== this && (!parentNode.index || !this.path.indexOf(parentNode.path)) : false;
   };
@@ -1576,8 +1574,8 @@
       // alias nodes
       states = pkg.nodes,
       // the type of the given argument
-      argType = typeof arg
-    ;
+      argType = typeof arg;
+
     // if not passed anything...
     if (!arguments.length) {
       // return callback for the program (root) state
@@ -1614,8 +1612,8 @@
       // alias for minification
       args = arguments,
       // node indice resolved by query
-      nodes = []
-    ;
+      nodes = [];
+
     // return false, a string or array of strings, based on whether a single node reference fails
     return (
       // at least one parameter
@@ -1644,8 +1642,8 @@
   corePkgDef.proxy.lock = function (set) {
     var
       // alias package instance
-      pkg = corePkgDef(this)
-    ;
+      pkg = corePkgDef(this);
+
     // if arguments were passed...
     if (arguments.length) {
       // if allowed to change the lock status...
@@ -1666,8 +1664,8 @@
   corePkgDef.proxy.bless = function (fnc) {
     var
       // placeholder for package instance
-      pkg = corePkgDef(this)
-    ;
+      pkg = corePkgDef(this);
+
     // if allowed and given a function...
     if (pkg.allowed() && typeof fnc === 'function') {
       // return "blessed" function
@@ -1680,8 +1678,8 @@
             // flag when we're already in a blessed function by testing type of the locked property
             alreadyInBlessedFunction = typeof pkg.locked === 'boolean',
             // placeholder to capture execution result
-            rslt
-          ;
+            rslt;
+
           // ensure we're executing in a trusted environment
           pkg.trust = 1;
           // if not already in a blessed function, and we're currently locked...
@@ -1885,8 +1883,8 @@
       [].slice.call(arguments).every(function (nodeRef) {
         var
           // resolve index of this reference
-          idx = pkg.vetIndexOf(nodeRef)
-        ;
+          idx = pkg.vetIndexOf(nodeRef);
+
         // add to waypoints
         waypoints.push(idx);
         // return true when the resolved index is not -1
@@ -1930,8 +1928,8 @@
       // use last argument as a time
       time = args[argLn - 1],
       // indicates result of call
-      result = 0
-    ;
+      result = 0;
+
     // if allowed and the the argument's are valid...
     if (pkg.allowed() && (!argLn || (time >= 0 && typeof time === 'number' && (noAction || ~delayNodeIdx || isFnc)))) {
       // flag that we've paused this flow
@@ -1972,8 +1970,8 @@
   corePkgDef.proxy.owner = function () {
     var
       // alias this flow's core-instance
-      pkg = corePkgDef(this)
-    ;
+      pkg = corePkgDef(this);
+
     // return the owning flow's proxy or true when external, otherwise return false when not owned
     return pkg.owner && (pkg.allowed() ? pkg.owner.proxy : true) || false;
   };
@@ -2026,8 +2024,8 @@
       // number of changes made to the master store
       storeChanged = 0,
       // the flag for the given command - default is false
-      commandFlag = 0
-    ;
+      commandFlag = 0;
+
     // if given arguments...
     if (args.length) {
       // if the first argument is an array, or there are two arguments and the second is a boolean....
@@ -2054,8 +2052,8 @@
                 // retrieve this flow's corresponding core-instance
                 pkgInst = corePkgDef(flow),
                 // get index of this instance (if any)
-                pkgIndex = store[0].indexOf(pkgInst)
-              ;
+                pkgIndex = store[0].indexOf(pkgInst);
+
               // if in the store...
               if (~pkgIndex) {
                 // remove from store
@@ -2071,8 +2069,8 @@
                 // retrieve this flow's corresponding core-instance
                 pkgInst = corePkgDef(flow),
                 // get index of this instance (if any)
-                pkgIndex = store[0].indexOf(pkgInst)
-              ;
+                pkgIndex = store[0].indexOf(pkgInst);
+
               // if not already in items...
               if (!~pkgIndex) {
                 // add to store
@@ -2147,8 +2145,7 @@
       // get the package instance
       pkg = corePkgDef(this),
       // alias the current node
-      currentNode = pkg.nodes[pkg.tank.currentIndex]
-    ;
+      currentNode = pkg.nodes[pkg.tank.currentIndex];
 
     // callback-function for retrieving the node index
     function getPathFromIndex(idx) {
