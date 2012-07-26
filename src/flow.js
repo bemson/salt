@@ -272,7 +272,7 @@
             // add target key
             obj[name] = {};
             // add "on" tag pointing to this function
-            obj[name][corePkgDef.events[0]] = base[name];
+            obj[name]['_' + corePkgDef.events[0]] = base[name];
             // set new base object
             base = obj;
             // set base type
@@ -286,7 +286,7 @@
             // add target key
             obj[name] = {};
             // add "on" tag pointing to this function
-            obj[name][corePkgDef.events[0]] = source[name];
+            obj[name]['_' + corePkgDef.events[0]] = source[name];
             // set new source object
             source = obj;
             // set source type
