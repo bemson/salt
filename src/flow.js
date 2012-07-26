@@ -664,15 +664,15 @@
         node.lastStore = parent ? parent.lastStore : 0;
       }
 
-      // if this node has a _walk tag...
-      if (tags.hasOwnProperty('_walk')) {
+      // if this node has a _sequence tag...
+      if (tags.hasOwnProperty('_sequence')) {
         // set walk to a new or copied array, based on the booly value
-        node.walk = tags._walk ? [] : 0;
+        node.seq = tags._sequence ? [] : 0;
         // set last walk to this state's walk
-        node.lastWalk = node.walk;
+        node.lastWalk = node.seq;
       } else {
         // set walk property to nil
-        node.walk = 0;
+        node.seq = 0;
         // pass thru the last walk array defined - if any
         node.lastWalk = parent && parent.lastWalk || 0;
         // if there is a lastWalk array...
@@ -1299,14 +1299,14 @@
       pkg.targets.shift();
     }
     // if traversing "on" a walk state...
-    if (node.walk && !pkg.phase) {
+    if (node.seq && !pkg.phase) {
       // if the last walk state matches the next target (if any)...
-      if (pkg.targets[0] && pkg.targets[0] === node.walk.slice( -1 )[0]) {
+      if (pkg.targets[0] && pkg.targets[0] === node.seq.slice( -1 )[0]) {
         // prepend all but the last state in this node's walk sequence
-        pkg.targets = node.walk.slice( 0, -1 ).concat( pkg.targets );
+        pkg.targets = node.seq.slice( 0, -1 ).concat( pkg.targets );
       } else { // otherwise, when merging will not cause adjacent duplicates...
         // prepend this node's walk sequence
-        pkg.targets = node.walk.concat( pkg.targets );
+        pkg.targets = node.seq.concat( pkg.targets );
       }
     }
     // if there is a function for this phase...
