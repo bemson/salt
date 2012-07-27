@@ -1962,8 +1962,8 @@
           function () {
             // if there is a delay action and it's a node index...
             if (!noAction && ~delayNodeIdx) {
-              // target this node index (being explicit to avoid collisions)
-              pkg.proxy.pkgs.core.target(delayNodeIdx);
+              // target this node index
+              pkg.proxy.target(delayNodeIdx);
             } else { // otherwise, when there is no delay, or the action is a callback...
               // if there is a callback function...
               if (isFnc) {
