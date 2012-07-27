@@ -773,13 +773,13 @@
         )
       ) {
         // add this instance to the parent's storage
-        activeFlowStore[0].push(pkg);
+        activeFlowStore[0][0].push(pkg);
         // clear the store's cache
         activeFlowStore[2] = [];
         // if there are now more items than allowed...
-        if (activeFlowStoreCfg[2] && activeFlowStore[0].length > activeFlowStoreCfg[2]) {
+        if (activeFlowStoreCfg[2] && activeFlowStore[0][0].length > activeFlowStoreCfg[2]) {
           // remove oldest store item
-          activeFlowStore[0].shift();
+          activeFlowStore[0][0].shift();
         }
       }
     }
@@ -1164,10 +1164,12 @@
           (
             // there are no instances, or...
             !store[2][0][0].length ||
-            // any instance states have changed
-            store[2][0][0].some(function (pkgInst, idx) {
+            // there are more master items than cached indexes, or...
+            !store[0][0].length > store[0][1].length ||
+            // any item has changed it's state...
+            store[0][0].some(function (pkgInst, idx) {
               // flag true when the current state index does not match the cached state index
-              return pkgInst.tank.currentIndex != store[2][0][1][idx];
+              return pkgInst.tank.currentIndex != store[0][1][idx];
             })
           )
         ) {
@@ -1176,29 +1178,26 @@
         }
         // if there is no cache for this config...
         if (!store[2][0]) {
+          // rebuild master state cache
+          store[0][1] = store[0][0].map(function (pkgInst, idx) {
+            return pkgInst.tank.currentIndex
+          });
           // starting from the last config and working backwards...
           for (i = store[1].length - 1; i > -1; i--) {
-            // build cache set
+            // build matches cache
             store[2][i] = [
               // 0 - instances that match this configs filter criteria
               pkg.inStore(
                 // the filter criteria of this config
                 store[1][i][1],
                 // against the earlier config's cache or all items
-                (store[2][i + 1] || store)[0]
+                store[2][i + 1] ? store[2][i + 1][0] : store[0][0]
               )
             ];
-            // add remaining cache items
-            store[2][i].push(
-              // 1 - cache of indexes, for comparison later
-              store[2][i][0].map(function (pkgInst) {
-                return pkgInst.tank.currentIndex;
-              }),
-              // 2 - cache of instance proxies, when returning
-              store[2][i][0].map(function (pkgInst) {
-                return pkgInst.proxy;
-              })
-            );
+            // 1 - cache proxy of the matches
+            store[2][i][1] = store[2][i][0].map(function (pkgInst) {
+              return pkgInst.proxy;
+            });
           }
         }
       }
@@ -1498,7 +1497,10 @@
   /*
   Each store tracker is an array with the following structure:
   [
-    [..]      // 0 : master items, collection of package instances
+    [         // 0 : master items and cache
+      [],     // 0 - 0 : master items, collection of package instances
+      []      // 0 - 1 : master item index cache  
+    ],
     [         // 1 : store configurations
       [       // 1 - 0 : store configuration
         [     // 1 - 0 - 0 : capture criteria
@@ -1520,8 +1522,7 @@
     [         // 2 : cached results, collection of package instances, from corresponding filter configurations
       [       // 2 - 0 : cache set
         [..], // 2 - 0 - 0 : filtered package instances
-        [..], // 2 - 0 - 1 : cached index of states for the filtered package instances
-        [..]  // 2 - 0 - 2 : cached proxy objects for the filtered package instances
+        [..]  // 2 - 0 - 1 : cached proxy objects for the filtered package instances
       ]
     ]
   ]
@@ -1559,7 +1560,12 @@
         // prepend a new storage tracker
         pkg.stores.unshift([
           // 0 - master set of items
-          [],
+          [
+            // 0 - 0: master collection of package instances
+            [],
+            // 0 - 1: master cache of instance states
+            []
+          ],
           // 1 - store configurations (the first is the capture criteria, the rest are filter criteria)
           [storeConfig],
           // 2 - cache of results from each config - starting with 0
@@ -2070,12 +2076,12 @@
                 // retrieve this flow's corresponding core-instance
                 pkgInst = corePkgDef(flow),
                 // get index of this instance (if any)
-                pkgIndex = store[0].indexOf(pkgInst);
+                pkgIndex = store[0][0].indexOf(pkgInst);
 
               // if in the store...
               if (~pkgIndex) {
                 // remove from store
-                store[0].splice(pkgIndex, 1);
+                store[0][0].splice(pkgIndex, 1);
                 // flag that a store item changed
                 storeChanged++;
               }
@@ -2087,12 +2093,12 @@
                 // retrieve this flow's corresponding core-instance
                 pkgInst = corePkgDef(flow),
                 // get index of this instance (if any)
-                pkgIndex = store[0].indexOf(pkgInst);
+                pkgIndex = store[0][0].indexOf(pkgInst);
 
               // if not already in items...
               if (!~pkgIndex) {
                 // add to store
-                store[0].push(pkgInst);
+                store[0][0].push(pkgInst);
                 // flag that a store item changed
                 storeChanged++;
               }
@@ -2126,7 +2132,7 @@
           setStoreCriteria(userCriteria, arg);
         });
         // capture proxies of instances filtered from the master or cached store...
-        pkgs = pkg.inStore(userCriteria, commandFlag ? store[0] : store[2][0][0]);
+        pkgs = pkg.inStore(userCriteria, commandFlag ? store[0][0] : store[2][0][0]);
         // if allowed...
         if (isAllowed) {
           // return proxies
@@ -2147,10 +2153,10 @@
       // if allowed...
       if (isAllowed) {
         // return copy of proxies
-        return store[2][0][2].concat();
+        return store[2][0][1].concat();
       } else { // otherwise, when not allowed access to flows
-        // return count of proxies
-        return store[2][0][2].length;
+        // return count of matches
+        return store[2][0][1].length;
       }
     }
     // (otherwise) when not passed arguments and there is no store, return 0 (this would only occur when called externally)
