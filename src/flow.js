@@ -806,6 +806,7 @@
 
   // define prototype of any package instances
   corePkgDef.prototype = {
+
     // return index of the node resolved from a node reference
     /*
     qry - (string|function.toString()|number|object.index) which points to a node
@@ -989,6 +990,7 @@
       // return resolved index
       return idx;
     },
+
     //  return index of the resolved node reference, or -1 when it's invalid or unavailable from the given/current node
     vetIndexOf: function (qry, node) {
       var
@@ -1008,6 +1010,7 @@
         return -1;
       }
     },
+
     // add a data-tracking-object to this package
     getDef: function (name, initialValue) {
       var
@@ -1040,6 +1043,7 @@
       // exit when pending, or direct tank to the first target - returns the number of steps completed (or false when there is no target)
       return pkg.pending ? 0 : pkg.tank.go(pkg.targets[0]);
     },
+
     delTimer: function () {
       var
         // alias self
@@ -1053,11 +1057,13 @@
         pkg.delay.timer = 0;
       }
     },
+
     // flag when the flow is allowed to perform trusted executions
     allowed: function () {
       // flag true when the current flow, or when active and unlocked
       return activeFlows[0] === this || (this.trust && !this.locked);
     },
+
     // calls .target() on the owning flow
     upOwner: function (stateQuery) {
       var
@@ -1067,6 +1073,7 @@
       // return the result of targeting the owner when present and the path is valid - pass the proxy and it's current status
       return pkg.owner && stateQuery !== '' && stateQuery !== -1 && pkg.owner.proxy.target(stateQuery, pkg.proxy, pkg.proxy.status());
     },
+
     // search store (or given store items) with the given criteria
     inStore: function (criteriaSet, itemStore) {
       var
@@ -1138,6 +1145,7 @@
             );
         });
     },
+
     // rebuilds store caches after testing whether instance states have changed
     upStore: function () {
       var
@@ -1195,6 +1203,7 @@
         }
       }
     }
+
   };
 
   // do something when the tank starts moving
