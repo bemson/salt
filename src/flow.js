@@ -445,8 +445,8 @@
     pkg.args = [];
     // collection of node calls made while traversing
     pkg.calls = [];
-    // collection of nodes encountered while traversing
-    pkg.route = [];
+    // collection of nodes targeted and reached while traversing
+    pkg.trail = [];
     // collection of defined variables
     pkg.data = {};
     // init delay object
@@ -462,6 +462,8 @@
     pkg.trust = 0;
     // init locked flag
     pkg.locked = 0;
+    // init tracked target
+    pkg.tgtTrace = [];
     // init index of node paths
     pkg.nodeIds = {};
     // the number of child flows fired by this flow's program functions
@@ -1018,8 +1020,10 @@
         values: arguments.length > 1 ? [initialValue] : []
       }));
     },
+
     // proceed towards the latest/current target
-    go: function () {
+    // track - save point for reconciliation later
+    go: function (trackTarget) {
       var
         // alias self
         pkg = this;
@@ -1028,6 +1032,11 @@
       pkg.pause = 0;
       // clear the timer
       pkg.delTimer();
+      // if there is a target to track...
+      if (trackTarget && pkg.targets.length) {
+        // add to traced target collection
+        pkg.tgtTrace.unshift(pkg.targets[0]);
+      }
       // exit when pending, or direct tank to the first target - returns the number of steps completed (or false when there is no target)
       return pkg.pending ? 0 : pkg.tank.go(pkg.targets[0]);
     },
@@ -1288,15 +1297,13 @@
     pkg.result = undefined;
     // reset owner updated flag
     pkg.ownUp = 0;
-    // if the current index is not the same as the last one in the route...
-    if (node.index !== pkg.route.slice(-1)[0]) {
-      // add index to the route
-      pkg.route.push(node.index);
-    }
     // if the tank no longer has a target...
     if (!~tank.targetIndex) {
-      // remove this target node
-      pkg.targets.shift();
+      // if last targeted index matches the target being tracked...
+      if (pkg.tgtTrace[0] === pkg.targets.shift()) {
+        // note that this target has been reached and stop tracing it
+        pkg.trail[pkg.trail.length] = pkg.tgtTrace.shift();
+      }
     }
     // if traversing "on" a walk state...
     if (node.seq && !pkg.phase) {
@@ -1397,8 +1404,10 @@
         pkg.args = [];
         // clear calls array
         pkg.calls = [];
-        // clear route
-        pkg.route = [];
+        // clear trail
+        pkg.trail = [];
+        // clear traced targets
+        pkg.tgtTrace = [];
         // if there are pending (parent) flows...
         if (pkg.pendees.length) {
           // with each pending flow...
@@ -1842,7 +1851,7 @@
       // reset targets array
       pkg.targets = [tgtIdx];
       // navigate towards the targets (unpauses the flow)
-      pkg.go();
+      pkg.go(1);
     } else { // otherwise, when the target node is invalid...
       // return false
       return false;
@@ -1902,7 +1911,7 @@
         pkg.targets = waypoints.concat(pkg.targets);
       }
       // capture result of move attempt or true when paused
-      result = pkg.go() || wasPaused;
+      result = pkg.go(1) || wasPaused;
     }
     // return result as boolean
     return !!result;
@@ -2162,7 +2171,7 @@
       pending: !!pkg.pending,
       pendable: !!currentNode.pendable,
       targets: pkg.targets.map(getPathFromIndex),
-      route: pkg.route.map(getPathFromIndex),
+      trail: pkg.trail.map(getPathFromIndex),
       path: currentNode.path,
       index: currentNode.index,
       phase: corePkgDef.events[pkg.phase],
