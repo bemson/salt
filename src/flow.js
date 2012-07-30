@@ -1591,7 +1591,7 @@
   };
 
   // add method to return callbacks to this flow's states
-  corePkgDef.proxy.cb = function (arg) {
+  corePkgDef.proxy.callbacks = function (arg) {
     var
       // get core package instance
       pkg = corePkgDef(this),
