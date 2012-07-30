@@ -75,7 +75,7 @@ test('State', function () {
 
 test('Proxy', function () {
   var flow = new Flow();
-  'cb|query|lock|data|args|target|go|wait|status|bless|owner'.split('|').forEach(function (mbr) {
+  'callbacks|query|lock|data|args|target|go|wait|status|bless|owner'.split('|').forEach(function (mbr) {
     equal(typeof flow[mbr], 'function', '<Core-Proxy>.' + mbr + '() is a method.');
   });
 });
@@ -261,7 +261,7 @@ test('_owner', function () {
       _in: function () {
         (new Flow({
           _owner: '//detour/'
-        })).cb()();
+        })).callbacks()();
       },
       originalTarget: 'never hits this state',
       detour: function () {
@@ -292,11 +292,11 @@ test('_owner', function () {
                 b: {
                   _owner: '//monitorB/'
                 }
-              })).cb().b();
+              })).callbacks().b();
             }
           }
           , monitorB: defaultOwnerUpdateAction
-        })).cb().a();
+        })).callbacks().a();
       },
       monitorA: defaultOwnerUpdateAction
     })
@@ -498,7 +498,7 @@ test('_owner', function () {
         child = new Flow(ownPrograms[idx]);
       },
       updates: defaultOwnerUpdateAction
-    })).cb()
+    })).callbacks()
   ;
 
   function defaultOwnerUpdateAction(childFlow, childStatus) {
@@ -516,7 +516,7 @@ test('_owner', function () {
           }
         }
       });
-      child.cb().foo();
+      child.callbacks().foo();
     },
     monitor: function (childFlow, childStatus) {
       var status = childFlow.status();
@@ -533,7 +533,7 @@ test('_owner', function () {
       equal(childStatus.trust, false, 'The child status is untrusted when the update is triggered.');
       ok(status.index < childStatus.index, 'The child flow can have a different status values than the one passed to the owning flow\'s update state.');
     }
-  })).cb()()
+  })).callbacks()()
 
   equal(internalUpdate.target('//originalTarget'), internalUpdate.target('//detour'), 'Child flows update their owner with a target call.');
 
@@ -1419,7 +1419,7 @@ test('.go()', function () {
     initialIndex = tank.currentIndex,
     stepCount;
 
-  equal(pkgInst.go.length, 0, 'Expects no arguments.');
+  equal(pkgInst.go.length, 1, 'Allows for at least one argument.');
   ok(!isNaN(pkgInst.go()), 'Returns an integer.');
   pkgInst.pause = 1;
   ok(pkgInst.pause && !pkgInst.go() && !pkgInst.pause, 'Unpauses a flow.');
@@ -1967,7 +1967,7 @@ test('.args()', function () {
         this.wait();
       }
     }),
-    cb = flow.cb();
+    cb = flow.callbacks();
   equal(T.type(flow.args()), 'array', 'Returns an array when passed no parameters.');
   ok(flow.args() !== flow.args(), 'The array returned is unique.');
   equal(flow.args(1), undefined, 'Returns "undefined" when passed a valid index.');
@@ -2032,7 +2032,7 @@ test('.owner()', function () {
   });
 });
 
-test('.cb()', function () {
+test('.callbacks()', function () {
   var rtnVal = {},
     program = {
       a: {
@@ -2060,14 +2060,14 @@ test('.cb()', function () {
     coreInst = Flow.pkg('core')(flow),
     initialIndex = coreInst.tank.currentIndex,
     cb;
-  equal(flow.cb.length, 1, 'Accepts at least one parameter.');
-  cb = flow.cb();
+  equal(flow.callbacks.length, 1, 'Accepts at least one parameter.');
+  cb = flow.callbacks();
   equal(typeof cb, 'function', 'Returns a function, when called with no arguments.');
   ok(cb.hasOwnProperty('toString'), 'The returned function has a custom .toString function.');
   ok(
     coreInst.nodes.every(function (node) {
       flow.go(node.index);
-      return flow.cb() === cb;
+      return flow.callbacks() === cb;
     }),
     'Returns the same function when called with no arguments, regardless of the current state.'
   );
@@ -2076,7 +2076,7 @@ test('.cb()', function () {
   ok(
     coreInst.nodes.slice(2, -1).every(function (node) {
       flow.go(node.index);
-      return flow.cb(true) !== cb && flow.cb(true) === node.cb;
+      return flow.callbacks(true) !== cb && flow.callbacks(true) === node.cb;
     }),
     'Returns a function matching the `.cb` member of the current state, when passed `true`.'
   );
@@ -2091,24 +2091,24 @@ test('.cb()', function () {
   );
   ok(
     [false, '', -1, -.01, {}, [], /s/, function () {}].every(function (param) {
-      return flow.cb(param) === false;
+      return flow.callbacks(param) === false;
     }) &&
-    [true, 1, 0, 'foo', flow.cb()].every(function (param) {
-      return typeof flow.cb(param) === 'function';
+    [true, 1, 0, 'foo', flow.callbacks()].every(function (param) {
+      return typeof flow.callbacks(param) === 'function';
     }),
     'Returns `false` when passed anything besides a state-query or `true`.'
   );
   equal(
-    flow.cb('foo').hasOwnProperty('toString'),
+    flow.callbacks('foo').hasOwnProperty('toString'),
     false,
     'Functions from state-queries do not have a local .toString() method.'
   );
   flow.go('/delayed');
   ok(
-    flow.cb(0) === coreInst.nodes[0].cb,
+    flow.callbacks(0) === coreInst.nodes[0].cb,
     'If a state query matches a state\'s path or index exactly, the corresponding node\'s `.cb` function is returned.'
   );
-  cb = flow.cb('@next');
+  cb = flow.callbacks('@next');
   strictEqual(
     cb(),
     flow.target('//rtnVal/'),
@@ -2295,7 +2295,7 @@ test('.loops', function () {
         this.wait();
       },
       reset: 1
-    })).cb(),
+    })).callbacks(),
     flow = new Flow({
       _on: function () {
         var loops = this.status().loops;
@@ -2453,20 +2453,20 @@ test('.pending', function () {
         this.wait();
       },
       reset: 1
-    })).cb(),
+    })).callbacks(),
     nestedPender = (new Flow({
       _on: function () {
         pend();
       },
       reset: 1
-    })).cb(),
+    })).callbacks(),
     doublePender = (new Flow({
       _on: function () {
         pend();
         this.wait();
       },
       reset: 1
-    })).cb(),
+    })).callbacks(),
     flow = new Flow({
       _on: function () {
         pend();
@@ -2524,7 +2524,7 @@ test('.targets', function () {
         this.wait();
       },
       reset: 1
-    })).cb(),
+    })).callbacks(),
     flow = new Flow({
       _in: function () {
         ok(this.status().targets.length, 'status.targets is not empty for the _in component function.');
@@ -2650,7 +2650,7 @@ test('.phase', function () {
       _in: function () {
         (new Flow(function () {
           this.wait();
-        })).cb()();
+        })).callbacks()();
       }
     })
   ;
@@ -2787,7 +2787,7 @@ test('Buffered execution, after numerous calls.', function () {
         start();
       }
     }),
-    eventHandlerCallBack = eventHandlerFlow.cb();
+    eventHandlerCallBack = eventHandlerFlow.callbacks();
   for (; i < callCnt; i++) {
     eventHandlerCallBack(arbitraryEventData);
   }
@@ -2835,7 +2835,7 @@ test('Calculate the fibonacci number of 1000 without causing a stack-overflow.',
     } else {
       return currentNumber;
     }
-  })).cb();
+  })).callbacks();
   equal(fibonacci(10), 89,'The "fibonacci" flow works as expected.');
   fibonacci(1000);
 });
@@ -2846,7 +2846,7 @@ test('Prevent consecutive execution for the same state.', function () {
       _in: function () {
         tic++;
       }
-    })).cb();
+    })).callbacks();
   doImportantThing();
   doImportantThing();
   equal(tic, 1, 'Function executed once!');
@@ -2926,7 +2926,7 @@ test('Automatic execution of prerequisite functions.', function () {
         equal(prereqs, 4, 'Earlier states self-executed using the _over component.');
       }
     }),
-    app = appFlow.cb();
+    app = appFlow.callbacks();
   app.start();
 });
 
@@ -2939,7 +2939,7 @@ test('Alter arguments before executing a function.', function () {
         this.args(0, this.args(0).split('').reverse().join(''));
       },
       _on: echo
-    })).cb(),
+    })).callbacks(),
     input = 'hello',
     invertEchoOutput = input.split('').reverse().join('');
   equal(echo(input), input, 'The raw function works as expected.');
