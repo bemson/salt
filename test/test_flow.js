@@ -2239,7 +2239,7 @@ test('.store()', function () {
   flow.go('//nested/');
 });
 
-module('&lt;Proxy&gt;.status()');
+module('Core-Proxy.status()');
 
 test('.trust', function () {
   var flow = new Flow({
