@@ -34,7 +34,7 @@ test('Instance', function () {
   'allowed|indexOf|vetIndexOf|getDef|go|upOwner'.split('|').forEach(function (mbr) {
     equal(typeof coreInst[mbr], 'function', '<Core-Instance>.' + mbr + ' is a  method.');
   });
-  'trust,0|args|calls|route|data|delay|cache|locked,0|nodeIds|pending,0|pendees|targets|phase,0|owner'.split('|').forEach(function (mbrSet) {
+  'trust,0|args|calls|trail|data|delay|cache|locked,0|nodeIds|pending,0|pendees|targets|phase,0|owner'.split('|').forEach(function (mbrSet) {
       var
         split = mbrSet.split(','),
         mbr = split[0],
@@ -523,7 +523,7 @@ test('_owner', function () {
       equal(arguments.length, 2, 'The state receiving updates is passed two arguments.');
       ok(child === childFlow, 'The first argument is the child flow that has updated the owning flow.');
       equal(childFlow.status().trust, false, 'The child flow has an untrusted status when the update executes.');
-      ok('trust|loops|depth|paused|pending|pendable|targets|route|path|index|phase|state'.split('|')
+      ok('trust|loops|depth|paused|pending|pendable|targets|trail|path|index|phase|state'.split('|')
         .every(function (statKey) {
           return childStatus.hasOwnProperty(statKey);
         }),
@@ -2118,7 +2118,7 @@ test('.cb()', function () {
 
 test('.status()', function () {
   var status = (new Flow({})).status();
-  'trust|loops|depth|paused|pending|pendable|targets|route|path|index|phase|state'
+  'trust|loops|depth|paused|pending|pendable|targets|trail|path|index|phase|state'
     .split('|')
     .forEach(
       function (mbr) {
@@ -2373,6 +2373,76 @@ test('.paused', function () {
   stop();
 });
 
+test('.trail', function () {
+  var
+    statePath,
+    pflow,
+    flow = new Flow({
+      _in: function () {
+        var
+          status = this.status();
+
+        equal(status.trail.length, 0, 'The targeted state is not added to the trail when entered.');
+        statePath = status.targets[0];
+      },
+      _on: function () {
+        var
+          status = this.status();
+
+        equal(status.trail[0], statePath, 'A targeted state is added to the trail when landed on.');
+        this.wait();
+      },
+      pended: function () {
+        var
+          pender = new Flow(function () {
+            this.wait();
+          });
+        pender.go(1);
+        return pender;
+      },
+      sequence: {
+        _sequence: 1,
+        child: 1,
+        end: function () {
+          var
+            status = this.status();
+
+          equal(status.trail[0], '//sequence/', 'Descendents of a sequenced state are not added to the trail.');
+          this.go('//targeted/');
+        }
+      },
+      targeted: function () {
+        var
+          status = this.status();
+
+        equal(status.trail.slice(-1)[0], status.path, 'The last state added to the trail is the most recent state traversed.');
+      },
+      repeat: function () {
+        var
+          status = this.status();
+
+        if (!status.loops) {
+          this.go('.');
+        } else {
+          equal(status.trail.length, 2, 'Retargeting a state adds it to the trail repeatedly.');
+        }
+      }
+    });
+  ok(flow.status().trail instanceof Array, 'status.trail is an array.');
+  equal(flow.status().trail.length, 0, 'status.trail is empty by default.');
+  flow.go(1);
+  ok(flow.status().trail.length && flow.status().paused, 'status.trail is available when a flow is paused.');
+  ok(flow.status().trail !== flow.status().trail, 'A new trail array is returned with every .status() call.');
+  flow.go();
+  ok(!flow.status().trail.length && !flow.status().paused, 'status.trail is empty when a flow is idle.');
+  pflow = flow.target('//pended/');
+  ok(flow.status().trail.length && flow.status().pending, 'status.trail is available when a flow is pended.');
+  pflow.go();
+  ok(!flow.status().trail.length && !flow.status().pending, 'status.trail is empty when a flow is unpended.');
+  flow.go('//sequence/');
+  flow.go('//repeat');
+});
+
 /*
 TODO: add test for pendable attribute and child overrides
 */
@@ -2517,91 +2587,6 @@ test('.targets', function () {
   pend.reset();
   flow.target(0);
   ok(!flow.status().targets.length, 'status.targets is empty when the flow is idle.');
-});
-
-test('.route', function () {
-  var pend = (new Flow({
-      _on: function () {
-        this.wait();
-      },
-      reset: 1
-    })).cb(),
-    flow = new Flow({
-      _in: function () {
-        var stat = this.status();
-        deepEqual(stat.route, ['//'], 'status.route reflects states traversed to reach this state.');
-        equal(stat.route.slice(-1)[0], stat.path, 'The last state in status.route is the state containing the _over component function.');
-      },
-      _out: function () {
-          var stat = this.status();
-          equal(stat.route.slice(-1)[0], stat.path, 'The last state in status.route is the state containing the _out component function.');
-      },
-      over: {
-        _over: function () {
-          var stat = this.status();
-          equal(stat.route.slice(-1)[0], stat.path, 'The last state in status.route is the state containing the _over component function.');
-        }
-      },
-      bover: {
-        _bover: function () {
-          var stat = this.status();
-          equal(stat.route.slice(-1)[0], stat.path, 'The last state in status.route is the state containing the _bover component function.');
-        }
-      },
-      hidden: 1,
-      hop: {
-        _over: function () {
-          this.go('//hop/skip/','//hop/');
-        },
-        skip: 1
-      },
-      traverse: {
-        _on: function () {
-          var stat = this.status();
-          deepEqual(stat.route, ['//', '//over/', '//bover/', '//hidden/', '//hop/', '//hop/skip/', '//hop/', '//traverse/'], 'status.route references all states, whether they have component functions or are traversed twice.');
-          equal(stat.route.slice(-1)[0], stat.path, 'The last state in status.route is the state containing the _on component function.');
-        },
-        start: function () {
-          var stat = this.status();
-          ok(stat.route.length, 'status.route is always populated when called internally.');
-          deepEqual(stat.route, ['//traverse/start/'], 'status.route always begins with the current state.');
-          this.go('../one', '../two', '../end');
-        },
-        one: function () {
-          deepEqual(this.status().route, ['//traverse/start/','//traverse/one/'], 'status.route accurately reflects the states traversed.');
-        },
-        two: function () {
-          deepEqual(this.status().route, ['//traverse/start/','//traverse/one/', '//traverse/two/'], 'status.route accurately reflects the states traversed.');
-        },
-        end: function () {
-          deepEqual(this.status().route, ['//traverse/start/','//traverse/one/', '//traverse/two/', '//traverse/end/'], 'status.route accurately reflects the states traversed.');
-        }
-      },
-      pause: {
-        _in: function () {
-          this.wait();
-        }
-      },
-      pend: {
-        _in: function () {
-          pend();
-        }
-      }
-    });
-  ok(!flow.status().route.length, 'status.route is empty by default.');
-  ok(flow.status().route !== flow.status().route, 'status.route is a new array everytime.');
-  flow.target('//traverse/');
-  flow.target('//traverse/start/');
-  flow.target('//pause/');
-  equal(flow.status().paused, true, 'The flow is paused.');
-  equal(flow.status().route[0], '//traverse/end/', 'status.route captures states exited, when navigating towards a target.');
-  deepEqual(flow.status().route, ['//traverse/end/', '//traverse/two/', '//traverse/one/', '//traverse/start/', '//traverse/', '//pause/'], 'status.targets is preserved when the flow is paused.');
-  flow.target('//pend/');
-  equal(flow.status().pending, true, 'The flow is pending.');
-  deepEqual(flow.status().route, ['//traverse/end/', '//traverse/two/', '//traverse/one/', '//traverse/start/', '//traverse/', '//pause/', '//pend/'], 'status.targets is preserved when the flow is pending.');
-  pend.reset();
-  flow.target(0);
-  ok(!flow.status().route.length, 'status.routeis empty when the flow is idle.');
 });
 
 test('.path', function () {
@@ -2822,7 +2807,7 @@ test('Flow arguments are passed to the _on function of the last/destination stat
     }),
     dynamicStateFnc = function (arg) {
       var status = this.status();
-      strictEqual(arg, argValue, 'Arguments pushed to "' + status.path + '" after visiting ' + (status.route.length - 1) + ' states, the current last/destination state.');
+      strictEqual(arg, argValue, 'Arguments pushed to "' + status.path + '" after visiting ' + (status.trail.length - 1) + ' states, the current last/destination state.');
       this.go('@next');
     },
     dynamicRoute = new Flow({
