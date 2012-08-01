@@ -1629,7 +1629,7 @@
   };
 
   // add method to 
-  corePkgDef.proxy.query = function (node) {
+  corePkgDef.proxy.query = function () {
     var
       // get package instance
       pkg = corePkgDef(this),
