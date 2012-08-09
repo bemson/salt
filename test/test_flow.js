@@ -741,6 +741,28 @@ test('_restrict', function () {
   equal(flow.target(0), true, 'Descendents of restricted states that are not restricted may navigate anywhere in the program.');
 });
 
+test('_ingress', function () {
+  var flow = new Flow({
+    curtain: {
+      _ingress: 1,
+      _on: function () {
+        equal(this.query('hidden/curtain/hidden/'), '//curtain/hidden/curtain/hidden/', 'Ingress limits are ignored  when the flow is traversing.');
+      },
+      hidden: {
+        curtain: {
+          _ingress: 1,
+          hidden: 1
+        }
+      }
+    }
+  });
+  equal(flow.query('//curtain/hidden/'), false, 'States can not be accessed from outside their ingress ancestor.');
+  equal(flow.query('//curtain/hidden/curtain/'), '//curtain/hidden/curtain/', 'Nested ingress states are accessible from outside their ingress ancestor.');
+  flow.go('//curtain/');
+  equal(flow.query('hidden'), '//curtain/hidden/', 'States may be accessed from within their ingress ancestor.');
+  equal(flow.query('curtain/hidden'), false, 'States can not be access from outside their nested ingress ancestor.');
+});
+
 test('_data', function () {
   var
     corePkgDef = Flow.pkg('core'),

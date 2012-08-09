@@ -522,6 +522,8 @@
       node.root = idx < 2 ? 1 : tags._root && node.index || parent.root;
       // set restrict node index, based on the "_restrict" attribute or the parent's existing restriction
       node.restrict = tags.hasOwnProperty('_restrict') ? tags._restrict && node.index || -1 : parent && parent.restrict || -1;
+      // set ingress node index, based on the "_ingress" attribute or the parent's existing ingressor
+      node.ingress = tags.hasOwnProperty('_ingress') ? tags._ingress && node.index || -1 : parent && parent.ingress || -1;
       // set lock to boolean equivalent of attribute
       node.lock = !!tags._lock;
       // set default for whether this node updates or is an update gate
@@ -1447,10 +1449,12 @@
   corePkgDef.node.canTgt = function (targetNode) {
     var
       // alias the restrict node (if any)
-      restrictingNode = this.pkg.nodes[this.restrict];
+      restrictingNode = this.pkg.nodes[this.restrict],
+      // alias the ingress node of the target
+      targetIngressNode = this.pkg.nodes[targetNode.ingress];
 
-    // return true if this node is not restricted, or when the targetNode is within the restricting node's path
-    return !restrictingNode || targetNode.within(restrictingNode);
+    // return true if this node is within it's restrictions (if any), or when we're within, targeting, or on the target's ingress node (if any)
+    return (!restrictingNode || targetNode.within(restrictingNode)) && (!targetIngressNode || this === targetIngressNode || targetNode === targetIngressNode || this.within(targetIngressNode));
   };
 
   // add method to de/scope defined variables
