@@ -742,25 +742,93 @@ test('_restrict', function () {
 });
 
 test('_ingress', function () {
-  var flow = new Flow({
-    curtain: {
-      _ingress: 1,
-      _on: function () {
-        equal(this.query('hidden/curtain/hidden/'), '//curtain/hidden/curtain/hidden/', 'Ingress limits are ignored  when the flow is traversing.');
-      },
-      hidden: {
-        curtain: {
-          _ingress: 1,
-          hidden: 1
+  var
+    flow = new Flow({
+      curtain: {
+        _ingress: 1,
+        _on: function () {
+          equal(this.query('hidden/curtain/hidden/'), '//curtain/hidden/curtain/hidden/', 'Ingress limits are ignored  when the flow is traversing.');
+        },
+        hidden: {
+          curtain: {
+            _ingress: 1,
+            hidden: 1
+          }
         }
       }
-    }
-  });
+    });
   equal(flow.query('//curtain/hidden/'), false, 'States can not be accessed from outside their ingress ancestor.');
   equal(flow.query('//curtain/hidden/curtain/'), '//curtain/hidden/curtain/', 'Nested ingress states are accessible from outside their ingress ancestor.');
   flow.go('//curtain/');
   equal(flow.query('hidden'), '//curtain/hidden/', 'States may be accessed from within their ingress ancestor.');
   equal(flow.query('curtain/hidden'), false, 'States can not be access from outside their nested ingress ancestor.');
+});
+
+test('_sequence', 6, function () {
+  var
+    tick = 0,
+    flow = new Flow({
+      tmp: function () {tick++;},
+      all: {
+        _sequence: 1,
+        a: {
+          _import: '//tmp/',
+          a: '//tmp/'
+        },
+        b: '//tmp/',
+        c: {
+          _import: '//tmp/',
+          a: {
+            _in: function () {
+              this.wait();
+            },
+            _import: '//tmp/',
+            a: '//tmp/'
+          },
+          b: '//tmp/'
+        }
+      },
+      order: {
+        _in: function () {
+          tick = 0;
+        },
+        _sequence: 1,
+        _in: function () {
+          equal(this.status().targets.length, 1, 'Targets are not added before the "in" callback.');
+        },
+        _on: function () {
+          equal(this.status().targets.length, 3, 'Targets are added before the "on" callback.');
+        },
+        a: 1,
+        b: 1,
+        c: 1
+      },
+      some: {
+        _in: function () {
+          tick = 0;
+        },
+        _on: function () {
+          equal(this.status().targets[0], '//some/b/', 'Descendant branches may be excluded from a sequence.');
+        },
+        _sequence: 1,
+        a: {
+          _sequence: 0,
+          a: 1,
+          b: 2
+        },
+        b: 1
+      }
+    }),
+    calls = flow.callbacks();
+
+  calls.order();
+  calls.all();
+  equal(tick, 4, 'Descendants are automatically traversed.');
+  deepEqual(flow.status().targets, ['//all/c/a/', '//all/c/a/a/', '//all/c/b/'], 'Sequences iterate in depth-first order.');
+  tick = 0;
+  flow.target('//all/a/');
+  equal(tick, 1, 'Sequence descendants may be targeted indepedently.');
+  calls.some();
 });
 
 test('_data', function () {
