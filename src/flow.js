@@ -1995,13 +1995,34 @@
   };
 
   // retrieve the flow that owns this one, if any
-  corePkgDef.proxy.owner = function () {
+  // owner may be set by the owner or child
+  // owner may be removed by the owner or child
+  corePkgDef.proxy.owner = function (arg) {
     var
       // alias this flow's core-instance
-      pkg = corePkgDef(this);
+      pkg = corePkgDef(this),
+      // alias the active flow
+      activeFlow = activeFlows[0],
+      // flag when allowed or the active flow is the owner
+      ownerAccess = pkg.allowed() || activeFlow === pkg.owner,
+      // capture number of arguments
+      argumentCount = arguments.length;
 
-    // return the owning flow's proxy or true when external, otherwise return false when not owned
-    return pkg.owner && (pkg.allowed() ? pkg.owner.proxy : true) || false;
+    if (ownerAccess) {
+
+      if (argumentCount) {
+
+        // set or remove this flow's owner, when the argument is valid
+        if (arg === false || (arg instanceof Flow && arg !== pkg.proxy)) {
+          pkg.owner = arg ? corePkgDef(arg) : 0;
+          return true;
+        }
+        return false;
+      }
+      return pkg.owner ? pkg.owner.proxy : false;
+    }
+    // return false with illegal usage or no owner, otherwise flag whether or not there is an owner
+    return argumentCount ? false : !!pkg.owner;
   };
 
   /*
