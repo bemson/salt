@@ -1,5 +1,5 @@
 /*!
- * Flow v0.4.6
+ * Flow v0.4.7
  * http://github.com/bemson/Flow/
  *
  * Dependencies:
@@ -156,7 +156,7 @@
     r_validPath = /^\/\/(?:\w+\/)+/;
 
   // version string
-  Flow.version = '0.4.6';
+  Flow.version = '0.4.7';
 
   // return a given namespace, based on whether in a browser or CommonJS environment
   function getFromEnvironment(namespace) {
