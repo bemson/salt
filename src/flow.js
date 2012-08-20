@@ -2015,7 +2015,7 @@
         // set or remove this flow's owner, when the argument is valid
         if (arg === false || (arg instanceof Flow && arg !== pkg.proxy)) {
           pkg.owner = arg ? corePkgDef(arg) : 0;
-          return true;
+          return arg || true;
         }
         return false;
       }
