@@ -2079,47 +2079,81 @@ test('.args()', function () {
 
 test('.owner()', function () {
   var
-    childOnCallbackPassThru = function (cb) {
-      cb.call(this);
-    }
-    , ownedFlow
-    , unownedFlow
-    , parentFlow = new Flow(function () {
-      unownedFlow = new Flow(childOnCallbackPassThru)
-      ownedFlow = new Flow({
-        _owner: 1
-        , _on: childOnCallbackPassThru
-      });
-    })
-    , orphanFlow = new Flow({
-      _owner: 1
-      , _on: childOnCallbackPassThru
-    })
-  ;
-  parentFlow.go(1);
-  equal(parentFlow.owner.length, 0, 'Expects zero paraneters');
-  strictEqual(unownedFlow.owner(), false, 'Return false when called in an untrusted environment for an unowned flow.');
-  strictEqual(ownedFlow.owner(), true, 'Return true when called in an untrusted environment for an owned flow.');
-  unownedFlow.target(1, function () {
-    strictEqual(this.owner(), false, 'Returns false when called internally and the flow has no owner.');
-  });
-  ownedFlow.target(1, function () {
-    ok(this.owner() instanceof Flow, 'Returns the owning flow when called internally and the flow has an owner.');
-  });
-  ok(
-    Flow.pkg('core')(unownedFlow).nodes.every(function (state) {
-      return !state.upOwn;
-    })
-    &&
-    Flow.pkg('core')(ownedFlow).nodes.some(function (state) {
-      return state.upOwn;
-    })
-    ,
-    'Flow programs with an _owner attribute can be owned.'
-  );
-  orphanFlow.target(1, function () {
-    strictEqual(this.owner(), false, 'Flows initialized via another flow callback can be owned.');
-  });
+    tests = new Flow({
+      _sequence: 1,
+      owner: {
+        access: function () {
+          var
+            ownedFlow = new Flow({_owner:-1});
+          ok(ownedFlow.owner() instanceof Flow, 'Owned flows return their owner when called by their owner.');
+        },
+        setting: function () {
+          var
+            owningFlow = this,
+            ownedFlow = new Flow({_owner: -1}),
+            otherFlow = new Flow(function () {return ownedFlow.owner(false);});
+          strictEqual(ownedFlow.owner(ownedFlow), false, 'Owners may not allow an owned flow to own itself.');
+          ok(ownedFlow.owner(otherFlow) === otherFlow && ownedFlow.owner() === true, 'Owners may assign an owned flow a new owner.');
+          strictEqual(otherFlow.target(1), true, 'Owners may remove themselves as an owning flow.');
+        },
+        locked: function () {
+          var
+            ownedFlow = new Flow({_owner:-1,_lock:1});
+          ownedFlow.go(1);
+          ok(ownedFlow.lock() === true && ownedFlow.owner() instanceof Flow, 'Owners may access an owned flow, even when locked.');
+        }
+      },
+      self: {
+        access: function () {
+          var
+            ownedFlow = new Flow({_owner:-1,_on: function () {return this.owner();}}),
+            unownedFlow = new Flow(function () {return this.owner();});
+          ok(ownedFlow.target(1) instanceof Flow, 'Owned flows return their owner when called internally.');
+          strictEqual(unownedFlow.target(1), false, 'Unowned flows return `false` when called internally.');
+        },
+        setting: function () {
+          var
+            potentialOwner = this,
+            unownedFlow = new Flow({
+              _on:function () {
+                return this.owner(potentialOwner);
+              },
+              self: function () {
+                strictEqual(this.owner(this), false, 'Flows may not be their own owner.');
+              },
+              remove: function () {
+                return this.owner(false);
+              }
+            });
+          unownedFlow.go('//self/');
+          ok(unownedFlow.target(1) === potentialOwner && unownedFlow.owner() === potentialOwner, 'An owned flow can change it\'s owner, when called internally.');
+          ok(unownedFlow.target('remove') === true && unownedFlow.owner() === false, 'An owner can remove it\'s owner, when called internally.');
+        }
+      },
+      other: {
+        access: function () {
+          var
+            unownedFlow = new Flow(),
+            ownedFlow = new Flow({_owner:-1}),
+            otherFlow = new Flow(function () {
+              strictEqual(ownedFlow.owner(), true, 'External calls receive `true` when a flow has an owner.');
+              strictEqual(unownedFlow.owner(), false, 'External calls receive `false` when a flow has no owner.');
+            });
+          otherFlow.go(1);
+        },
+        setting: function () {
+          var
+            unownedFlow = new Flow(),
+            ownedFlow = new Flow({_owner:-1}),
+            otherFlow = new Flow(function () {
+              strictEqual(unownedFlow.owner(this), false, 'Owners may not be set externally.');
+              strictEqual(ownedFlow.owner(false), false, 'Owners may not be removed externally.');
+            });
+          otherFlow.go(1);
+        }
+      }
+    });
+  tests.go(1);
 });
 
 test('.callbacks()', function () {
