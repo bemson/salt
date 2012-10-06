@@ -567,10 +567,10 @@ test('_owner', function () {
 
   own(0);
     child.go(1);
-    equal(updateStatePhases[0], '_program@in', 'The owning flow is updated when an _update state is entered.');
-    equal(updateStatePhases[1], '_program@on', 'The owning flow is updated when navigation ends within an _update state.');
+    equal(updateStatePhases[0], '_program@in', 'The owning flow is updated when an _owner state is entered.');
+    equal(updateStatePhases[1], '_program@on', 'The owning flow is updated when navigation ends within an _owner state.');
     child.go(0);
-    equal(updateStatePhases[2], '_program@out', 'The owning flow is updated when an _update state is exits an _update state.');
+    equal(updateStatePhases[2], '_program@out', 'The owning flow is updated when an _owner state is exits an _owner state.');
 
   own(1);
     child.go(1);
@@ -579,9 +579,9 @@ test('_owner', function () {
 
   own(2);
     child.go(1);
-    equal(updateStatePhases.length, 0, 'Only updates the owning when inside an _update state.');
+    equal(updateStatePhases.length, 0, 'Only updates the owning when inside an _owner state.');
     child.go('//relay/sub/');
-    deepEqual(updateStatePhases, ['relay@in', 'sub@on'], 'Updates the owning when navigation stops on a descendent of an _update state.');
+    deepEqual(updateStatePhases, ['relay@in', 'sub@on'], 'Updates the owning when navigation stops on a descendent of an _owner state.');
 
   own(3);
     child.go('//relay/redirect/');
@@ -589,25 +589,25 @@ test('_owner', function () {
 
   own(4);
     child.go(1);
-    equal(updateStatePhases.length, 0, 'The owning flow is not updated when an _update state is pending.');
+    equal(updateStatePhases.length, 0, 'The owning flow is not updated when an _owner state is pending.');
     child.tmpPender.go();
     deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'The owning flow is updated when the child flow is unpended.')
 
   own(5);
     child.go(1);
-    equal(updateStatePhases.length, 0, 'The owning flow is not updated when an _update state halts at the _in phase.');
+    equal(updateStatePhases.length, 0, 'The owning flow is not updated when an _owner state halts at the _in phase.');
     child.go();
     deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'The owning flow is updated when the halted child completes the _in phase.');
 
   own(6);
     child.go(1);
-    deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is not updated when an _update state halts at the _on phase.');
+    deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is not updated when an _owner state halts at the _on phase.');
     child.go();
     deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'The owning flow is updated when the halted child completes the _on phase.');
 
   own(7);
     child.go(1, 0);
-    deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is not updated when an _update state halts at the _out phase.');
+    deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is not updated when an _owner state halts at the _out phase.');
     child.go();
     deepEqual(updateStatePhases, ['_program@in', '_program@out'], 'The owning flow is updated when the halted child completes the _out phase.');
 
@@ -615,19 +615,19 @@ test('_owner', function () {
 
   own(8);
     child.go(1);
-    equal(updateStatePhases.length, 0, 'The owning flow is not updated when an _update state delays the _in phase.');
+    equal(updateStatePhases.length, 0, 'The owning flow is not updated when an _owner state delays the _in phase.');
     setTimeout(function () {
       deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'The owning flow is updated when the delayed child completes the _in phase.');
 
       own(9);
         child.go(1);
-        deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is not updated when an _update state delays the _on phase.');
+        deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is not updated when an _owner state delays the _on phase.');
         setTimeout(function () {
           deepEqual(updateStatePhases, ['_program@in', '_program@on'], 'The owning flow is updated when the delayed child completes the _on phase.');
 
           own(10);
             child.go(1, 0);
-            deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is not updated when an _update state delays the _out phase.');
+            deepEqual(updateStatePhases, ['_program@in'], 'The owning flow is not updated when an _owner state delays the _out phase.');
             setTimeout(function () {
               deepEqual(updateStatePhases, ['_program@in', '_program@out'], 'The owning flow is updated when the delayed child completes the _out phase.');
 
@@ -1408,7 +1408,7 @@ test('.owner', function () {
         createOwnableChildFlow();
         strictEqual(child.owner, corePkgDef(this), 'A flow has an owner when it is created within the callback of another flow.');
         createChildFlow();
-        ok(!child.owner, 'A flow can not have an owner if no state has a valid _update attribute.');
+        ok(!child.owner, 'A flow can not have an owner if no state has a valid _owner attribute.');
         child = 0;
         createFromExternalBlessedFunction = this.bless(function () {
           createOwnableChildFlow();
