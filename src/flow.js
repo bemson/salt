@@ -1828,8 +1828,8 @@
       if (idx instanceof Array) {
         // replace args with a copy of the idx array
         pkg.args = [].concat(idx);
-        // flag success with setting new argument values
-        return true;
+        // flag success by returning the array given
+        return idx;
       } else if (idxType === 'number' && !isNaN(idx) && idx >= 0) { // or, when idx is a valid index...
         // if a value was passed...
         if (argCnt > 1) {
@@ -1840,6 +1840,8 @@
           } else { // otherwise, when not removing the last index
             // set the value of the target index
             pkgArgs[idx] = value;
+            // return the value set
+            return value;
           }
           // (finally) flag success with setting or removing the index
           return true;

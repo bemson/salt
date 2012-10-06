@@ -2064,7 +2064,7 @@ test('.args()', function () {
   [NaN, -1, function () {}, {}, true].forEach(function (arg) {
     equal(flow.args(arg), false, 'Returns false when the first index is "' + arg + '".');
   });
-  equal(flow.args(valAry), true, 'Returns true when passed an array.');
+  strictEqual(flow.args(valAry), valAry, 'Returns true when passed an array.');
   equal(flow.args()[valAry.length - 1], valAry[valAry.length - 1], 'Passing an array replaces the flow arguments.');
   valAry.push(val1);
   ok(flow.args().length !== valAry.length, 'Returns a cloned array.');
@@ -2072,7 +2072,7 @@ test('.args()', function () {
   equal(flow.args().length, 0, 'There are no arguments when a flow completes navigating.');
   cb.paused(val1);
   equal(flow.args()[0], val1, 'Arguments are available when the flow is paused.');
-  equal(flow.args(1, val2), true, 'Returns true when passed a valid index and second argument.');
+  strictEqual(flow.args(1, val2), val2, 'Returns true when passed a valid index and second argument.');
   flow.args(1, undefined);
   equal(flow.args().length, 1, 'Removes the last argument when setting the last indice to undefined.');
 });
@@ -2867,7 +2867,7 @@ test('Traversal method behavior on a locked flow.', function () {
   var flow = new Flow(function () {
     this.lock(1);
     equal(this.lock(), true, 'The flow is now locked.');
-    equal(this.args(0, 'bacon'), true, 'proxy.args() can set arguments internally.');
+    strictEqual(this.args(0, 'bacon'), 'bacon', 'proxy.args() can set arguments internally.');
     equal(this.go(0), true, 'proxy.go() works internally.');
     equal(this.target(0, 'foo'), true, 'proxy.target() works internally.');
     equal(this.args(0), 'foo', 'Using proxy.target() internally does change arguments.');
