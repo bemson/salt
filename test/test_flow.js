@@ -2017,7 +2017,7 @@ test('.bless()', function  () {
 test('.data()', function () {
   var flow = new Flow(),
     name = 'foo',
-    value = 1,
+    value = 'zen',
     batch = {
       bar: 'baz',
       zog: 'pop'
@@ -2030,9 +2030,9 @@ test('.data()', function () {
   );
   equal(flow.data(name), undefined, 'The value of undeclared variables is "undefined".');
   deepEqual(flow.data(), [name], 'Returns an array of declared variables, when called without arguments.');
-  equal(flow.data(name, value), true, 'Returns true when setting a variable.');
+  strictEqual(flow.data(name, value), value, 'Returns the same value when setting a variable.');
   equal(flow.data(name), value, 'Returns the last set value of a variable.');
-  equal(flow.data(batch), true, 'Returns true when given an object with one or more key/value pairs.');
+  strictEqual(flow.data(batch), batch, 'Returns true when given an object with one or more key/value pairs.');
   equal(flow.data('bar'), 'baz', 'Passing an object allows batch addition of defined variable keys and values.');
 });
 
@@ -2871,7 +2871,7 @@ test('Traversal method behavior on a locked flow.', function () {
     equal(this.go(0), true, 'proxy.go() works internally.');
     equal(this.target(0, 'foo'), true, 'proxy.target() works internally.');
     equal(this.args(0), 'foo', 'Using proxy.target() internally does change arguments.');
-    equal(this.data('hello', 'chicken'), true, 'proxy.data() works internally.');
+    equal(this.data('hello', 'chicken'), 'chicken', 'proxy.data() works internally.');
     this.wait(function () {
         this.lock(0);
         equal(this.lock(), false, 'The flow is now unlocked.');
@@ -2886,7 +2886,7 @@ test('Traversal method behavior on a locked flow.', function () {
   equal(flow.args(0), 'foo', 'proxy.args() can get arguments externally.');
   equal(flow.args(0, 'bar'), false, 'proxy.args() will not set arguments externally.');
   equal(flow.data('hello'), 'chicken', 'proxy.data() can get variables externally.');
-  equal(flow.data('hello', 'world'), true, 'proxy.data() can set variables externally.');
+  equal(flow.data('hello', 'world'), 'world', 'proxy.data() can set variables externally.');
   equal(flow.go(0), false, 'pkg.go() does not work externally.');
   equal(flow.target(0, 'bar'), false, 'pkg.target() does not work externally.');
   equal(flow.args(0), 'foo', 'Using pkg.target() externally does not change arguments.');

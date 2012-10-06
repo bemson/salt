@@ -1757,8 +1757,8 @@
             if (argCnt > 1) {
               // set the current value
               d.values[0] = value;
-              // flag success with setting the value
-              rtn = true;
+              // use current value to flag success
+              rtn = value;
             } else { // otherwise, when no value is passed...
               // return the current value
               rtn = d.values[0];
@@ -1794,8 +1794,8 @@
                 // make recursive call to set this name/value pair
                 pkg.proxy.data(key, name[key]);
               });
-              // flag batch success
-              rtn = true;
+              // return the given object
+              rtn = name;
             }
           }
         break;
