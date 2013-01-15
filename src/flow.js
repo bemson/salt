@@ -1,15 +1,15 @@
 /*!
- * Flow v0.4.8
+ * Flow v0.5.0
  * http://github.com/bemson/Flow/
  *
  * Dependencies:
- * - Panzer v0.3.5 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
- * - genData v2.0.1 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/genData/)
+ * - Panzer v0.4.0 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
+ * - genData v3.1.0 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/genData/)
  *
- * Copyright 2012, Bemi Faison
+ * Copyright, Bemi Faison
  * Released under the MIT License
  */
-!function (inCJS, inAMD, Array, Math, Object, RegExp, scope, undefined) {
+!function (inAMD, inCJS, Array, Math, Object, RegExp, scope, undefined) {
 
   // dependent module initializer
   function initFlow(require, exports, module) {
@@ -341,7 +341,7 @@
       }
     ;
 
-    Flow.version = '0.4.8';
+    Flow.version = '0.5.0';
 
     // define remaining core tags and share tag initializers
     /*
@@ -2113,20 +2113,20 @@
         state: currentNode.name
       };
     };
-    // return module
+
     return Flow;
   }
 
   // initialize and expose Flow, based on the environment
-  if (inCJS) {
-    module.exports = initFlow(require, exports, module);
-  } else if (inAMD) {
+  if (inAMD) {
     define(initFlow);
+  } else if (inCJS) {
+    module.exports = initFlow(require, exports, module);
   } else if (!scope.Flow) {
     scope.Panzer = initFlow();
   }
 }(
-  typeof exports != 'undefined',
   typeof define == 'function',
+  typeof exports != 'undefined',
   Array, Math, Object, RegExp, this
 );
