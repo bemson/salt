@@ -128,6 +128,11 @@
             return node.parentIndex;
           }
         },
+        child: {
+          f: function () {
+            return node.firstChildIndex;
+          }
+        },
         next: {
           f: function (node) {
             return node.nextIndex;
