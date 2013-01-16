@@ -1078,9 +1078,10 @@
           nodes = pkg.nodes,
           nids = pkg.nids,
           qryNode,
-          queryHasNoTokens,
+          simpleQuery,
           tokens,
           token,
+          qryCacheId,
           slash = '/',
           idx = -1
         ;
@@ -1109,96 +1110,105 @@
             qry = qry + '';
 
           case 'string':
+
             // short circuit special queries
             if (qry === '..//' || qry === '//') {
               idx = qry === '//' ? 1 : 0;
               break;
             }
-            // flag when this is a simple query
-            queryHasNoTokens = !r_queryIsTokenized.test(qry);
-            // ensure the query ends with a slash
+
+            simpleQuery = !r_queryIsTokenized.test(qry);
+
+            // ensure query ends with a slash (for absolute, root, and relative queries)
             if (qry.slice(-1) !== slash) {
               qry += slash;
             }
-            // if a root or absolute query...
+
             if (qry.charAt(0) === slash) {
-              // if an absolute query...
               if (qry.charAt(1) === slash) {
-                // validate simple absolute queries now
-                if (queryHasNoTokens) {
+
+                // vet absolute query
+                if (simpleQuery) {
                   idx = nids[qry] || -1;
                   break;
                 }
-                // start resolution from absolute state
                 qryNode = nodes[0];
-              } else { // otherwise, when a root query...
-                // start query at the root relative to the current node
+              } else {
                 qryNode = nodes[qryNode.rootIndex];
-                // validate simple root queries now
-                if (queryHasNoTokens) {
+
+                // vet rooted query
+                if (simpleQuery) {
                   idx = nids[qryNode.path + qry.substr(1)] || -1;
                   break;
                 }
               }
-            } else if (queryHasNoTokens) { // or, when a simple local query...
-              // validate simple local queries now
+            } else if (simpleQuery) {
+              // vet relative query
               idx = nids[qryNode.path + qry] || -1;
               break;
             }
-            // prepare to resolve and cache this query (if not already cached)
+
+            // prepare query for token resolution and caching
             qry = qry.replace(r_trimSlashes, '');
             qryCacheId = qry + node.index;
-            // resolve when not cached (for this node)
+
             if (!pkg.cache.indexOf.hasOwnProperty(qryCacheId)) {
               generateTokens(qry).every(function (token) {
                 var
-                  tmpIdx = -1,
+                  resolvedIndex = -1,
                   tmpNode,
                   dynamicTokenResolver
                 ;
                 if (token.value) {
-                  // skip when part of a resolved option group
+
+                  // skip this option when the match set has been satisfied
                   if (token.set && token.set.done) {
                     return 1;
                   }
+
                   if (token.dyn) {
-                    // resolve dynamic tokens
                     dynamicTokenResolver = reservedQueryTokens[token.dyn] || pkg.tokens[token.dyn];
                     if (dynamicTokenResolver) {
                       if (dynamicTokenResolver.f) {
-                        tmpIdx = dynamicTokenResolver.f(qryNode, nodes, token.dyn);
+                        // validate token with a function
+                        resolvedIndex = dynamicTokenResolver.f(qryNode, nodes, token.dyn);
                       } else {
-                        tmpIdx = dynamicTokenResolver.i;
+                        // resolve token with an index
+                        resolvedIndex = dynamicTokenResolver.i;
                       }
                     }
                   } else {
-                    // resolve child state of the current path
-                    tmpIdx = nids[qryNode.path + token.value + slash];
+                    // get index matching this state appended to the current node's path
+                    resolvedIndex = nids[qryNode.path + token.value + slash];
                   }
-                  // get node of the resolved index
-                  tmpNode = nodes[tmpIdx];
+                  // target node at the resolved index
+                  tmpNode = nodes[resolvedIndex];
                 }
-                // revert findings when there are more options to resolve
+
+                // allow failed resolution for match sets with more options
                 if (!tmpNode && token.set && token.opt + 1 < token.set.opts) {
                   return 1;
                 }
-                // continue or abort loop
+
                 if (tmpNode) {
+                  // satisfy the match set
                   if (token.set) {
                     token.set.done = 1;
                   }
+                  // capture progress and continue resolving
                   idx = resolvedIndex;
                   qryNode = tmpNode;
                   return 1;
                 } else {
+                  // clear progress and exit
                   idx = -1;
                   return 0;
                 }
               });
-              // cache resolved index
+              // cache query result
               pkg.cache.indexOf[qryCacheId] = idx;
             }
-            // use cached index
+            // get cached query result
             idx = pkg.cache.indexOf[qryCacheId];
         }
         // return resolved index
