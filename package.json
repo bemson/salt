@@ -2,6 +2,7 @@
   "name": "Flow",
   "version": "0.5.0",
   "description": "A semantic JavaScript framework, for unparalled code organization and execution control.",
+  "main": "src/flow.js",
   "dependencies" : {
     "Panzer": "~0.4",
     "genData": "~3.1"
@@ -14,11 +15,14 @@
   },
   "keywords": [
     "semantic",
-    "state"
+    "state",
     "thread",
     "architecture",
-    "framework",
+    "framework"
   ],
+  "scripts": {
+    "test": "node_modules/.bin/mocha"
+  },
   "private": true,
   "author": {
     "name": "Bemi Faison",
@@ -34,6 +38,5 @@
       "type" : "MIT",
       "url" : "https://github.com/bemson/Flow/raw/master/LICENSE"
     }
-  ],
-  "main": "src/flow.js"
+  ]
 }
