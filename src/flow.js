@@ -129,7 +129,7 @@
           }
         },
         child: {
-          f: function () {
+          f: function (node) {
             return node.firstChildIndex;
           }
         },
