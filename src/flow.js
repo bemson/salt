@@ -1877,8 +1877,6 @@
       ) {
         // if there are waypoints...
         if (waypoints.length) {
-          // prepend and track way points
-          pkg.prependTargets(waypoints);
           // if the last waypoint matches the first target...
           while (waypoints[waypoints.length - 1] === pkg.targets[0]) {
             // remove the last waypoint
@@ -2150,7 +2148,7 @@
   } else if (inCJS) {
     module.exports = initFlow(require, exports, module);
   } else if (!scope.Flow) {
-    scope.Panzer = initFlow();
+    scope.Flow = initFlow();
   }
 }(
   typeof define == 'function',
