@@ -389,7 +389,7 @@
       // key tests from every package
       tagKeyTests = tagKeyTests || Flow.pkg()
         .map(function ( pkgName ) {
-          return Flow.pkg( pkgName ).tagKey;
+          return Flow.pkg( pkgName ).attrKey;
         })
         .filter(function ( tagKeyTest ) {
           return tagKeyTest;
@@ -917,7 +917,7 @@
     corePkgDef.actives = [];
 
     // pattern for identifying tag keys
-    corePkgDef.tagKey = /^_/;
+    corePkgDef.attrKey = /^_/;
 
     // pattern for identifying invalid state names
     corePkgDef.badKey = /\W|^toString$/;
@@ -1004,7 +1004,7 @@
       pkg.nodes.forEach(function (node, idx) {
         var
           parentNode = pkg.nodes[node.parentIndex],
-          tags = node.tags,
+          tags = node.attrs,
           tagName
         ;
 
@@ -1018,7 +1018,7 @@
         // compile core tags
         for (tagName in coreTags) {
           if (coreTags.hasOwnProperty(tagName)) {
-            coreTags[tagName](tagName, nodeTags.hasOwnProperty(tagName), nodeTags, node, parentNode, pkg, idx);
+            coreTags[tagName](tagName, tags.hasOwnProperty(tagName), tags, node, parentNode, pkg, idx);
           }
         }
 
