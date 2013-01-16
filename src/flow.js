@@ -31,60 +31,69 @@
       r_trimSlashes = /^\/+|\/+$/g,
       r_hasNonAlphanumericCharacter = /\W/,
       r_hasAlphanumericCharacter = /\w/,
-      generateTokens = genData.spawn(function (name, value, parent, dataset, flags) {
+      generateTokens = genData.spawn(function (name, value, parent, flags) {
         var
-          // alias self
           data = this,
           slash = '/',
-          hasTokenPfx;
-        // exclude by default
-        flags.omit = 1;
-        // init properties
-        data.set = data.dyn = 0;
-        // if this is a string...
+          hasTokenPfx,
+          dataset = flags.returns,
+          parseFurther = 0
+        ;
+
+        // init props here (for faster lookups)
+        data.set =
+        data.dyn =
+          0;
+
         if (typeof value === 'string') {
-          // abort when string is empty
+
+          // cancel empty strings
           if (!value) {
-            dataset.splice(0, dataset.length);
-            flags.exit = 1;
+            flags.returns = [];
+            flags.breaks = 1;
             return;
           }
-          // if slashes exist...
+
           if (~value.indexOf(slash)) {
-            // split into slashes
-            data.value = value.split(slash);
-          } else if (value.charAt(0) === '[' && value.slice(-1) === ']') { // or, when a match-set...
-            // remove brackets and split by the match-set delimiter
-            data.value = value.slice(1,-1).split('|');
-            // identify data object holding all options of this set (could be parent)
+
+            // iterate over string paths
+            flags.source = value.split(slash);
+            parseFurther = 1;
+
+          } else if (value.charAt(0) === '[' && value.slice(-1) === ']') {
+
+            // iterate over match-sets
+            flags.source = value.slice(1,-1).split('|');
+            parseFurther = 1;
+
+            // identify the one object that will hold options for this set
             if (parent && parent.set) {
               data.set = parent.set;
             } else {
               data.set = data;
             }
-            // init set's done flag
+            // init set's object resolution flags
             data.set.done = 0;
-            // init opts count for set
             if (!data.set.opts) {
               data.set.opts = 0;
             }
           }
         }
-        // if the value is (still) a string...
-        if (typeof data.value === 'string') {
-          // if this is part of a set...
+
+        if (!parseFurther) {
+
+          // link and update the set manager when this is a match-option
           if (parent && parent.set) {
-            // point to the set this option is part of
             data.set = parent.set;
-            // capture count of this option
             data.opt = data.set.opts++;
           }
+
           // capture dynamic token - anything with non-alphanumeric characters
           if (r_hasNonAlphanumericCharacter.test(data.value)) {
             data.dyn = (data.value.charAt(0) === tokenPrefix) ? data.value.substr(1) : data.value;
           }
-          // include this token in dataset
-          flags.omit = 0;
+
+          return data;
         }
       }),
       traversalCallbackOrder = {
