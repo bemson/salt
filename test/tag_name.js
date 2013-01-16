@@ -25,7 +25,7 @@ describe( '_name tag', function () {
     flow.query('@foo').should.equal('//b/');
   });
 
-	it( 'should ignore empty, non-alphanumeric, and tokized strings', function () {
+	it( 'should ignore empty, non-alphanumeric, and tokenized strings', function () {
     flow = new Flow({
       empty: {
         _name: ''

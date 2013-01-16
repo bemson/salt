@@ -228,7 +228,10 @@
           Define alias for this state, to use in queries.
         */
         _name: function (tagName, exists, tags, node, parentNode, pkg, idx) {
-          if (exists && tags._name && typeof tags._name === 'string') {
+          if (
+            exists && tags._name && typeof tags._name === 'string' &&
+            !r_queryIsTokenized.test(tags._name) && r_hasAlphanumericCharacter.test(tags._name)
+          ) {
             pkg.tokens[tags._name] = {
               i: idx,
               f: 0
