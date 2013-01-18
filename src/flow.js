@@ -351,8 +351,19 @@
           Defines one of five callback methods to invoke.
         */
         _on: function (tagName, exists, tags, node, parentNode, pkg, idx) {
-          if (exists && typeof tags[tagName] === 'function') {
-            node.fncs[traversalCallbackOrder[tagName]] = tags[tagName];
+          var
+            tagValue,
+            typeofTagValue
+          ;
+          if (exists) {
+            tagValue = tags[tagName];
+            typeofTagValue = typeof tagValue;
+            if (typeofTagValue === 'function') {
+              node.fncs[traversalCallbackOrder[tagName]] = tagValue;
+            }
+            if (typeofTagValue === 'string' || typeofTagValue === 'number') {
+              nodes.fncs[traversalCallbackOrder[tagName]] = sharedRedirectEventHandler;
+            }
           }
         }
       }
@@ -666,6 +677,11 @@
       } else {
         return 0;
       }
+    }
+
+    function sharedRedirectEventHandler() {
+      var pkg = this;
+      pkg.proxy.go(pkg.nodes[pkg.tank.currentIndex].fncs[pkg.phase]);
     }
 
     function FlowStorage() {
