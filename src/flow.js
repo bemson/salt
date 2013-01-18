@@ -361,7 +361,7 @@
             if (typeofTagValue === 'function') {
               node.fncs[traversalCallbackOrder[tagName]] = tagValue;
             }
-            if (typeofTagValue === 'string' || typeofTagValue === 'number') {
+            if ((typeofTagValue === 'string' && tagValue) || (typeofTagValue === 'number' && tagValue >= 0 && pkg.nodes.length < tagValue)) {
               nodes.fncs[traversalCallbackOrder[tagName]] = sharedRedirectEventHandler;
             }
           }
