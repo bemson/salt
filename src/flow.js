@@ -1513,7 +1513,8 @@
         // alias the restrict node (if any)
         restrictingNode = this.pkg.nodes[this.restrict],
         // alias the ingress node of the target
-        targetIngressNode = this.pkg.nodes[targetNode.ingress];
+        targetIngressNode = this.pkg.nodes[targetNode.ingress]
+      ;
 
       // return true if this node is within it's restrictions (if any), or when we're within, targeting, or on the target's ingress node (if any)
       return (!restrictingNode || targetNode.within(restrictingNode)) && (!targetIngressNode || this === targetIngressNode || targetNode === targetIngressNode || this.within(targetIngressNode));
