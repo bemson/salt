@@ -262,33 +262,29 @@
         _data: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           var
             cfgs = {},
-            dataKey,
-            definedAtLeastOneDataConfiguration
+            key
           ;
+
+          // init dtos property to collect data tracking objects
+          node.dcfgs = [];
+
           if (exists) {
             (isArray(tags._data) ? tags._data : [tags._data]).forEach(function (data) {
               var
                 typeofData = typeof data,
                 key
               ;
-              if (
-                typeofData === 'string' &&
-                isDataDefinitionNameValid(data)
-              ) {
-                definedAtLeastOneDataConfiguration = 1;
+              if (typeofData === 'string' && data) {
                 cfgs[data] = {
                   use: 0,
-                  name: data
+                  name: data,
+                  value: undefined
                 };
               }
               if (typeofData === 'object' && data) {
                 for (key in data) {
-                  if (
-                    data.hasOwnProperty(key) &&
-                    isDataDefinitionNameValid(key)
-                  ) {
-                    definedAtLeastOneDataConfiguration = 1;
-                    cfgs[data] = {
+                  if (data.hasOwnProperty(key)) {
+                    cfgs[key] = {
                       use: 1,
                       name: key,
                       value: data[key]
@@ -297,18 +293,12 @@
                 }
               }
             });
+            for (key in cfgs) {
+              if (cfgs.hasOwnProperty(key)) {
+                node.cfgs.push(cfgs[key]);
           }
-          if (definedAtLeastOneDataConfiguration) {
-            node.dKeys = Object.keys(cfgs);
-            node.data = [];
-            for (dataKey in cfgs) {
-              if (cfgs.hasOwnProperty(dataKey)) {
-                node.data.push(cfgs[dataKey]);
               }
             }
-          } else {
-            node.dKeys = node.data = staticUnusedArray;
-          }
         },
         /*
           Specifies a branch to navigate after targeting this state.
@@ -331,7 +321,7 @@
             // if there is a lastWalk array...
             if (node.lastWalk) {
               // add this node's index to the array
-              node.lastWalk[node.lastWalk.length] = node.index;
+              node.lastWalk.push(node.index);
             }
           }
         },
@@ -974,7 +964,9 @@
     corePkgDef.init = function (cfg) {
       var
         pkg = this,
-        activeFlow = activeFlows[0]
+        activeFlow = activeFlows[0],
+        sharedProxyDataMember = {},
+        pkgId
       ;
 
       // define stored instance manager
@@ -991,8 +983,8 @@
       pkg.trail = [];
       // state index to add to trail at end of traversal/resume
       pkg.tgtTrail = -1;
-      // collection of defined variables
-      pkg.data = {};
+      // collection of declared variable tracking objects
+      pkg.dtos = {};
       // init delay timer and function
       pkg.waitTimer = pkg.waitFnc = 0;
       // collection of cached values
@@ -1014,8 +1006,6 @@
       pkg.pendees = [];
       // collection of targeted nodes
       pkg.targets = [];
-      // stack of defined variables (begin with faux data stack)
-      pkg.dKeys = [];
       // identify the initial phase for this flow, 0 by default
       pkg.phase = 0;
       // set owner permission and assignment defaults
@@ -1071,6 +1061,13 @@
         // from _sequence
         delete node.lastWalk;
       });
+
+      // reference data object in all proxy objects
+      for (pkgId in pkg.pkgs) {
+        if (pkg.pkgs.hasOwnProperty(pkgId)) {
+          pkg.pkgs[pkgId].proxy.data = sharedProxyDataMember;
+        }
+      }
 
       if (activeFlow) {
 
@@ -1263,16 +1260,17 @@
       getDTO: function (name) {
         var pkg = this;
 
-        if (isDataDefinitionNameValid(name)) {
-          if (!pkg.data.hasOwnProperty(name)) {
-            pkg.data[name] = {
+        if (!pkg.dtos.hasOwnProperty(name)) {
+          pkg.dtos[name] = {
               name: name,
               stack: []
             };
+          // check proxy for existing data by this name
+          if (typeof pkg.proxy.data == 'object' && pkg.proxy.data.hasOwnProperty(name)) {
+            pkg.dtos[name].stack[0] = pkg.proxy.data[name];
           }
-          return pkg.data[name];
         }
-        return 0;
+        return pkg.dtos[name];
       },
 
       // proceed towards the latest/current target
@@ -1528,30 +1526,28 @@
         pkg = node.pkg
       ;
 
-      // add/remove data name manifest
-      if (descope) {
-        pkg.dKeys.shift();
-      } else {
-        pkg.dKeys.unshift(node.dKeys);
-      }
-
       // add/remove data configurations
       if (descope) {
-        node.data.forEach(function (dataCfg) {
+        node.dcfgs.forEach(function (dataCfg) {
           var dto = pkg.getDTO(dataCfg.name);
           // remove value from stack
           dto.stack.shift();
           if (!dto.stack.length) {
-            delete pkg.data[dataCfg.name];
+            // remove empty tracking object
+            delete pkg.dtos[dataCfg.name];
+            // remove managed keys in proxy data
+            delete pkg.proxy.data[dataCfg.name];
           }
         });
       } else {
-        node.data.forEach(function (dataCfg) {
+        node.dcfgs.forEach(function (dataCfg) {
           var dto = pkg.getDTO(dataCfg.name);
-          // add initial value to stack
           if (dataCfg.use) {
+            // add initial value to stack
             dto.stack.unshift(dataCfg.value);
           }
+          // add key to proxy data
+          pkg.proxy.data[dataCfg.name] = dataCfg.value;
         });
       }
     };
@@ -1729,54 +1725,6 @@
           };
       }
       // (otherwise) return false
-      return false;
-    };
-
-    // access and edit scoped data variables for a node
-    corePkgDef.proxy.data = function (name, value) {
-      var
-        pkg = corePkgDef(this),
-        typeofFirstArgument,
-        argumentsLength = arguments.length,
-        val
-      ;
-
-      // return all data keys
-      if (!argumentsLength) {
-        val = Object.keys(pkg.data);
-        val.sort();
-        return val;
-      }
-
-      // return keys last defined for this state
-      if (name === true && argumentsLength === 1) {
-        return (pkg.dKeys[0] || staticUnusedArray).concat();
-      }
-
-      typeofFirstArgument = typeof name;
-
-      // set and/or retrieve data value
-      if (typeofFirstArgument === 'string' && isDataDefinitionNameValid(name)) {
-        val = pkg.getDTO(name);
-        if (argumentsLength > 1) {
-          val.stack[0] = value;
-        }
-        return val.stack[0];
-      }
-
-      // set multiple key/value pairs with recursive calls
-      if (typeofFirstArgument === 'object' && name) {
-        val = Object.keys(name);
-        if (val.every(isDataDefinitionNameValid)) {
-          val.forEach(function (key) {
-            pkg.proxy.data(key, name[key]);
-          });
-          // return original object
-          return name;
-        }
-      }
-
-      // otherwise, fail invocation
       return false;
     };
 
