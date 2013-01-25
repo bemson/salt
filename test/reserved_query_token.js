@@ -1,4 +1,4 @@
-describe( 'Reserved Tokens', function () {
+describe( 'Reserved query token', function () {
 
   var flow;
 
@@ -23,7 +23,7 @@ describe( 'Reserved Tokens', function () {
     flow.query('@parent').should.be.false;
   });
   
-  describe( 'flow', function () {
+  describe( '@flow', function () {
 
     it( 'should be first state of the flow', function () {
       flow.query('@flow').should.equal('..//');
@@ -31,7 +31,7 @@ describe( 'Reserved Tokens', function () {
 
   });
   
-  describe( 'program', function () {
+  describe( '@program', function () {
 
     it( 'should be the second state of the flow', function () {
       flow.query('@program').should.equal('//');
@@ -39,7 +39,7 @@ describe( 'Reserved Tokens', function () {
 
   });
   
-  describe( 'root', function () {
+  describe( '@root', function () {
 
     it( 'should be the state designated as the local branch root', function () {
       flow.go('//b/');
@@ -50,7 +50,7 @@ describe( 'Reserved Tokens', function () {
 
   });
   
-  describe( 'parent', function () {
+  describe( '@parent', function () {
 
     it( 'should be the parent of the current state', function () {
       flow.go(1);
@@ -59,7 +59,7 @@ describe( 'Reserved Tokens', function () {
 
   });
   
-  describe( 'next', function () {
+  describe( '@next', function () {
 
     it( 'should be the right sibling of the current state', function () {
       flow.go(2);
@@ -68,7 +68,7 @@ describe( 'Reserved Tokens', function () {
 
   });
   
-  describe( 'previous', function () {
+  describe( '@previous', function () {
 
     it( 'should be the left sibling of the current state', function () {
       flow.go('//b/');
@@ -77,7 +77,7 @@ describe( 'Reserved Tokens', function () {
 
   });
   
-  describe( 'oldest', function () {
+  describe( '@oldest', function () {
 
     it( 'should be the right-most sibling of the current state', function () {
       flow.go(2);
@@ -86,16 +86,16 @@ describe( 'Reserved Tokens', function () {
 
   });
   
-  describe( 'youngest', function () {
+  describe( '@youngest', function () {
 
-    it( 'should be the right-most sibling of the current state', function () {
+    it( 'should be the left-most sibling of the current state', function () {
       flow.go('//d/');
       flow.query('@youngest').should.equal('//a/');
     });
 
   });
 
-  describe( 'self', function () {
+  describe( '@self', function () {
 
     it( 'should be the current state', function () {
       flow.query('@self').should.equal('..//');
@@ -105,7 +105,7 @@ describe( 'Reserved Tokens', function () {
 
   });
 
-  describe( 'child', function () {
+  describe( '@child', function () {
 
     it( 'should be the current state', function () {
       flow.go(1);

@@ -17,7 +17,6 @@ describe( 'Flow', function () {
   //     .and.deep.equals(['core']);
   // });
 
-
   it( 'should execute functions as it navigates the compiled states of a program', function () {
     var
       fncs = [
@@ -54,6 +53,13 @@ describe( 'Flow', function () {
     ;
   });
 
+  it( 'should ')
+
+  describe( 'programs', function () {
+
+    it( 'should have a minimum of two states, when the given value has no members');
+
+  });
   // describe( 'navigation');
 
   // describe( 'program', function () {
