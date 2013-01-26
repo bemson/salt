@@ -296,9 +296,9 @@
             for (key in cfgs) {
               if (cfgs.hasOwnProperty(key)) {
                 node.cfgs.push(cfgs[key]);
-          }
               }
             }
+          }
         },
         /*
           Specifies a branch to navigate after targeting this state.
