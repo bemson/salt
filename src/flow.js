@@ -1015,12 +1015,21 @@
       // set name of second node
       pkg.nodes[1].name = '_program';
       // initialize each node...
-      pkg.nodes.forEach(function (node, idx) {
+      pkg.nodes.forEach(function (node, idx, nodes) {
         var
           parentNode = pkg.nodes[node.parentIndex],
           tags = node.attrs,
           tagName
         ;
+
+        // define node path
+        if (idx == 1) {
+          node.path = '//';
+        } else if (idx) {
+          node.path = nodes[node.parentIndex].path + node.name + '/';
+        } else {
+          node.path = '..//';
+        }
 
         // index this node path
         pkg.nids[node.path] = idx;
