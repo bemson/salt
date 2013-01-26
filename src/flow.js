@@ -352,7 +352,8 @@
               node.fncs[traversalCallbackOrder[tagName]] = tagValue;
             }
             if ((typeofTagValue === 'string' && tagValue) || (typeofTagValue === 'number' && tagValue >= 0 && pkg.nodes.length < tagValue)) {
-              nodes.fncs[traversalCallbackOrder[tagName]] = sharedRedirectEventHandler;
+              // capture details to vet after compilation
+              pkg.vetSets = [node, traversalCallbackOrder[tagName], tagValue];
             }
           }
         }
@@ -671,7 +672,7 @@
 
     function sharedRedirectEventHandler() {
       var pkg = this;
-      pkg.proxy.go(pkg.nodes[pkg.tank.currentIndex].fncs[pkg.phase]);
+      pkg.proxy.go(pkg.nodes[pkg.tank.currentIndex].reds[pkg.phase]);
     }
 
     function FlowStorage() {
@@ -1037,6 +1038,7 @@
         // prep for tag compilation
         node.pkg = pkg;
         node.fncs = [0,0,0,0,0];
+        node.reds = [];
 
         // compile core tags
         for (tagName in coreTags) {
@@ -1070,6 +1072,21 @@
         // from _sequence
         delete node.lastWalk;
       });
+
+      // vet short-hand redirect queries
+      pkg.vetSets.forEach(function (vetSet) {
+        var
+          node = vetSet[0],
+          phase = vetSet [1],
+          idx = pkg.indexOf(vetSet[2], node)
+        ;
+        if (~idx) {
+          // add valid query results as event callbacks
+          node.reds[phase] = idx;
+          node.fncs[phase] = sharedRedirectEventHandler;
+        }
+      });
+      delete pkg.vetSets;
 
       // reference data object in all proxy objects
       for (pkgId in pkg.pkgs) {
