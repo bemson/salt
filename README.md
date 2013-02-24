@@ -1,30 +1,10 @@
 # Flow
 by Bemi Faison
 
-version 0.4.7
-(8/20/12)
+version 0.5.0
+(2/24/13)
 
-## DESCRIPTION
-
-Flow is a semantic JavaScript framework, for unparalleled code organization and control. Flow is designed to reduce code complexity, redundancy, and concurrency issues, for confident web development.
-
-## FILES
-
-* src/ - Directory containing the source code
-* test/ - [Qunit](http://docs.jquery.com/QUnit) tests of minified source files
-* README.md - This readme file
-* LICENSE - The legal terms and conditions under which this software may be used
-* flow-min.js - The Flow platform, including dependencies
-
-Source files minified with [UglifyJS](http://marijnhaverbeke.nl/uglifyjs)
-
-## INSTALLATION
-
-Flow requires [Panzer v0.3.5](https://github.com/bemson/Panzer).
-
-**At this time, Flow is not recommended for production.**
-
-## USAGE
+Flow is an experiment for creating comprehensive, maintainable JavaScript applications. Unlike most frameworks, which provide objects to use in your code, Flow captures how you use those objects in your code. Flow uses a mix of declarative and state-based programming to deliver discrete code organization and unparalleled execution control.
 
 During this alpha-stage of development, **the code remains undocumented**. Please review the test and source files for insights into the codebase. Thank you for your patience!
 
