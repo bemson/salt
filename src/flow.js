@@ -353,7 +353,7 @@
             }
             if ((typeofTagValue === 'string' && tagValue) || (typeofTagValue === 'number' && tagValue >= 0 && pkg.nodes.length < tagValue)) {
               // capture details to vet after compilation
-              pkg.vetSets = [node, traversalCallbackOrder[tagName], tagValue];
+              pkg.vetSets[pkg.vetSets.length] = [node, traversalCallbackOrder[tagName], tagValue];
             }
           }
         }
@@ -982,6 +982,8 @@
       pkg.calls = [];
       // collection of nodes targeted and reached while traversing
       pkg.trail = [];
+      // collection of redirect queries to validate after compilation
+      pkg.vetSets = [];
       // state index to add to trail at end of traversal/resume
       pkg.tgtTrail = -1;
       // collection of declared variable tracking objects
@@ -1077,7 +1079,7 @@
       pkg.vetSets.forEach(function (vetSet) {
         var
           node = vetSet[0],
-          phase = vetSet [1],
+          phase = vetSet[1],
           idx = pkg.indexOf(vetSet[2], node)
         ;
         if (~idx) {
