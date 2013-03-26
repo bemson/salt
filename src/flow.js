@@ -1497,7 +1497,7 @@
       }
 
       // scope node data
-      if (node.data.length) {
+      if (node.dcfgs.length) {
         node.scopeData(!entering);
       }
 
