@@ -19,6 +19,7 @@
       genData = (inCJS || inAMD) ? require('genData') : scope.genData,
       corePkgDef = Flow.pkg('core'),
       staticUnusedArray = [],
+      i, // loop vars
       isArray = (typeof Array.isArray === 'function') ?
         Array.isArray :
         function (obj) {
@@ -342,22 +343,137 @@
         */
         _on: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           var
+            tagValue = tags[tagName],
+            isFnc = typeof tagValue
+          ;
+          if (exists && isFnc) {
+            node.fncs[traversalCallbackOrder[tagName]] = tagValue;
+          }
+        },
+        /*
+          Specifies where to direct the flow at the end of a sequence for a given branch
+        */
+        _tail: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+          var
             tagValue,
-            typeofTagValue
+            tailData,
+            tailNode
           ;
           if (exists) {
-            tagValue = tags[tagName];
-            typeofTagValue = typeof tagValue;
-            if (typeofTagValue === 'function') {
-              node.fncs[traversalCallbackOrder[tagName]] = tagValue;
+            tagValue = tags._tail;
+            node.tail = tailData = {
+              p: tagValue
+            };
+            if (tagValue === true) {
+              tailData.n = node;
+            } else if (tagValue === false) {
+              // skip all when false
+              tailData.n =
+              tailData.t =
+                -1;
+            } else if (typeof tagValue === 'number' && !(tailData.n = pkg.nodes[tagValue])) {
+              // ignore invalid numbers now
+              tailData.t = -1;
             }
-            if ((typeofTagValue === 'string' && tagValue) || (typeofTagValue === 'number' && tagValue >= 0 && pkg.nodes.length < tagValue)) {
-              // capture details to vet after compilation
-              pkg.vetSets[pkg.vetSets.length] = [node, traversalCallbackOrder[tagName], tagValue];
+          } else if (parentNode) {
+            node.tail = parentNode.tail;
+          } else {
+            node.tail = 0;
+          }
+        }
+      },
+      // tags that depend on other tags or require cleanup
+      corePostTags = {
+        /*
+          Clean up lastWalk flag
+        */
+        _sequence: function (tagName, exists, tags, node) {
+          delete node.lastWalk;
+        },
+        /*
+          Specifies where to direct the flow at the end of a sequence for a given branch
+        */
+        _tail: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+          var
+            tailData = node.tail,
+            tailNode
+          ;
+          node.tail = -1;
+          // if there is tail data to use/process
+          if (tailData) {
+
+            // resolve path when there is no node
+            if (!tailData.hasOwnProperty('n')) {
+              tailData.n = pkg.nodes[pkg.indexOf(tailData.p, node)];
+            }
+
+            // resolve tail index
+            if (!tailData.hasOwnProperty('t')) {
+              tailNode = tailData.n;
+              // if...
+              if (
+                // there is a tail target, and...
+                tailNode &&
+                // the tail target is not a descendent of this node, and...
+                !tailNode.within(node) &&
+                (
+                  // the tail target is not a sequence, or...
+                  !tailNode.seq ||
+                  (
+                    // the tail sequence is not the owning node, and...
+                    tailNode !== node &&
+                    // not an ancestor anyway
+                    !node.within(tailNode)
+                  )
+                )
+              ) {
+                // capture tail target index
+                tailData.t = tailNode.index;
+              } else {
+                // ignore invalid tail target
+                tailData.t = -1;
+              }
+            }
+
+            // if this is an owning node that tails itself...
+            if (exists && tailData.n === node) {
+              // use parent's tail value
+              node.tail = parentNode.tail;
+            } else {
+              node.tail = tailData.t;
+            }
+          }
+        },
+        /*
+          Process callbacks that are redirects
+        */
+        _on: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+          var
+            tgtIdx = -1,
+            phase,
+            typeofTagValue,
+            tagValue
+          ;
+          if (exists && (typeofTagValue = typeof (tagValue = tags[tagName])) !== 'function') {
+            if (typeofTagValue === 'string' && tagValue.length) {
+              tgtIdx = pkg.indexOf(tagValue, node);
+            } else if (typeofTagValue === 'number' && pkg.nodes[tagValue]) {
+              tgtIdx = tagValue;
+            }
+            if (~tgtIdx) {
+              phase = traversalCallbackOrder[tagName];
+              node.reds[phase] = tgtIdx;
+              node.fncs[phase] = sharedRedirectEventHandler;
             }
           }
         }
-      }
+      },
+      // cache of core tag keys
+      coreTagKeys = [],
+      coreTagKeyCount,
+      // cache of core post tag keys
+      corePostTagKeys = [],
+      corePostTagKeyCount
     ;
 
     Flow.version = '0.5.0';
@@ -368,6 +484,23 @@
     */
     coreTags._ingress = coreTags._restrict;
     coreTags._in = coreTags._out = coreTags._over = coreTags._bover = coreTags._on;
+    corePostTags._in = corePostTags._out = corePostTags._over = corePostTags._bover = corePostTags._on;
+
+    // get core tag keys
+    for (i in coreTags) {
+      if (coreTags.hasOwnProperty(i)) {
+        coreTagKeys[coreTagKeys.length] = i;
+      }
+    }
+    coreTagKeyCount = coreTagKeys.length;
+
+    // get post core tag keys
+    for (i in corePostTags) {
+      if (corePostTags.hasOwnProperty(i)) {
+        corePostTagKeys[corePostTagKeys.length] = i;
+      }
+    }
+    corePostTagKeyCount = corePostTagKeys.length;
 
     // reuse dynamic resolution for other tokens
     reservedQueryTokens['.'] = reservedQueryTokens.self;
@@ -967,6 +1100,10 @@
         pkg = this,
         activeFlow = activeFlows[0],
         sharedProxyDataMember = {},
+        nodes = pkg.nodes,
+        nodeCount = nodes.length,
+        i, j,
+        node, parentNode, tagName,
         pkgId
       ;
 
@@ -982,8 +1119,6 @@
       pkg.calls = [];
       // collection of nodes targeted and reached while traversing
       pkg.trail = [];
-      // collection of redirect queries to validate after compilation
-      pkg.vetSets = [];
       // state index to add to trail at end of traversal/resume
       pkg.tgtTrail = -1;
       // collection of declared variable tracking objects
@@ -1017,46 +1152,42 @@
       pkg.nodes[0].name = '_flow';
       // set name of second node
       pkg.nodes[1].name = '_program';
-      // initialize each node...
-      pkg.nodes.forEach(function (node, idx, nodes) {
-        var
-          parentNode = pkg.nodes[node.parentIndex],
-          tags = node.attrs,
-          tagName
-        ;
+      // initialize nodes...
+      for (i = 0; i < nodeCount; i++) {
+        node = nodes[i];
+        parentNode = nodes[node.parentIndex];
 
         // define node path
-        if (idx == 1) {
+        if (i == 1) {
           node.path = '//';
-        } else if (idx) {
-          node.path = nodes[node.parentIndex].path + node.name + '/';
+        } else if (i) {
+          node.path = parentNode.path + node.name + '/';
         } else {
           node.path = '..//';
         }
 
         // index this node path
-        pkg.nids[node.path] = idx;
+        pkg.nids[node.path] = i;
 
         // prep for tag compilation
         node.pkg = pkg;
         node.fncs = [0,0,0,0,0];
         node.reds = [];
 
-        // compile core tags
-        for (tagName in coreTags) {
-          if (coreTags.hasOwnProperty(tagName)) {
-            coreTags[tagName](tagName, tags.hasOwnProperty(tagName), tags, node, parentNode, pkg, idx);
-          }
+        // run core tags
+        for (j = 0; j < coreTagKeyCount; j++) {
+          tagName = coreTagKeys[j];
+          coreTags[tagName](tagName, node.attrs.hasOwnProperty(tagName), node.attrs, node, parentNode, pkg, i);
         }
 
         // define custom, curried, and linked calls to .target
         node.cb = function () {
           var args = [].slice.call(arguments);
-          args.unshift(idx);
+          args.unshift(i);
           return pkg.proxy.target.apply(pkg.proxy, args);
         };
         node.cb.toString = function () {
-          return node.path
+          return node.path;
         };
         if (parentNode) {
           parentNode.cb[node.name] = node.cb;
@@ -1067,28 +1198,16 @@
           // use as the _on[0] traversal function
           node.fncs[0] = node.value;
         }
-      });
+      }
 
-      // clean up/finalize node compilation cruft
-      pkg.nodes.forEach(function (node) {
-        // from _sequence
-        delete node.lastWalk;
-      });
-
-      // vet short-hand redirect queries
-      pkg.vetSets.forEach(function (vetSet) {
-        var
-          node = vetSet[0],
-          phase = vetSet[1],
-          idx = pkg.indexOf(vetSet[2], node)
-        ;
-        if (~idx) {
-          // add valid query results as event callbacks
-          node.reds[phase] = idx;
-          node.fncs[phase] = sharedRedirectEventHandler;
+      // run post core tags for each node
+      for (i = 0; i < nodeCount; i++) {
+        node = nodes[i];
+        for (j = 0; j < corePostTagKeyCount; j++) {
+          tagName = corePostTagKeys[j];
+          corePostTags[tagName](tagName, node.attrs.hasOwnProperty(tagName), node.attrs, node, parentNode, pkg, i);
         }
-      });
-      delete pkg.vetSets;
+      }
 
       // reference data object in all proxy objects
       for (pkgId in pkg.pkgs) {
@@ -1481,15 +1600,21 @@
         tank = pkg.tank,
         parentFlow = activeFlows[1],
         blocked = pkg.pause || pkg.pending || pkg.phase,
+        hasTargets = pkg.targets.length,
         node = pkg.nodes[tank.currentIndex]
       ;
 
       // clear leftover delay function (is this possible/necessary?)
       pkg.waitFnc = 0;
 
-      if (!blocked && pkg.targets.length) {
-        // direct tank to the next state
-        tank.go(pkg.targets[0]);
+      if (!blocked && (hasTargets || ~node.tail)) {
+        if (hasTargets) {
+          // direct tank to the next state
+          tank.go(pkg.targets[0]);
+        } else {
+          // instruct flow to tail state
+          pkg.proxy.go(node.tail);
+        }
       } else {
         if (blocked) {
           // link pendable parents with this pendable state
@@ -1643,11 +1768,11 @@
       /*
         Check out whether this path has already been processed and cache.
       */
-      if (pkg.cbs.hasOwnProperty(arg)) {
-        return pkg.cbs[arg];
-      }
-
       if (argType === 'string') {
+        if (pkg.cbs.hasOwnProperty(arg)) {
+          return pkg.cbs[arg];
+        }
+
         return (pkg.cbs[arg] = function () {
           return pkg.proxy.target.apply(pkg.proxy, [].concat([].slice.call(arguments)));
         })
