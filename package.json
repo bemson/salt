@@ -4,7 +4,7 @@
   "description": "A semantic JavaScript framework, for unparalled code organization and execution control.",
   "main": "src/flow.js",
   "dependencies" : {
-    "Panzer": "~0.3.6",
+    "Panzer": "~0.3.7",
     "genData": "~3.1"
   },
   "devDependencies": {
