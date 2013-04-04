@@ -1123,8 +1123,11 @@
       pkg.tgtTrail = -1;
       // collection of declared variable tracking objects
       pkg.dtos = {};
-      // init delay timer and function
-      pkg.waitTimer = pkg.waitFnc = 0;
+      // init delay timer, function, and args
+      pkg.waitTimer =
+      pkg.waitFnc =
+      pkg.waitArgs =
+        0;
       // collection of cached values
       pkg.cache = {
         // token query cache
@@ -1565,7 +1568,7 @@
 
       // execute any delay function
       if (pkg.waitFnc) {
-        pkg.waitFnc.apply(pkg.proxy);
+        pkg.waitFnc.apply(pkg.proxy, pkg.waitArgs);
       }
     };
 
@@ -1604,8 +1607,10 @@
         node = pkg.nodes[tank.currentIndex]
       ;
 
-      // clear leftover delay function (is this possible/necessary?)
-      pkg.waitFnc = 0;
+      // clear leftover delay function and args (is this possible/necessary?)
+      pkg.waitFnc =
+      pkg.waitArgs =
+        0;
 
       if (!blocked && (hasTargets || ~node.tail)) {
         if (hasTargets) {
@@ -2021,14 +2026,16 @@
         argLn = args.length,
         // flag when no action will be taken after a delay
         noAction = argLn < 2,
+        // collect remaining arguments when there is an action
+        callbackArgs = noAction ? [] : [].slice.call(args, 2),
         // capture first argument as action to take after the delay, when more than one argument is passed
         delayFnc = noAction ? 0 : args[0],
         // flag when the delay is a function
         isFnc = typeof delayFnc === 'function',
         // get node referenced by delayFnc (the first argument) - no vet check, since this would be a privileged call
         delayNodeIdx = pkg.indexOf(delayFnc),
-        // use last argument as a time
-        time = args[argLn - 1]
+        // use first or last argument as a time
+        time = args[noAction ? 0 : 1]
       ;
       // if allowed and the the argument's are valid...
       if (pkg.allowed() && (!argLn || (time >= 0 && typeof time === 'number' && (noAction || ~delayNodeIdx || isFnc)))) {
@@ -2044,13 +2051,22 @@
             function () {
               // if there is a delay action and it's a node index...
               if (!noAction && ~delayNodeIdx) {
-                // target this node index
-                pkg.proxy.target(delayNodeIdx);
+                // if passing arguments to this target...
+                if (callbackArgs.length) {
+                  // prepend target to arguments
+                  callbackArgs.unshift(delayNodeIdx);
+                  // target this node index and pass arguments
+                  pkg.proxy.target.apply(pkg.proxy, callbackArgs);
+                } else {
+                  // target this node index
+                  pkg.proxy.target(delayNodeIdx);
+                }
               } else { // otherwise, when there is no delay, or the action is a callback...
                 // if there is a callback function...
                 if (isFnc) {
                   // set delay callback (fired during subsequent "begin" event)
                   pkg.waitFnc = delayFnc;
+                  pkg.waitArgs = callbackArgs;
                 }
                 // traverse towards the current target
                 pkg.go();
