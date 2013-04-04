@@ -1736,7 +1736,8 @@
         // alias nodes
         nodes = pkg.nodes,
         // the type of the given argument
-        argType = typeof arg;
+        argType = typeof arg,
+        customCallback;
 
       /*
         Not passing arguments returns the program root state.
@@ -1766,6 +1767,11 @@
         return nodes[arg].cb;
       }
 
+      // ensure strings have an ending slash
+      if (argType === 'string' && arg.charAt(arg.length - 1) !== '/') {
+        arg += '/';
+      }
+
       /*
         Compare string with existing current id.
 
@@ -1783,9 +1789,16 @@
           return pkg.cbs[arg];
         }
 
-        return (pkg.cbs[arg] = function () {
+        customCallback = function () {
           return pkg.proxy.target.apply(pkg.proxy, [].concat([].slice.call(arguments)));
-        })
+        };
+        // preserve query via the .toString() method
+        customCallback.toString = function () {
+          return arg;
+        };
+
+        // return cached custom callback
+        return pkg.cbs[arg] = customCallback;
       }
 
       return false;
