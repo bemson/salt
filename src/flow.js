@@ -808,6 +808,21 @@
       pkg.proxy.go(pkg.nodes[pkg.tank.currentIndex].reds[pkg.phase]);
     }
 
+    function sharedNodeCallbackInitializer(node, parentNode) {
+      // define custom, curried, and linked calls to .target
+      node.cb = function () {
+        var args = [].slice.call(arguments);
+        args.unshift(node.index);
+        return pkg.proxy.target.apply(pkg.proxy, args);
+      };
+      node.cb.toString = function () {
+        return node.path;
+      };
+      if (parentNode) {
+        parentNode.cb[node.name] = node.cb;
+      }
+    }
+
     function FlowStorage() {
       this.all = {};
       this.tmp = {};
@@ -1183,18 +1198,8 @@
           coreTags[tagName](tagName, node.attrs.hasOwnProperty(tagName), node.attrs, node, parentNode, pkg, i);
         }
 
-        // define custom, curried, and linked calls to .target
-        node.cb = function () {
-          var args = [].slice.call(arguments);
-          args.unshift(i);
-          return pkg.proxy.target.apply(pkg.proxy, args);
-        };
-        node.cb.toString = function () {
-          return node.path;
-        };
-        if (parentNode) {
-          parentNode.cb[node.name] = node.cb;
-        }
+        // add callback-tree
+        sharedNodeCallbackInitializer(node, parentNode);
 
         // if there is no _on[0] function and this node's value is a function...
         if (!node.fncs[0] && typeof node.value === 'function') {
