@@ -804,8 +804,11 @@
     }
 
     function sharedRedirectEventHandler() {
-      var pkg = this;
-      pkg.proxy.go(pkg.nodes[pkg.tank.currentIndex].reds[pkg.phase]);
+      var
+        flow = this,
+        pkg = corePkgDef(flow)
+      ;
+      flow.go(pkg.nodes[pkg.tank.currentIndex].reds[pkg.phase]);
     }
 
     function sharedNodeCallbackInitializer(node, parentNode) {
