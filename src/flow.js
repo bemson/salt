@@ -111,7 +111,7 @@
       },
       activeFlows = [],
       reservedQueryTokens = {
-        flow: {
+        'null': {
           f: 0,
           i: 0
         },
