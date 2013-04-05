@@ -1169,8 +1169,8 @@
       pkg.phase = 0;
       // set owner permission and assignment defaults
       pkg.owner = pkg.ownable = 0;
-      // set name of first node name to _flow
-      pkg.nodes[0].name = '_flow';
+      // set name of first node
+      pkg.nodes[0].name = '_null';
       // set name of second node
       pkg.nodes[1].name = '_program';
       // initialize nodes...
