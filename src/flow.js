@@ -19,6 +19,7 @@
       genData = (inCJS || inAMD) ? require('genData') : scope.genData,
       corePkgDef = Flow.pkg('core'),
       staticUnusedArray = [],
+      protoSlice = Array.prototype.slice,
       i, // loop vars
       isArray = (typeof Array.isArray === 'function') ?
         Array.isArray :
@@ -814,7 +815,7 @@
     function sharedNodeCallbackInitializer(node, parentNode) {
       // define custom, curried, and linked calls to .target
       node.cb = function () {
-        var args = [].slice.call(arguments);
+        var args = protoSlice.call(arguments);
         args.unshift(node.index);
         return pkg.proxy.target.apply(pkg.proxy, args);
       };
@@ -1793,7 +1794,7 @@
         }
 
         customCallback = function () {
-          return pkg.proxy.target.apply(pkg.proxy, [].concat([].slice.call(arguments)));
+          return pkg.proxy.target.apply(pkg.proxy, [].concat(protoSlice.call(arguments)));
         };
         // preserve query via the .toString() method
         customCallback.toString = function () {
@@ -1822,7 +1823,7 @@
         // at least one parameter
         args.length &&
         // all parameters resolve to nodes
-        [].slice.call(arguments).every(function (nodeRef) {
+        protoSlice.call(arguments).every(function (nodeRef) {
           var
             // resolve index of this reference
             idx = pkg.vetIndexOf(nodeRef),
@@ -1966,7 +1967,7 @@
       // if the destination node is valid, and the flow can move...
       if (~tgtIdx) {
         // capture arguments after the tgt
-        pkg.args = [].slice.call(arguments).slice(1);
+        pkg.args = protoSlice.call(arguments).slice(1);
         // reset targets array
         pkg.targets = [tgtIdx];
         // navigate towards the targets (unpauses the flow)
@@ -2008,7 +2009,7 @@
         // allowed or unlocked and ...
         (pkg.allowed() || !pkg.locked) &&
         // any and all node references are valid...
-        [].slice.call(arguments).every(function (nodeRef) {
+        protoSlice.call(arguments).every(function (nodeRef) {
           var
             // resolve index of this reference
             idx = pkg.vetIndexOf(nodeRef);
@@ -2048,7 +2049,7 @@
         // flag when no action will be taken after a delay
         noAction = argLn < 2,
         // collect remaining arguments when there is an action
-        callbackArgs = noAction ? [] : [].slice.call(args, 2),
+        callbackArgs = noAction ? [] : protoSlice.call(args, 2),
         // capture first argument as action to take after the delay, when more than one argument is passed
         delayFnc = noAction ? 0 : args[0],
         // flag when the delay is a function
@@ -2229,7 +2230,7 @@
       // route simplified 'add'
       if (typeof cmd === 'object') {
         cmd = 'add';
-        cfg = [].slice.call(arguments);
+        cfg = protoSlice.call(arguments);
       } else if (argumentsLength < 2) {
         // route simplified 'get'
         cmd = 'get';
