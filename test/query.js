@@ -146,7 +146,7 @@ describe( 'Query', function () {
 
   });
 
-  describe( 'tokens', function () {
+  describe( 'token', function () {
 
     describe( '"..//" (null state)', function () {
 
@@ -365,7 +365,7 @@ describe( 'Query', function () {
 
     });
 
-    describe( 'defined with the _name tag', function () {
+    describe( 'defined by the _name tag', function () {
 
       before(function () {
         flow = new Flow({
@@ -389,6 +389,48 @@ describe( 'Query', function () {
       it( 'should not alter what built-in tokens resolve', function () {
         flow.query('@program').should.equal('//')
           .and.not.equal('//fake/');
+      });
+
+    });
+
+    describe( 'pointing to child states', function () {
+
+      before(function () {
+        flow = new Flow({
+          foo: {}
+        });
+      });
+
+      it( 'should return the matching child state', function () {
+        flow.go(1);
+        flow.query('foo').should.be.ok;
+      });
+
+      it( 'should deny targeting the program state by name', function () {
+        flow.go(0);
+        flow.query('_program').should.not.be.ok;
+      });
+    });
+
+
+    describe( 'lists', function () {
+
+      before(function () {
+        flow = new Flow({
+          a: {
+            _restrict: true,
+            b: {}
+          },
+          c: {}
+        });
+      });
+
+      it( 'should be delimited with pipe characters', function () {
+        flow.query('bacon|foo|@null').should.be.ok;
+      });
+
+      it( 'should return the first valid token per slash-group', function () {
+        flow.query('@next|@previous|@null/@next|@parent|@child|@null/bar|zee|a/b').should.be.ok;
       });
 
     });

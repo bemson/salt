@@ -3,8 +3,7 @@
  * http://github.com/bemson/Flow/
  *
  * Dependencies:
- * - Panzer v0.4.0 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
- * - genData v3.1.0 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/genData/)
+ * - Panzer v0.3.7 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
  *
  * Copyright, Bemi Faison
  * Released under the MIT License
@@ -16,7 +15,6 @@
 
     var
       Flow = ((inCJS || inAMD) ? require('Panzer') : scope.Panzer).create(),
-      genData = (inCJS || inAMD) ? require('genData') : scope.genData,
       corePkgDef = Flow.pkg('core'),
       staticUnusedArray = [],
       protoSlice = Array.prototype.slice,
@@ -33,71 +31,6 @@
       r_trimSlashes = /^\/+|\/+$/g,
       r_hasNonAlphanumericCharacter = /\W/,
       r_hasAlphanumericCharacter = /\w/,
-      generateTokens = genData.spawn(function (name, value, parent, flags) {
-        var
-          data = this,
-          slash = '/',
-          hasTokenPfx,
-          dataset = flags.returns,
-          parseFurther = 0
-        ;
-
-        // init props here (for faster lookups)
-        data.set =
-        data.dyn =
-          0;
-
-        if (typeof value === 'string') {
-
-          // cancel empty strings
-          if (!value) {
-            flags.returns = [];
-            flags.breaks = 1;
-            return;
-          }
-
-          if (~value.indexOf(slash)) {
-
-            // iterate over string paths
-            flags.source = value.split(slash);
-            parseFurther = 1;
-
-          } else if (value.charAt(0) === '[' && value.slice(-1) === ']') {
-
-            // iterate over match-sets
-            flags.source = value.slice(1,-1).split('|');
-            parseFurther = 1;
-
-            // identify the one object that will hold options for this set
-            if (parent && parent.set) {
-              data.set = parent.set;
-            } else {
-              data.set = data;
-            }
-            // init set's object resolution flags
-            data.set.done = 0;
-            if (!data.set.opts) {
-              data.set.opts = 0;
-            }
-          }
-        }
-
-        if (!parseFurther) {
-
-          // link and update the set manager when this is a match-option
-          if (parent && parent.set) {
-            data.set = parent.set;
-            data.opt = data.set.opts++;
-          }
-
-          // capture dynamic token - anything with non-alphanumeric characters
-          if (r_hasNonAlphanumericCharacter.test(data.value)) {
-            data.dyn = (data.value.charAt(0) === tokenPrefix) ? data.value.substr(1) : data.value;
-          }
-
-          return data;
-        }
-      }),
       traversalCallbackOrder = {
         _on: 0,
         _in: 1,
@@ -151,6 +84,7 @@
             if (parentNode) {
               return parentNode[((tokenName.charAt(0) === 'y') ? 'first' : 'last') + 'ChildIndex'];
             }
+            return -1;
           }
         },
         self: {
@@ -1262,7 +1196,14 @@
           tokens,
           token,
           qryCacheId,
-          slash = '/',
+          slashSegments,
+          slashSegmentsIdx,
+          slashSegmentsLn,
+          pipeSegments,
+          pipeSegmentsIdx,
+          pipeSegmentsLn,
+          resolvedIndex,
+          tokenResolver,
           idx = -1
         ;
         // use the current node, when node is omitted
@@ -1300,12 +1241,12 @@
             simpleQuery = !r_queryIsTokenized.test(qry);
 
             // ensure query ends with a slash (for absolute, root, and relative queries)
-            if (qry.slice(-1) !== slash) {
-              qry += slash;
+            if (qry.slice(-1) !== '/') {
+              qry += '/';
             }
 
-            if (qry.charAt(0) === slash) {
-              if (qry.charAt(1) === slash) {
+            if (qry.charAt(0) === '/') {
+              if (qry.charAt(1) === '/') {
 
                 // vet absolute query
                 if (simpleQuery) {
@@ -1328,65 +1269,57 @@
               break;
             }
 
-            // prepare query for token resolution and caching
+            // (otherwise) prepare query for token resolution and caching
             qry = qry.replace(r_trimSlashes, '');
             qryCacheId = qry + node.index;
 
             if (!pkg.cache.indexOf.hasOwnProperty(qryCacheId)) {
-              generateTokens(qry).every(function (token) {
-                var
-                  resolvedIndex = -1,
-                  tmpNode,
-                  dynamicTokenResolver
-                ;
-                if (token.value) {
-
-                  // skip this option when the match set has been satisfied
-                  if (token.set && token.set.done) {
-                    return 1;
+              slashSegments = qry.split('/');
+              slashSegmentsLn = slashSegments.length;
+              resolution:
+              for (slashSegmentsIdx = 0; slashSegmentsIdx < slashSegmentsLn; slashSegmentsIdx++) {
+                pipeSegments = slashSegments[slashSegmentsIdx].split('|');
+                pipeSegmentsLn = pipeSegments.length;
+                for (pipeSegmentsIdx = 0; pipeSegmentsIdx < pipeSegmentsLn; pipeSegmentsIdx++) {
+                  token = pipeSegments[pipeSegmentsIdx];
+                  // fail when an empty string
+                  if (!token) {
+                    idx = -1;
+                    break resolution;
                   }
-
-                  if (token.dyn) {
-                    dynamicTokenResolver = reservedQueryTokens[token.dyn] || pkg.tokens[token.dyn];
-                    if (dynamicTokenResolver) {
-                      if (dynamicTokenResolver.f) {
+                  resolvedIndex = -1;
+                  if (r_hasNonAlphanumericCharacter.test(token)) {
+                    // resolve dynamic token
+                    if (token.charAt(0) === tokenPrefix) {
+                      token = token.slice(1);
+                    }
+                    tokenResolver = reservedQueryTokens[token] || pkg.tokens[token];
+                    if (tokenResolver) {
+                      if (tokenResolver.f) {
                         // validate token with a function
-                        resolvedIndex = dynamicTokenResolver.f(qryNode, nodes, token.dyn);
+                        resolvedIndex = tokenResolver.f(qryNode, nodes, token);
                       } else {
                         // resolve token with an index
-                        resolvedIndex = dynamicTokenResolver.i;
+                        resolvedIndex = tokenResolver.i;
                       }
                     }
                   } else {
                     // get index matching this state appended to the current node's path
-                    resolvedIndex = nids[qryNode.path + token.value + slash];
+                    resolvedIndex = nids[qryNode.path + token + '/'] || -1;
                   }
-                  // target node at the resolved index
-                  tmpNode = nodes[resolvedIndex];
-                }
-
-                // allow failed resolution for match sets with more options
-                if (!tmpNode && token.set && token.opt + 1 < token.set.opts) {
-                  return 1;
-                }
-
-                if (tmpNode) {
-                  // satisfy the match set
-                  if (token.set) {
-                    token.set.done = 1;
+                  if (~resolvedIndex) {
+                    qryNode = nodes[resolvedIndex];
+                    // go to next slash segment (if any)
+                    break;
                   }
-                  // capture progress and continue resolving
-                  idx = resolvedIndex;
-                  qryNode = tmpNode;
-                  return 1;
-                } else {
-                  // clear progress and exit
-                  idx = -1;
-                  return 0;
                 }
-              });
+                // exit when all pipe segments fail
+                if (!~resolvedIndex) {
+                  break;
+                }
+              }
               // cache query result
-              pkg.cache.indexOf[qryCacheId] = idx;
+              pkg.cache.indexOf[qryCacheId] = idx = resolvedIndex;
             }
             // get cached query result
             idx = pkg.cache.indexOf[qryCacheId];
