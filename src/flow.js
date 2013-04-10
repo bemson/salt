@@ -1367,13 +1367,16 @@
 
       // proceed towards the latest/current target
       // track - save point for reconciliation later
-      go: function () {
+      go: function (useCurrent) {
         var
-          // alias self
-          pkg = this;
-
+          pkg = this,
+          targetIndex = pkg.targets[0]
+        ;
+        if (targetIndex === undefined && useCurrent) {
+          targetIndex = pkg.tank.currentIndex;
+        }
         // exit when pending, or direct tank to the first target - returns the number of steps completed (or false when there is no target)
-        return pkg.tank.go(pkg.targets[0]);
+        return pkg.tank.go(targetIndex);
       },
 
       // flag when the flow is allowed to perform trusted executions
@@ -1511,6 +1514,10 @@
       // execute any delay function
       if (pkg.waitFnc) {
         pkg.waitFnc.apply(pkg.proxy, pkg.waitArgs);
+        // clear delay components
+        pkg.waitFnc =
+        pkg.waitArgs =
+          0;
       }
     };
 
@@ -1548,11 +1555,6 @@
         hasTargets = pkg.targets.length,
         node = pkg.nodes[tank.currentIndex]
       ;
-
-      // clear leftover delay function and args (is this possible/necessary?)
-      pkg.waitFnc =
-      pkg.waitArgs =
-        0;
 
       if (!blocked && (hasTargets || ~node.tail)) {
         if (hasTargets) {
@@ -2024,7 +2026,7 @@
                   pkg.waitArgs = callbackArgs;
                 }
                 // traverse towards the current target
-                pkg.go();
+                pkg.go(1);
               }
             },
             ~~time // number of milliseconds to wait (converted to an integer)
