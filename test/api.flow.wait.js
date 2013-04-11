@@ -67,22 +67,20 @@ describe( 'Flow#wait()', function () {
   });
 
   it( 'should work via (multiple) delayed callbacks', function (done) {
-    flow = new Flow({
-      _in: function () {
-        this.wait(
-          function (passedThru1) {
-            this.wait(
-              function (passedThru2) {
-                this.wait(passedThru2, 0);
-              },
-              0,
-              passedThru1
-            );
-          },
-          0,
-          done
-        );
-      }
+    flow = new Flow(function () {
+      this.wait(
+        function (passedThru1) {
+          this.wait(
+            function (passedThru2) {
+              this.wait(passedThru2, 0);
+            },
+            0,
+            passedThru1
+          );
+        },
+        0,
+        done
+      );
     });
     flow.go(1);
   });

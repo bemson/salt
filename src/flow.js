@@ -1367,16 +1367,10 @@
 
       // proceed towards the latest/current target
       // track - save point for reconciliation later
-      go: function (useCurrent) {
-        var
-          pkg = this,
-          targetIndex = pkg.targets[0]
-        ;
-        if (targetIndex === undefined && useCurrent) {
-          targetIndex = pkg.tank.currentIndex;
-        }
+      go: function () {
+        var pkg = this;
         // exit when pending, or direct tank to the first target - returns the number of steps completed (or false when there is no target)
-        return pkg.tank.go(targetIndex);
+        return pkg.tank.go(pkg.targets[0]);
       },
 
       // flag when the flow is allowed to perform trusted executions
