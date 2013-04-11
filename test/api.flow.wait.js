@@ -85,4 +85,20 @@ describe( 'Flow#wait()', function () {
     flow.go(1);
   });
 
+  it( 'should prevent parent Flow from completing', function (done) {
+    var pender = new Flow(function () {
+      this.wait();
+    });
+    flow = new Flow({
+      _in: function () {
+        pender.go(1);
+      },
+      _on: done
+    });
+    flow.go(1);
+    flow.status().pending.should.be.ok;
+    pender.status().paused.should.be.ok;
+    pender.go();
+  });
+
 });
