@@ -74,4 +74,18 @@ describe( 'Flow', function () {
     });
   });
 
+  describe( '.version', function () {
+
+    it( 'should be a member property', function () {
+      Flow.hasOwnProperty('version').should.be.ok;
+    });
+
+    it( 'should be a semver formatted string', function () {
+      Flow.version
+        .should.be.a('string')
+        .and.match(/^\d+\.\d+\.\d+$/);
+    });
+
+  });
+
 });

@@ -101,19 +101,11 @@ describe( 'Flow#callbacks()', function () {
   it( 'should not expose any network of calls for non-absolute queries', function () {
     var
       query = '@next|@child',
-      curriedQuery = flow.callbacks(query),
-      props = [],
-      prop
+      curriedQuery = flow.callbacks(query)
     ;
 
     curriedQuery.should.be.a('function');
-
-    for (prop in curriedQuery) {
-      if (prop !== 'toString' && curriedQuery.hasOwnProperty(prop)) {
-        props.push(prop);
-      }
-    }
-    props.length.should.equal(0);
+    curriedQuery.should.have.keys('toString');
   });
 
 });
