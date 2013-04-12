@@ -748,7 +748,10 @@
     function sharedNodeCallbackInitializer(node, parentNode) {
       // define custom, curried, and linked calls to .target
       node.cb = function () {
-        var args = protoSlice.call(arguments);
+        var
+          args = protoSlice.call(arguments),
+          pkg = node.pkg
+        ;
         args.unshift(node.index);
         return pkg.proxy.target.apply(pkg.proxy, args);
       };
