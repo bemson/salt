@@ -11,7 +11,7 @@ describe( 'Tag _on', function () {
     spy.should.have.been.calledOnce;
   });
 
-  it( '', function () {
+  it( 'should scope the given function to the Flow instance', function () {
     var spy = sinon.spy();
     flow = new Flow({
       _on: spy
@@ -22,15 +22,15 @@ describe( 'Tag _on', function () {
 
   it( 'should navigate to the resolved state when paired with a query', function () {
     flow = new Flow({
-      _on: '@child'
+      _on: '@child',
       b: {}
     });
     flow.go('//');
     flow.status().path.should.equal('//b/');
   });
 
-  it( 'should not navigate to queries for the current state', function () {
-    var spyTraverse = sinon.spy(Flow.pkg('core').onTraverse);
+  it( 'should not accept queries to the current state', function () {
+    var spyTraverse = sinon.spy(Flow.pkg('core'), 'onTraverse');
     flow = new Flow({
       _on: '@self'
     });
