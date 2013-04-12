@@ -1661,14 +1661,12 @@
     // Flow prototype methods
 
     // add method to return callbacks to this flow's states
-    corePkgDef.proxy.callbacks = function (arg) {
+    corePkgDef.proxy.callbacks = function (origQry) {
       var
-        // get core package instance
         pkg = corePkgDef(this),
-        // alias nodes
         nodes = pkg.nodes,
-        // the type of the given argument
-        argType = typeof arg,
+        qry = origQry,
+        qryType = typeof qry,
         customCallback;
 
       /*
@@ -1686,7 +1684,7 @@
 
         eg: flow.callbacks(true);
       */
-      if (arg === true) {
+      if (qry === true) {
         return nodes[pkg.tank.currentIndex].cb;
       }
 
@@ -1695,13 +1693,13 @@
 
         eg: flow.callbacks(4);
       */
-      if (argType === 'number' && nodes[arg]) {
-        return nodes[arg].cb;
+      if (qryType === 'number' && nodes[qry]) {
+        return nodes[qry].cb;
       }
 
       // ensure strings have an ending slash
-      if (argType === 'string' && arg.charAt(arg.length - 1) !== '/') {
-        arg += '/';
+      if (qryType === 'string' && qry.charAt(qry.length - 1) !== '/') {
+        qry += '/';
       }
 
       /*
@@ -1709,28 +1707,28 @@
 
         eg: flow.callbacks(obj);
       */
-      if (pkg.nids.hasOwnProperty(arg)) {
-        return nodes[pkg.nids[arg]].cb;
+      if (pkg.nids.hasOwnProperty(qry)) {
+        return nodes[pkg.nids[qry]].cb;
       }
 
       /*
         Check out whether this path has already been processed and cache.
       */
-      if (argType === 'string') {
-        if (pkg.cbs.hasOwnProperty(arg)) {
-          return pkg.cbs[arg];
+      if (qryType === 'string') {
+        if (pkg.cbs.hasOwnProperty(origQry)) {
+          return pkg.cbs[origQry];
         }
 
         customCallback = function () {
-          return pkg.proxy.target.apply(pkg.proxy, [].concat(protoSlice.call(arguments)));
+          return pkg.proxy.target.apply(pkg.proxy, [origQry].concat(protoSlice.call(arguments)));
         };
         // preserve query via the .toString() method
         customCallback.toString = function () {
-          return arg;
+          return origQry;
         };
 
         // return cached custom callback
-        return pkg.cbs[arg] = customCallback;
+        return pkg.cbs[origQry] = customCallback;
       }
 
       return false;
