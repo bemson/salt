@@ -278,10 +278,9 @@
         */
         _on: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           var
-            tagValue = tags[tagName],
-            isFnc = typeof tagValue
+            tagValue = tags[tagName]
           ;
-          if (exists && isFnc) {
+          if (exists && typeof tagValue === 'function') {
             node.fncs[traversalCallbackOrder[tagName]] = tagValue;
           }
         },
@@ -395,7 +394,7 @@
             } else if (typeofTagValue === 'number' && pkg.nodes[tagValue]) {
               tgtIdx = tagValue;
             }
-            if (~tgtIdx) {
+            if (~tgtIdx && tgtIdx !== idx) {
               phase = traversalCallbackOrder[tagName];
               node.reds[phase] = tgtIdx;
               node.fncs[phase] = sharedRedirectEventHandler;
