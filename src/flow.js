@@ -394,7 +394,7 @@
             } else if (typeofTagValue === 'number' && pkg.nodes[tagValue]) {
               tgtIdx = tagValue;
             }
-            if (~tgtIdx && tgtIdx !== idx) {
+            if (~tgtIdx && (tagName !== '_on' || tgtIdx !== idx)) {
               phase = traversalCallbackOrder[tagName];
               node.reds[phase] = tgtIdx;
               node.fncs[phase] = sharedRedirectEventHandler;

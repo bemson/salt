@@ -1,4 +1,4 @@
-describe( 'Tag _tail', function () {
+describe( '_tail tag', function () {
   
   var flow;
 

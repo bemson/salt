@@ -1,4 +1,4 @@
-describe( 'Tag _on', function () {
+describe( '_on tag', function () {
   
   var flow;
 
@@ -26,6 +26,20 @@ describe( 'Tag _on', function () {
       b: {}
     });
     flow.go('//');
+    flow.status().path.should.equal('//b/');
+  });
+
+  it( 'should navigate queries as waypoints', function () {
+    var spy = sinon.spy();
+    flow = new Flow({
+      a: {
+        _on: '@oldest'
+      },
+      b: {},
+      c: spy
+    });
+    flow.go('//a/', '//b/');
+    spy.should.have.been.calledOnce;
     flow.status().path.should.equal('//b/');
   });
 
