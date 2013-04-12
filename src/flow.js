@@ -231,7 +231,7 @@
             });
             for (key in cfgs) {
               if (cfgs.hasOwnProperty(key)) {
-                node.cfgs.push(cfgs[key]);
+                node.dcfgs.push(cfgs[key]);
               }
             }
           }
@@ -1442,7 +1442,7 @@
 
       // scope node data
       if (node.dcfgs.length) {
-        node.scopeData(!entering);
+        node.scopeData(entering);
       }
 
       // notify owner before entering and after exiting this node
@@ -1619,35 +1619,55 @@
     };
 
     // add method to de/scope defined variables
-    corePkgDef.node.scopeData = function (descope) {
+    corePkgDef.node.scopeData = function (add) {
       var
         node = this,
-        pkg = node.pkg
+        pkg = node.pkg,
+        data = pkg.proxy.data,
+        dataCfgs = node.dcfgs,
+        dataCfgLn = dataCfgs.length,
+        dataCfgIdx = 0,
+        dataCfg,
+        dataName,
+        dataTrackingObject,
+        scopeAction
       ;
-
-      // add/remove data configurations
-      if (descope) {
-        node.dcfgs.forEach(function (dataCfg) {
-          var dto = pkg.getDTO(dataCfg.name);
-          // remove value from stack
-          dto.stack.shift();
-          if (!dto.stack.length) {
-            // remove empty tracking object
-            delete pkg.dtos[dataCfg.name];
-            // remove managed keys in proxy data
-            delete pkg.proxy.data[dataCfg.name];
+      // define scoping routine
+      if (add) {
+        // scope new value to stack - set value from config
+        scopeAction = function () {
+          // capture current value in stack (if any)
+          if (data.hasOwnProperty(dataName)) {
+            // capture current value in stack
+            dataTrackingObject.stack.unshift(data[dataName]);
           }
-        });
-      } else {
-        node.dcfgs.forEach(function (dataCfg) {
-          var dto = pkg.getDTO(dataCfg.name);
           if (dataCfg.use) {
-            // add initial value to stack
-            dto.stack.unshift(dataCfg.value);
+            // set key to value from config
+            data[dataName] = dataCfg.value;
+          } else {
+            // set key to last value or undefined (by default)
+            data[dataName] = dataTrackingObject.stack[0];
           }
-          // add key to proxy data
-          pkg.proxy.data[dataCfg.name] = dataCfg.value;
-        });
+        };
+      } else {
+        // set value form stack and remove
+        scopeAction = function () {
+          if (dataTrackingObject.stack.length) {
+            // use and remove value from stack
+            data[dataName] = dataTrackingObject.stack.shift();
+          } else {
+            // remove tracking object and data member
+            delete pkg.dtos[dataName];
+            delete data[dataName];
+          }
+        };
+      }
+
+      for (; dataCfgIdx < dataCfgLn; dataCfgIdx++) {
+        dataCfg = dataCfgs[dataCfgIdx];
+        dataName = dataCfg.name;
+        dataTrackingObject = pkg.getDTO(dataName);
+        scopeAction();
       }
     };
 
