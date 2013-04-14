@@ -1064,6 +1064,8 @@
 
       // define stored instance manager
       pkg.bin = new FlowStorage();
+      // define initial vars member
+      pkg.vars = {};
       // collection of custom query tokens
       pkg.tokens = {};
       // collection of custom callback queries
@@ -1391,6 +1393,41 @@
         if (owner) {
           owner.proxy.target(stateQuery, proxy, proxy.status());
         }
+      },
+
+      // set vars member
+      setVars: function () {
+        var
+          pkg = this,
+          proxy = pkg.proxy
+        ;
+
+        // preserve untrusted vars member (if any)
+        if (proxy.hasOwnProperty('vars')) {
+          pkg.tvars = proxy.vars;
+        }
+        // set "private" vars member
+        proxy.vars = pkg.vars;        
+      },
+
+      // unset vars member
+      delVars: function () {
+        var
+          pkg = this,
+          proxy = pkg.proxy
+        ;
+        // set and delete vars member
+        if (typeof proxy.vars === 'object') {
+          pkg.vars = proxy.vars;
+        }
+        if (pkg.hasOwnProperty('tvars')) {
+          // restore public vars member
+          proxy.vars = pkg.tvars;
+          delete pkg.tvars;
+        } else {
+          // remove "private" vars member
+          delete proxy.vars;
+        }
       }
 
     };
@@ -1433,10 +1470,11 @@
         pkg = this,
         node = pkg.nodes[pkg.tank.currentIndex]
       ;
-      // ensure phase is "in" or "out", based on scope
       if (entering) {
+        // set phase to "in"
         pkg.phase = 1;
       } else {
+        // set phase to "out"
         pkg.phase = 2;
       }
 
@@ -1452,13 +1490,19 @@
     };
 
     corePkgDef.onEngage = function () {
+      var pkg = this;
       // trust api calls
-      this.trust = 1;
+      pkg.trust = 1;
+
+      pkg.setVars();
     };
 
     corePkgDef.onRelease = function () {
+      var pkg = this;
       // untrust api calls
-      this.trust = 0;
+      pkg.trust = 0;
+
+      pkg.delVars();
     };
 
     // do something when the tank traverses a node
@@ -1521,6 +1565,7 @@
     corePkgDef.onTraversed = function (evtName, phase) {
       var
         pkg = this,
+        proxy = pkg.proxy,
         node = pkg.nodes[pkg.tank.currentIndex]
       ;
 
@@ -1539,6 +1584,10 @@
           pkg.pingOwner(node.ping);
         }
       }
+      if (typeof proxy.vars === 'object') {
+        pkg.vars = proxy.vars;
+      }
+      proxy.vars = pkg.vars;
     };
 
     // do something when the tank stops
@@ -1580,6 +1629,11 @@
           pkg.args = [];
           pkg.calls = [];
           pkg.trail = [];
+
+          if (!node.index) {
+            // reset vars when ending on the null node
+            pkg.vars = {};
+          }
 
           // update pending flows
           if (pkg.pendees.length) {
@@ -1861,47 +1915,36 @@
     // access and edit the arguments passed to traversal functions
     corePkgDef.proxy.args = function (idx, value) {
       var
-        // get package
         pkg = corePkgDef(this),
-        // alias arguments from this package
         pkgArgs = pkg.args,
-        // get number of arguments passed
         argCnt = arguments.length,
-        // get type of first argument
-        idxType = typeof idx;
+        isInt = typeof idx === 'number' && ~~idx === idx
+      ;
 
-      // if getting a single value, or setting arguments on a permitted or unlocked flow...
-      if (argCnt === 1 || (argCnt && (pkg.allowed() || !pkg.locked))) {
-        // if idx is an array...
-        if (isArray(idx)) {
-          // replace args with a copy of the idx array
-          pkg.args = [].concat(idx);
-          // flag success by returning the array given
-          return idx;
-        } else if (idxType === 'number' && !isNaN(idx) && idx >= 0) { // or, when idx is a valid index...
-          // if a value was passed...
-          if (argCnt > 1) {
-            // if the value is undefined and the last index was targeted...
-            if (value === undefined && idx === pkgArgs.length - 1) {
-              // remove the last index
-              pkgArgs.pop();
-            } else { // otherwise, when not removing the last index
-              // set the value of the target index
-              pkgArgs[idx] = value;
-              // return the value set
-              return value;
-            }
-            // (finally) flag success with setting or removing the index
+      if (pkg.allowed() || !pkg.locked) {
+        // return cparray of arguments
+        if (argCnt === 0) {
+          return [].concat(pkgArgs);
+        }
+        if (argCnt === 1) {
+          if (isInt) {
+            // return specific argument
+            return pkgArgs[idx];
+          }
+          if (isArray(idx)) {
+            // set new arguments
+            pkg.args = [].concat(idx);
+            return idx;
+          }
+        }
+        if (argCnt === 2 && isInt) {
+          if (idx === pkgArgs.length - 1 && value === undefined) {
+            pkgArgs.pop();
             return true;
           }
-          // (otherwise) return the value of the targeted index (could be undefined)
-          return pkgArgs[idx];
+          return pkgArgs[idx] = value;
         }
-      } else if (!argCnt) { // otherwise, when given no arguments...
-        // return a copy of the arguments array (available to locked flows)
-        return [].concat(pkgArgs);
       }
-      // send false when sent arguments are invalid or setting is prohibited (i.e., the flow is locked)
       return false;
     };
 
