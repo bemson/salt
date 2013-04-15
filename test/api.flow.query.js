@@ -16,6 +16,14 @@ describe( 'Flow#query()', function () {
     flow.query('@program/a/@next').should.equal('//b/');
   });
 
+  it( 'should be performed from the current state\'s perspective', function () {
+    flow.query('b').should.not.be.ok;
+    flow.go('//');
+    flow.query('b').should.equal('//b/');
+    flow.go('a');
+    flow.query('b').should.equal('//a/b/');
+  });
+
   it( 'should return an array of paths when given multiple queries', function () {
     flow.query('//a', '@program/a/@next')
       .should.be.an.instanceOf(Array)
