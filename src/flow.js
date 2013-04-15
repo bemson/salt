@@ -402,6 +402,9 @@
           }
         }
       },
+      // import resolution helpers
+      import_pkgCnt,
+      import_tagKeyTests,
       // cache of core tag keys
       coreTagKeys = [],
       coreTagKeyCount,
@@ -446,174 +449,179 @@
       return typeof name === 'string' && r_hasAlphanumericCharacter.test(name);
     }
 
-    function mergeStates( program, tagKeyTests, base, source, merged ) {
+    // gets tag key tests for parsing state tags
+    function import_cacheTagKeyTests () {
+      var pkgNames = Flow.pkg();
+      // only compile if the number of packages has changed
+      // NOTE: this approach is performant but fails if attrkeys are changed per package
+      if (pkgNames.length !== import_pkgCnt) {
+        // compile list of attribute keys from all packages
+        if ((import_pkgCnt = pkgNames.length) === 1) {
+          import_tagKeyTests = [corePkgDef.attrKey];
+        } else {
+          import_tagKeyTests = pkgNames
+            .map(import_cacheTagKeyTests_map)
+            .filter(import_cacheTagKeyTests_filter)
+          ;
+        }
+        // cache type of attribute test
+        import_tagKeyTests = import_tagKeyTests
+          .map(import_cacheTagKeyTests_precalc);
+      }
+    }
+
+    function import_cacheTagKeyTests_map ( pkgName ) {
+      return Flow.pkg(pkgName).attrKey;
+    }
+
+    function import_cacheTagKeyTests_filter ( tagKeyTest ) {
+      return tagKeyTest;
+    }
+
+    function import_cacheTagKeyTests_precalc ( tagKeyTest ) {
+      var typeMap = {
+        // flag when the test is a function
+        f:0,
+        // flag when the test is a regular-expression
+        r:0
+      };
+      if (typeof tagKeyTest === 'function') {
+        typeMap.f = tagKeyTest;
+      } else {
+        typeMap.r = tagKeyTest;
+      }
+      return typeMap;
+    }
+
+    function import_extractBasePath (state) {
+      var importPath;
+      if (typeof state === 'string') {
+        importPath = state;
+      } else if (state && state.hasOwnProperty('_import') && typeof state._import === 'string') {
+        importPath = state._import;
+      }
+      if (importPath && r_validAbsolutePath.test(importPath)) {
+        return importPath;
+      }
+      return '';
+    }
+
+    // flag when the given state member is a state (otherwise a tag)
+    function import_isState ( name, value ) {
       var
-        // name of the member
-        name,
-        // temporary object and types
-        sourceType, baseType,
-        obj,
-        // loop vars
-        idx = 0, length,
-        // keys in base object
+        i = 0,
+        tagKeyTest
+      ;
+      // all key tests must fail, in order to be a state
+      for (; tagKeyTest = import_tagKeyTests[i]; i++) {
+        if (
+          (
+            tagKeyTest.r &&
+            tagKeyTest.r.test(name)
+          ) ||
+          (
+            tagKeyTest.f &&
+            tagKeyTest.f(name, value)
+          )
+        ) {
+          return 0;
+        }
+      }
+      return 1;
+    }
+
+    // ensure the given value is a state object
+    function import_mergeStates_convertToObject( state ) {
+      var typeofState = typeof state;
+      if (typeofState === 'string') {
+        return {
+          _import: state
+        };
+      } else if (typeofState === 'function') {
+        return {
+          _on: baseState
+        };
+      } else if (typeofState === 'object') {
+        return state;
+      }
+      return {};
+    }
+
+    function import_mergeStates ( baseState, sourceState, mergedState) {
+      var
+        merged = mergedState || {},
+        base = import_mergeStates_convertToObject(baseState),
+        source = import_mergeStates_convertToObject(sourceState),
         baseKeys = Object.keys(base),
-        // keys in source object
         sourceKeys = Object.keys(source),
-        // keys of the merged object
-        mergedKeys,
-        keyIsShared;
+        keyIsInSource,
+        idx = 0,
+        key
+      ;
 
-      // key tests from every package
-      tagKeyTests = tagKeyTests || Flow.pkg()
-        .map(function ( pkgName ) {
-          return Flow.pkg( pkgName ).attrKey;
-        })
-        .filter(function ( tagKeyTest ) {
-          return tagKeyTest;
-        });
-
-      // define a merged object to return, or create one
-      merged = merged || {};
-
-      // add base object keys
-      for (idx = 0; name = baseKeys[idx]; idx++) {
-        // flag whether the key is in the source object
-        keyIsShared = source.hasOwnProperty(name);
-        // if this is a tag...
-        if (tagKeyTests.every(function ( tagKeyTest ) {
-          // if this is a function...
-          if (typeof tagKeyTest === 'function') {
-            // return result of function
-            return tagKeyTest( name, value );
-          } else { // otherwise, when the test is not a function...
-            // return whether the regular expression passed
-            return tagKeyTest.test( name );
+      // import base keys and merge states also in source
+      for (; key = baseKeys[idx]; idx++) {
+        keyIsInSource = source.hasOwnProperty(key);
+        if (import_isState(key)) {
+          if (keyIsInSource) {
+            merged[key] = import_mergeStates(base[key], source[key], {});
+          } else {
+            merged[key] = base[key];
           }
-        })) {
-          // if the key is present in the source object...
-          if (keyIsShared) {
-            // use source's tag value
-            merged[name] = source[name];
-          } else { // otherwise, when the key is not in the source object...
-            // use base's tag value
-            merged[name] = base[name];
-          }
-        } else { // otherwise, when not a tag...
-          // if the key is also in the source object...
-          if (keyIsShared) {
-            // get types
-            baseType = typeof base[name];
-            sourceType = typeof source[name];
-
-            // if base is a function...
-            if (baseType === 'function') {
-              // init new base object
-              obj = {};
-              // add target key
-              obj[name] = {};
-              // add "on" tag pointing to this function
-              obj[name]['_' + traversalCallbackOrder[0]] = base[name];
-              // set new base object
-              base = obj;
-              // set base type
-              baseType = 'object';
-            }
-
-            // if source is a function...
-            if (sourceType === 'function') {
-              // init new source object
-              obj = {};
-              // add target key
-              obj[name] = {};
-              // add "on" tag pointing to this function
-              obj[name]['_' + traversalCallbackOrder[0]] = source[name];
-              // set new source object
-              source = obj;
-              // set source type
-              sourceType = 'object';
-            }
-
-            // if the base and source are objects...
-            if (baseType === 'object' && sourceType === 'object') {
-              // merge the subtrees
-              merged[name] = mergeStates( program, tagKeyTests, base[name], source[name] );
-            } else { // otherwise, when one is not an object...
-              // ignore the base value (since they can't be merged)
-              merged[name] = source[name];
-            }
-          } else { // otherwise, when the key is not in the source object
-            // copy to the final object
-            merged[name] = base[name];
-          }
+        } else if (keyIsInSource && key !== '_import') { // override all but the _import tag
+          merged[key] = source[key];
+        } else {
+          merged[key] = base[key];
         }
       }
 
-      // add unique source object keys
-      for (idx = 0; name = sourceKeys[idx]; idx++) {
-        // if this key is not in the base object...
-        if (!base.hasOwnProperty(name)) {
-          // add directly to the merged object
-          merged[name] = source[name];
+      // append unique source keys that are not "_import"
+      for (idx = 0; key = sourceKeys[idx]; idx++) {
+        if (!base.hasOwnProperty(key) && key !== '_import') {
+          merged[key] = source[key];
         }
       }
 
-      // get merged object's keys
-      mergedKeys = Object.keys(merged);
-      // process nested literal imports
-      for (idx = 0; name = merged[idx]; i++) {
-        // if the value is a string and a valid import string...
-        if (typeof merged[name] === 'string' && r_validImportPath.test( merged[name] )) {
-          // get resolved path
-          obj = resolveProgramPath( merged[name], program );
-          // if the result is valid...
-          if (typeof obj !== 'undefined') {
-            // use resolved state reference
-            merged[name] = obj;
-          }
-        }
-      }
-
-      // return the merged object
       return merged;
     }
 
-    function resolveProgramPath( path, program ) {
-      var
-        // the state whose child states should be used, based on the given paths
-        resolvedState,
-        // placeholder for simiulating a full state when it's actually a function
-        fauxState,
-        // cached of processed paths
-        paths = {};
+    function import_getStateByAbsolutePath( path, program ) {
+      var resolvedState = program;
 
-      // while there is a valid state path (handles recursive references)...
-      while (path && r_validAbsolutePath.test( path )) {
-        // flag that we've tested this path
-        paths[path] = 1;
-        // start the resolved state at the program
-        resolvedState = program;
-        // with each state in this path...
-        path.slice( 2, -1 ).split( '/' ).every(function ( childPath ) {
-          // step through the path, state by state
-          return (resolvedState = resolvedState.hasOwnProperty( childPath ) && resolvedState[childPath]);
-        });
-        // if the resolved state is yet another path that has not been resolved...
-        if (typeof resolvedState === 'string' && !paths.hasOwnProperty( resolvedState )) {
-          // set as new path to test and import
-          path = resolvedState;
+      if (
+        path.slice(2, -1).split('/').every(function ( partialPath ) {
+          if (
+            resolvedState.hasOwnProperty(partialPath) &&
+            import_isState(partialPath, resolvedState[partialPath])
+          ) {
+            resolvedState = resolvedState[partialPath];
+            return 1;
+          }
+        })
+      ) {
+        return resolvedState;
+      }
+    }
+
+    function import_resolveBase( sourceState, program, importedPaths ) {
+      var
+        resolvedState,
+        baseState,
+        importPath = import_extractBasePath(sourceState)
+      ;
+
+      if (
+        importPath &&
+        !importedPaths.hasOwnProperty(importPath) &&
+        (baseState = import_getStateByAbsolutePath(importPath, program))
+      ) {
+        importedPaths[importPath] = 1;
+        if (typeof sourceState === 'string') {
+          resolvedState = baseState;
         } else {
-          // clear the import path (to exit loop)
-          path = 0;
+          resolvedState = import_mergeStates(baseState, sourceState);
         }
       }
-      // if the resolved state is a function...
-      if (typeof resolvedState === 'function') {
-        // enclose in an object
-        fauxState = {};
-        fauxState['_' + traversalCallbackOrder[0]] = resolvedState;
-        resolvedState = fauxState;
-      }
-      // return the final state (when truthy), or `undefined` otherwise
       return resolvedState;
     }
 
@@ -1025,27 +1033,23 @@
     // pattern for identifying invalid state names
     corePkgDef.badKey = /\W|^toString$/;
 
-    // tests each state for the import pattern, and performs substitution when necessary
+    corePkgDef.prepTree = function () {
+      import_cacheTagKeyTests();
+    };
+
     corePkgDef.prepNode = function ( state, program ) {
       var
-        // the state whose child states should be used, based on the _import attribute
-        resolvedState,
-        // determine whether this state is extensible, based on it's attribute or value
-        importPath = typeof state === 'string' ? state : (state && typeof state._import === 'string' ? state._import : '');
-
-      // if there is a path...
-      if (importPath && r_validAbsolutePath.test( importPath )) {
-        // resolve a state from this path
-        resolvedState = resolveProgramPath( importPath, program );
-        // if the resolved state and given state are both objects...
-        if (typeof resolvedState === 'object' && typeof state === 'object') {
-          // get merged state
-          resolvedState = mergeStates( program, 0, resolvedState, state );
-        }
+        finalState,
+        tmpState = state,
+        importedPaths = {}
+      ;
+      // resolve all top-level imports for this state - avoid shallow-recursion
+      // this is similar to sub-classing
+      while (tmpState = import_resolveBase(tmpState, program, importedPaths)) {
+        finalState = tmpState;
       }
 
-      // return the final state
-      return resolvedState;
+      return finalState;
     };
 
     // initialize the package instance with custom properties
