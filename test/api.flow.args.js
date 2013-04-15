@@ -14,7 +14,7 @@ describe( 'Flow#args()', function () {
     flow.target(1, 'foo', 'bar');
   });
 
-  it( 'should return the argument of the given index', function () {
+  it( 'should return the argument at the given index', function () {
     flow = new Flow(function (x, y) {
       this.args(1).should.equal(y);
     });
@@ -92,7 +92,7 @@ describe( 'Flow#args()', function () {
     flow.status().path.should.equal('//');
     flow.target('//lock', 'chick', 'zebra');
     flow.lock().should.be.ok;
-    // flow.args().should.equal(false);
+    flow.args().should.equal(false);
     flow.args(1).should.equal(false);
     flow.args(1, 'pop').should.equal(false);
     flow.args([]).should.equal(false);
