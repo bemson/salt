@@ -1974,11 +1974,25 @@
       }
       // return based on call path
         // when internal (via a program-function)
-          // true when there are no pending child flows (otherwise, false)
+          // false when pending
+          // true when paused or not pending
         // when external (outside a program-function)
-          // false when this flow is paused or exits outside of phase 0
-          // true when the traversal result is undefined - otherwise the traversal result is returned
-      return pkg.allowed() ? !pkg.pending : ((pkg.phase || pkg.pause) ? false : pkg.result === undefined || pkg.result);
+          // false when pending
+          // false when paused
+          // false when exiting outside of phase 0 (_on)
+          // true when the traversal result is undefined
+          // the traversal result otherwise the traversal result is returned
+      if (pkg.pending) {
+        return false;
+      } else if (pkg.allowed()) {
+        return true;
+      } else if (pkg.pause || pkg.phase) {
+        return false;
+      } else if (pkg.result === undefined) {
+        return true;
+      } else {
+        return pkg.result;
+      } 
     };
 
     /**
