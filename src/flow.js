@@ -1059,6 +1059,13 @@
         pkg = this,
         activeFlow = activeFlows[0],
         sharedProxyDataMember = {},
+        sharedProxyStateMember = {
+          name: '_null',
+          path: '..//',
+          depth: 0,
+          index: 0,
+          phase: traversalCallbackOrder[0]
+        },
         nodes = pkg.nodes,
         nodeCount = nodes.length,
         i, j,
@@ -1163,10 +1170,12 @@
         }
       }
 
-      // reference data object in all proxy objects
       for (pkgId in pkg.pkgs) {
         if (pkg.pkgs.hasOwnProperty(pkgId)) {
+          // reference data object in all proxy objects
           pkg.pkgs[pkgId].proxy.data = sharedProxyDataMember;
+          // reference data object in all proxy objects
+          pkg.pkgs[pkgId].proxy.state = sharedProxyStateMember;
         }
       }
 
@@ -1459,10 +1468,18 @@
     corePkgDef.onNode = function (evtName, currentNodeIndex, lastNodeIndex) {
       var
         pkg = this,
+        state = pkg.proxy.state,
         nodes = pkg.nodes,
         currentNode = nodes[currentNodeIndex],
         lastNode = nodes[lastNodeIndex]
       ;
+      // set nodal info
+      state.name = currentNode.name;
+      state.index = currentNode.index;
+      state.depth = currentNode.depth;
+      state.path = currentNode.path;
+      state.phase = -1;
+
       // lock or unlock flow
       if (currentNode.lGate || lastNode.lGate) {
         pkg.locked = currentNode.lock;
@@ -1518,7 +1535,7 @@
         parentNode = pkg.nodes[node.parentIndex]
       ;
 
-      pkg.phase = phase;
+      pkg.proxy.state.phase = traversalCallbackOrder[pkg.phase = phase];
 
       // capture when this node was a tank target
       if (!~tank.targetIndex) {
