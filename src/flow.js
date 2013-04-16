@@ -2299,34 +2299,78 @@
     };
 
     // return an object with status information about the flow and it's current state
-    corePkgDef.proxy.status = function () {
+    corePkgDef.proxy.status = function (metric) {
       var
         // get the package instance
         pkg = corePkgDef(this),
         // alias the current node
-        currentNode = pkg.nodes[pkg.tank.currentIndex];
+        currentNode = pkg.nodes[pkg.tank.currentIndex],
+        obj = {},
+        all = !arguments.length
+      ;
 
       // callback-function for retrieving the node index
       function getPathFromIndex(idx) {
         return pkg.nodes[idx].path;
       }
 
-      // return the collection of keys for the node object
-      return {
-        trust: !!pkg.trust,
-        permit: !!pkg.allowed(),
-        loops: Math.max((pkg.calls.join().match(new RegExp('\\b' + currentNode.index + '.' + pkg.phase, 'g')) || []).length - 1, 0),
-        depth: currentNode.depth,
-        paused: !!pkg.pause,
-        pending: !!pkg.pending,
-        pendable: !!currentNode.pendable,
-        targets: pkg.targets.map(getPathFromIndex),
-        trail: pkg.trail.map(getPathFromIndex),
-        path: currentNode.path,
-        index: currentNode.index,
-        phase: traversalCallbackOrder[pkg.phase],
-        state: currentNode.name
-      };
+      if (all || metric === 'trust') {
+        obj.trust = !!pkg.trust;
+      }
+
+      if (all || metric === 'permit') {
+        obj.permit = !!pkg.allowed();
+      }
+
+      if (all || metric === 'loops') {
+        obj.loops = Math.max((pkg.calls.join().match(new RegExp('\\b' + pkg.tank.currentIndex + '.' + pkg.phase, 'g')) || []).length - 1, 0);
+      }
+
+      if (all || metric === 'paused') {
+        obj.paused = !!pkg.pause;
+      }
+
+      if (all || metric === 'pending') {
+        obj.pending = !!pkg.pending;
+      }
+
+      if (all || metric === 'targets') {
+        obj.targets = pkg.targets.map(getPathFromIndex);
+      }
+
+      if (all || metric === 'trail') {
+        obj.trail = pkg.trail.map(getPathFromIndex);
+      }
+
+      if (all || metric === 'pendable') {
+        obj.pendable = !!currentNode.pendable;
+      }
+
+      if (all || metric === 'path') {
+        obj.path = currentNode.path;
+      }
+
+      if (all || metric === 'depth') {
+        obj.depth = currentNode.depth;
+      }
+
+      if (all || metric === 'index') {
+        obj.index = currentNode.index;
+      }
+
+      if (all || metric === 'phase') {
+        obj.phase = traversalCallbackOrder[pkg.phase];
+      }
+
+      if (all || metric === 'state') {
+        obj.state = currentNode.name;
+      }
+
+      if (all) {
+        return obj;
+      } else {
+        return obj[metric];
+      }
     };
 
     return Flow;

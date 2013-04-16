@@ -21,27 +21,6 @@ describe( 'Flow#status()', function () {
     status.loops.should.be.a('number');
   });
 
-  // it( 'should list completed states', function () {
-  //   var progamSpy = sinon.spy(function () {
-  //     status = this.status();
-  //     status.targets.should.have.a.lengthOf(1);
-  //     status.target[0].should.equal('//a/');
-  //     status.trail.should.have.a.lengthOf(1);
-  //     status.trail[0].should.equal('//');
-  //     status.permit.should.be.ok;
-  //     status.loops.should.equal(0);
-  //     status.permit.should.be.ok;
-  //     status.trust.should.be.ok;
-  //   });
-  //   flow = new Flow({
-  //     _on: programSpy,
-  //     a: {}
-  //   });
-  //   flow.go(1, '//a');
-  //   programSpy.should.have.been.calledOnce;
-  //   aSpy.should.have.been.calledOnce;
-  // });
-
   it( 'should list completed states', function () {
     var spy = sinon.spy(function () {
       var status = this.status();
@@ -70,14 +49,6 @@ describe( 'Flow#status()', function () {
     });
     flow.go(1, '//a', '//b');
     spy.should.have.been.calledOnce;
-  });
-
-  it( 'should indicate when the Flow is locked', function () {
-    // var spy = sinon.spy(function () {
-    // });
-    // flow = new Flow(spy);
-    // flow.go(1);
-    // spy.should.have.been.calledOnce;
   });
 
   it( 'should indicate when the Flow is active/idle', function () {
@@ -110,12 +81,49 @@ describe( 'Flow#status()', function () {
   });
 
   it( 'should preserve sequence data while paused or pending', function () {
+    flow = new Flow({
+      pause: function () {
+        this.wait();
+      },
+      next: {}
+    });
+    flow.go('//', '//pause', '//next');
+    flow.status().targets.should.not.be.empty;
+    flow.status().trail.should.not.be.empty;
+    flow.go();
+    flow.status().targets.should.be.empty;
+    flow.status().trail.should.be.empty;
   });
 
-  it( 'should indicate how many times a state has been touched', function () {
+  it( 'should indicate the number of times a phase is repeated', function () {
+    var
+      onHits = 0,
+      onSpy = sinon.spy(function () {
+        onHits++;
+        if (onHits < 10) {
+          this.go('.');
+          this.status().loops.should.be.below(onHits);
+        }
+      }),
+      outSpy = sinon.spy(function () {
+        this.status().loops.should.equal(0);
+      })
+    ;
+    flow = new Flow({
+      _on: onSpy,
+      _out: outSpy
+    });
+    flow.go(1, 0);
+    onHits.should.equal(10);
+    onSpy.should.have.been.called;
+    outSpy.should.have.been.called;
   });
 
-  it( 'should return the given property (or `undefined`)', function () {
+  it( 'should return the matching property (or `undefined`)', function () {
+    flow = new Flow();
+    flow.status('targets').should.be.an.instanceOf(Array);
+    expect(flow.status('foo')).to.equal(undefined);
+    expect(flow.status(null)).to.equal(undefined);
   });
 
 
