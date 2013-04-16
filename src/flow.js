@@ -1386,8 +1386,18 @@
       // track - save point for reconciliation later
       go: function () {
         var pkg = this;
+        pkg.preMove();
         // exit when pending, or direct tank to the first target - returns the number of steps completed (or false when there is no target)
         return pkg.tank.go(pkg.targets[0]);
+      },
+
+      // handle various flags before moving forward
+      preMove: function () {
+        var pkg = this;
+        // clear any delays
+        clearTimeout(pkg.waitTimer);
+        // unpause this flow
+        pkg.pause = 0;
       },
 
       // flag when the flow is allowed to perform trusted executions
@@ -1455,10 +1465,7 @@
       activeFlows.unshift(pkg);
       corePkgDef.actives.unshift(pkg.proxy);
 
-      // clear any delays
-      clearTimeout(pkg.waitTimer);
-      // unpause this flow
-      pkg.pause = 0;
+      pkg.preMove();
       // prevent going forward when pended by another flow
       if (pkg.pending) {
         pkg.tank.stop();
