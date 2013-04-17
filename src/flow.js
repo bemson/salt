@@ -1893,7 +1893,7 @@
         return false;
       }
       // (otherwise) return current locked status
-      return pkg.locked;
+      return !!pkg.locked;
     };
 
     // set trust flag before and after execution
