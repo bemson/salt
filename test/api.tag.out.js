@@ -30,7 +30,7 @@ describe( '_out tag', function () {
     });
     flow.go('//a/', 1);
     spy.should.have.been.calledOnce;
-    flow.status().path.should.equal('//');
+    flow.state.path.should.equal('//');
   });
 
   it( 'should navigate queries as waypoints', function () {
@@ -43,7 +43,7 @@ describe( '_out tag', function () {
     });
     flow.go('//a/', 1);
     spy.should.have.been.calledOnce;
-    flow.status().path.should.equal('//');
+    flow.state.path.should.equal('//');
   });
 
   it( 'should cause an infinite sequence when a query points inside the state', function () {

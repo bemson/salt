@@ -9,9 +9,9 @@ describe( 'Flow#go()', function () {
       _on: spy,
       a: spy
     });
-    flow.status().path.should.equal('..//');
+    flow.state.path.should.equal('..//');
     flow.go(1, '//a/');
-    flow.status().path.should.equal('//a/');
+    flow.state.path.should.equal('//a/');
     spy.should.have.been.calledThrice;
   });
 

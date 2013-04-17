@@ -7,9 +7,9 @@ describe( 'Flow#target()', function () {
     flow = new Flow({
       _in: inSpy
     });
-    flow.status().path.should.equal('..//');
+    flow.state.path.should.equal('..//');
     flow.target(1);
-    flow.status().path.should.equal('//');
+    flow.state.path.should.equal('//');
     inSpy.should.have.been.calledOnce;
   });
 
@@ -43,7 +43,7 @@ describe( 'Flow#target()', function () {
       b: {}
     });
     flow.go('//a', '//b');
-    flow.status().path.should.equal('//');
+    flow.state.path.should.equal('//');
     inSpy.should.have.been.called;
   });
 
@@ -60,7 +60,7 @@ describe( 'Flow#target()', function () {
       c: {}
     });
     flow.go('//a', '//b', '//c');
-    flow.status().path.should.equal('//');
+    flow.state.path.should.equal('//');
     inSpy.should.have.been.called;
   });
 
@@ -155,9 +155,9 @@ describe( 'Flow#target()', function () {
 
     flow.target(1).should.equal(false);
     flow.status().paused.should.not.be.ok;
-    flow.status().pending.should.be.ok;
+    flow.status().pending.should.equal(true);
     pender.go();
-    flow.status().pending.should.not.be.ok;
+    flow.status().pending.should.equal(false);
   });
 
   it( 'should return false when called externally on a locked instance', function () {

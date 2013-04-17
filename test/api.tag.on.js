@@ -26,7 +26,7 @@ describe( '_on tag', function () {
       b: {}
     });
     flow.go('//');
-    flow.status().path.should.equal('//b/');
+    flow.state.path.should.equal('//b/');
   });
 
   it( 'should navigate queries as waypoints', function () {
@@ -40,7 +40,7 @@ describe( '_on tag', function () {
     });
     flow.go('//a/', '//b/');
     spy.should.have.been.calledOnce;
-    flow.status().path.should.equal('//b/');
+    flow.state.path.should.equal('//b/');
   });
 
   it( 'should not accept queries to the current state', function () {

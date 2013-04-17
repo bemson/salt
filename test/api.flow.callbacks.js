@@ -28,14 +28,14 @@ describe( 'Flow#callbacks()', function () {
       network = flow.callbacks()
     ;
 
-    flow.status().path.should.equal('..//');
+    flow.state.path.should.equal('..//');
     spyTarget.should.not.have.been.called;
 
     network.should.be.a('function');
     network(arg);
     spyTarget.should.have.been.calledOnce;
     spyTarget.should.have.been.calledWithExactly(1, arg);
-    flow.status().path.should.equal('//');
+    flow.state.path.should.equal('//');
 
     network.a.should.be.a('function');
     network.a.b.should.be.a('function');
@@ -44,7 +44,7 @@ describe( 'Flow#callbacks()', function () {
     network.a.b(arg);
     spyTarget.should.have.been.calledTwice;
     spyTarget.should.have.been.calledWithExactly(3, arg);
-    flow.status().path.should.equal('//a/b/');
+    flow.state.path.should.equal('//a/b/');
   });
 
   it( 'should return a sub-network when given an absolute query', function () {

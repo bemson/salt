@@ -196,7 +196,7 @@ describe( 'Query', function () {
       });
 
       it( 'should return the current state', function () {
-        flow.status().path.should.equal(flow.query('.'));
+        flow.state.path.should.equal(flow.query('.'));
       });
 
     });
@@ -262,7 +262,7 @@ describe( 'Query', function () {
       });
 
       it( 'should return the current state', function () {
-        flow.status().path.should.equal(flow.query('@self'));
+        flow.state.path.should.equal(flow.query('@self'));
       });
 
     });

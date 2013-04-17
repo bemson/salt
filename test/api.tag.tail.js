@@ -11,9 +11,9 @@ describe( '_tail tag', function () {
       c: {}
     });
     flow.go('//a/');
-    flow.status().path.should.equal('//c/');
+    flow.state.path.should.equal('//c/');
     flow.go('//a/b/');
-    flow.status().path.should.equal('//c/');
+    flow.state.path.should.equal('//c/');
   });
 
   it( 'should not redirect when redirecting to, and stopping on, the tagged state', function () {
@@ -37,7 +37,7 @@ describe( '_tail tag', function () {
       }
     });
     flow.go('//a/');
-    flow.status().path.should.equal('//a/');
+    flow.state.path.should.equal('//a/');
     spy.should.not.have.been.called;
   });
 
@@ -50,7 +50,7 @@ describe( '_tail tag', function () {
       }
     });
     flow.go('//a/');
-    flow.status().path.should.equal('//a/');
+    flow.state.path.should.equal('//a/');
     spy.should.not.have.been.called;
   });
 
@@ -82,7 +82,7 @@ describe( '_tail tag', function () {
     spy.reset();
 
     flow.go('//a/b/');
-    flow.status().path.should.equal('//a/');
+    flow.state.path.should.equal('//a/');
   });
 
   it( 'should treat `false` as a bad query', function () {
@@ -94,7 +94,7 @@ describe( '_tail tag', function () {
       }
     });
     flow.go('//a/');
-    flow.status().path.should.equal('//a/');
+    flow.state.path.should.equal('//a/');
     spy.should.not.have.been.called;
   });
 
@@ -114,19 +114,19 @@ describe( '_tail tag', function () {
       e: {}
     });
     flow.go('//a/b/');
-    flow.status().path.should.equal('//a/');
+    flow.state.path.should.equal('//a/');
 
     flow.go('//a/b/c/');
-    flow.status().path.should.equal('//a/b/c/');
+    flow.state.path.should.equal('//a/b/c/');
 
     flow.go('//a/b/d/');
-    flow.status().path.should.equal('//e/');
+    flow.state.path.should.equal('//e/');
   });
 
   it( 'should allow tailing to the null state', function () {
     flow = new Flow({_tail: 0});
     flow.go(1);
-    flow.status().path.should.equal('..//');
+    flow.state.path.should.equal('..//');
   });
 
   it( 'should allow for compounding redirects', function () {
@@ -143,7 +143,7 @@ describe( '_tail tag', function () {
       c: spy
     });
     flow.go('//a/');
-    flow.status().path.should.equal('//c/');
+    flow.state.path.should.equal('//c/');
     spy.should.have.been.calledThrice;
   });
 
@@ -174,7 +174,9 @@ describe( '_tail tag', function () {
       b: done
     });
     flow.go('//a/');
-    flow.status().pending.should.be.ok;
+    flow.status().pending.should.equal(true);
+    flow.state.path.should.equal('//a/');
+    pender.go();
   });
 
 });

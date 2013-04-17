@@ -50,7 +50,7 @@ describe( '_bover tag', function () {
     });
     flow.go('//b/', 0);
     spy.should.have.been.calledOnce;
-    flow.status().path.should.equal('..//');
+    flow.state.path.should.equal('..//');
   });
 
   it( 'should not invoke if _out redirects from an older to a younger sibling state', function () {
@@ -73,7 +73,7 @@ describe( '_bover tag', function () {
       }
     });
     flow.go('//scenario');
-    flow.status().path.should.equal('//scenario/younger/');
+    flow.state.path.should.equal('//scenario/younger/');
     spy.should.not.have.been.called;
   });
 
@@ -97,7 +97,7 @@ describe( '_bover tag', function () {
     });
     flow.go('//scenario');
     spy.should.have.been.calledOnce;
-    flow.status().path.should.equal('//scenario/younger/');
+    flow.state.path.should.equal('//scenario/younger/');
   });
 
   it( 'should cause an infinite sequence when a query points to an older/descendent state', function () {

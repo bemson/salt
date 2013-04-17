@@ -20,7 +20,7 @@ describe( '_sequence tag', function () {
     seqSpy.should.have.been.calledOnce;
     aSpy.should.have.been.calledOnce;
     bSpy.should.have.been.calledOnce;
-    flow.status().path.should.equal('//seq/b/');
+    flow.state.path.should.equal('//seq/b/');
   });
 
   it( 'should not work targeting a descendant of the tagged state', function () {
@@ -37,7 +37,7 @@ describe( '_sequence tag', function () {
     flow.go('//seq/a/');
     aSpy.should.have.been.calledOnce;
     bSpy.should.not.have.been.called;
-    flow.status().path.should.equal('//seq/a/');
+    flow.state.path.should.equal('//seq/a/');
   });
 
   it( 'should add descendants as waypoints', function () {
@@ -57,7 +57,7 @@ describe( '_sequence tag', function () {
     });
     flow.go('//seq/', '//end/');
     aSpy.should.have.been.calledOnce;
-    flow.status().path.should.equal('//end/');
+    flow.state.path.should.equal('//end/');
   });
 
 

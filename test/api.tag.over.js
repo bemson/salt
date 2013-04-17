@@ -50,7 +50,7 @@ describe( '_over tag', function () {
     });
     flow.go('//b/');
     spy.should.have.been.calledOnce;
-    flow.status().path.should.equal('//b/');
+    flow.state.path.should.equal('//b/');
   });
 
   it( 'should not invoke if _out redirects from a younger to an older sibling state', function () {
@@ -73,7 +73,7 @@ describe( '_over tag', function () {
       }
     });
     flow.go('//scenario');
-    flow.status().path.should.equal('//scenario/older/');
+    flow.state.path.should.equal('//scenario/older/');
     spy.should.not.have.been.called;
   });
 
@@ -100,7 +100,7 @@ describe( '_over tag', function () {
     });
     flow.go('//scenario');
     spy.should.have.been.calledTwice;
-    flow.status().path.should.equal('//scenario/older/');
+    flow.state.path.should.equal('//scenario/older/');
   });
 
   it( 'should cause an infinite sequence when a query points to a younger/ancestor state', function () {

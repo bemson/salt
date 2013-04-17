@@ -270,7 +270,7 @@
           } else if (parentNode) {
             node.pendable = parentNode.pendable;
           } else {
-            node.pendable = 1;
+            node.pendable = true;
           }
         },
         /*
@@ -1064,7 +1064,8 @@
           path: '..//',
           depth: 0,
           index: 0,
-          phase: traversalCallbackOrder[0]
+          phase: traversalCallbackOrder[0],
+          pendable: true
         },
         nodes = pkg.nodes,
         nodeCount = nodes.length,
@@ -1485,6 +1486,7 @@
       state.index = currentNode.index;
       state.depth = currentNode.depth;
       state.path = currentNode.path;
+      state.pendable = currentNode.pendable;
       state.phase = -1;
 
       // lock or unlock flow
@@ -2340,30 +2342,6 @@
 
       if (all || metric === 'trail') {
         obj.trail = pkg.trail.map(getPathFromIndex);
-      }
-
-      if (all || metric === 'pendable') {
-        obj.pendable = !!currentNode.pendable;
-      }
-
-      if (all || metric === 'path') {
-        obj.path = currentNode.path;
-      }
-
-      if (all || metric === 'depth') {
-        obj.depth = currentNode.depth;
-      }
-
-      if (all || metric === 'index') {
-        obj.index = currentNode.index;
-      }
-
-      if (all || metric === 'phase') {
-        obj.phase = traversalCallbackOrder[pkg.phase];
-      }
-
-      if (all || metric === 'state') {
-        obj.state = currentNode.name;
       }
 
       if (all) {

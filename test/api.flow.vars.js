@@ -83,7 +83,7 @@ describe( 'Flow#vars', function () {
       }
     });
     flow.go(1, 0);
-    flow.status().state.should.equal('_null');
+    flow.state.name.should.equal('_null');
     flow.go('//check');
     spy.should.have.been.calledOnce;
   });
@@ -105,7 +105,7 @@ describe( 'Flow#vars', function () {
     flow.should.not.haveOwnProperty('vars');
     flow.go('//pend');
     flow.status().paused.should.not.be.ok;
-    flow.status().pending.should.be.ok;
+    flow.status().pending.should.equal(true);
     flow.should.not.haveOwnProperty('vars');
   });
 

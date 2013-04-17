@@ -89,7 +89,7 @@ describe( 'Flow#args()', function () {
     flow.args(2, val).should.equal(val);
     flow.go();
 
-    flow.status().path.should.equal('//');
+    flow.state.path.should.equal('//');
     flow.target('//lock', 'chick', 'zebra');
     flow.lock().should.be.ok;
     flow.args().should.equal(false);

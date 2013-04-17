@@ -18,7 +18,7 @@ describe( 'Flow#wait()', function () {
     });
     flow.go('//foo/');
     flow.status().paused.should.equal(true);
-    flow.status().path.should.equal('//');
+    flow.state.path.should.equal('//');
   });
 
   it( 'should delay navigation', function (done) {
@@ -85,20 +85,26 @@ describe( 'Flow#wait()', function () {
     flow.go(1);
   });
 
-  it( 'should prevent parent Flow from completing', function (done) {
-    var pender = new Flow(function () {
-      this.wait();
-    });
+  it( 'should prevent parent Flow from completing', function () {
+    var
+      spy = sinon.spy(),
+      pender = new Flow(function () {
+        this.wait();
+      })
+    ;
     flow = new Flow({
       _in: function () {
         pender.go(1);
       },
-      _on: done
+      _on: spy
     });
     flow.go(1);
-    flow.status().pending.should.be.ok;
-    pender.status().paused.should.be.ok;
+    spy.should.not.have.been.called;
+    flow.status().pending.should.equal(true);
+    pender.status().paused.should.equal(true);
     pender.go();
+    flow.status().pending.should.equal(false);
+    spy.should.have.been.calledOnce;
   });
 
 });
