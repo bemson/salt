@@ -11,6 +11,7 @@ describe( 'Flow#state', function () {
         b: {}
       },
       c: {
+        _pendable: false,
         _in: function () {
           this.wait();
         }
@@ -48,6 +49,10 @@ describe( 'Flow#state', function () {
     state.should.haveOwnProperty('phase');
   });
 
+  it( 'should have an "pendable" member', function () {
+    state.should.haveOwnProperty('pendable');
+  });
+
 
   it( 'should reflect the null state by default', function () {
     expect(state.name).to.equal('_null');
@@ -55,6 +60,7 @@ describe( 'Flow#state', function () {
     expect(state.depth).to.equal(0);
     expect(state.path).to.equal('..//');
     expect(state.phase).to.equal('_on');
+    expect(state.pendable).to.equal(true);
   });
 
   it( 'should reflect the current state', function () {
@@ -64,6 +70,7 @@ describe( 'Flow#state', function () {
     state.depth.should.equal(2);
     state.path.should.equal('//a/');
     state.phase.should.equal('_on');
+    state.pendable.should.equal(true);
 
     flow.go('//c/');
     state.name.should.equal('c');
@@ -71,6 +78,7 @@ describe( 'Flow#state', function () {
     state.depth.should.equal(2);
     state.path.should.equal('//c/');
     state.phase.should.equal('_in');
+    state.pendable.should.equal(false);
   });
 
 });
