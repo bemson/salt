@@ -121,14 +121,10 @@
           Specifies when an entered state will lock/unlock the flow.
         */
         _lock: function (tagName, exists, tags, node, parentNode, pkg, idx) {
-
-          node.lGate = node.lock = 0;
-
           if (exists) {
-            node.lGate = 1;
-            node.lock = !!tags._lock;
-          } else if (parentNode) {
-            node.lock = parentNode.lock;
+            node.lock = tags._lock ? 1 : 0;
+          } else {
+            node.lock = -1;
           }
         },
         /*
@@ -1086,6 +1082,8 @@
       pkg.args = [];
       // collection of node calls made while traversing
       pkg.calls = [];
+      // collection of lock states - begin with unlocked
+      pkg.locks = [0];
       // collection of nodes targeted and reached while traversing
       pkg.trail = [];
       // state index to add to trail at end of traversal/resume
@@ -1106,8 +1104,6 @@
       };
       // flag when api calls are trusted
       pkg.trust = 0;
-      // init locked flag
-      pkg.locked = 0;
       // init index of node paths
       pkg.nids = {};
       // the number of child flows fired by this flow's program functions
@@ -1404,7 +1400,7 @@
       // flag when the flow is allowed to perform trusted executions
       allowed: function () {
         // flag true when the current flow, or when active and unlocked
-        return activeFlows[0] === this || (this.trust && !this.locked);
+        return activeFlows[0] === this || (this.trust && !this.locks[0]);
       },
 
       // direct owning flow to the given state
@@ -1479,8 +1475,11 @@
         state = pkg.proxy.state,
         nodes = pkg.nodes,
         currentNode = nodes[currentNodeIndex],
-        lastNode = nodes[lastNodeIndex]
+        lastNode = nodes[lastNodeIndex],
+        lastNodeDepth = lastNode.depth,
+        currentNodeDepth = currentNode.depth
       ;
+
       // set nodal info
       state.name = currentNode.name;
       state.index = currentNode.index;
@@ -1489,10 +1488,39 @@
       state.pendable = currentNode.pendable;
       state.phase = -1;
 
-      // lock or unlock flow
-      if (currentNode.lGate || lastNode.lGate) {
-        pkg.locked = currentNode.lock;
+      if (currentNodeDepth === lastNodeDepth) {
+
+        // to sibling
+
+        if (~lastNode.lock) {
+          // remove from lock stack
+          pkg.locks.shift();
+        }
+        if (~currentNode.lock) {
+          // add to lock stack
+          pkg.locks.unshift(currentNode.lock);
+        }
+
+      } else if (currentNodeDepth > lastNodeDepth) {
+
+        // to child
+
+        if (~currentNode.lock) {
+          // add to lock stack
+          pkg.locks.unshift(currentNode.lock);
+        }
+
+      } else if (lastNodeDepth > currentNodeDepth) {
+
+        // to parent
+
+        if (~lastNode.lock) {
+          // remove from lock stack
+          pkg.locks.shift();
+        }
+
       }
+
     };
 
     corePkgDef.onScope = function (evtName, entering) {
@@ -1887,7 +1915,7 @@
         // if allowed to change the lock status...
         if (pkg.allowed()) {
           // set new lock state
-          pkg.locked = set ? 1 : 0;
+          pkg.locks[0] = !!set;
           // flag success in changing the locked property of this flow
           return true;
         }
@@ -1895,7 +1923,7 @@
         return false;
       }
       // (otherwise) return current locked status
-      return !!pkg.locked;
+      return !!pkg.locks[0];
     };
 
     // set trust flag before and after execution
@@ -1912,9 +1940,9 @@
               // capture initial trust value
               currentTrustValue = pkg.trust,
               // capture initial lock value
-              currentLockValue = pkg.locked,
+              currentLockValue = pkg.locks[0],
               // flag when we're already in a blessed function by testing type of the locked property
-              alreadyInBlessedFunction = typeof pkg.locked === 'boolean',
+              alreadyInBlessedFunction = typeof pkg.locks[0] === 'boolean',
               // placeholder to capture execution result
               rslt;
 
@@ -1923,16 +1951,16 @@
             // if not already in a blessed function, and we're currently locked...
             if (!alreadyInBlessedFunction && currentLockValue) {
               // ensure we're unlocked - set to boolean, since it's not set like this anywhere else
-              pkg.locked = false;
+              pkg.locks[0] = false;
             }
             // call and capture function result, pass along scope and args
             rslt = fnc.apply(this, arguments);
             // restore trust value
             pkg.trust = currentTrustValue;
             // if not already in a blessed function and the lock value is still a boolean (which means lock() was not called)...
-            if (!alreadyInBlessedFunction && typeof pkg.locked === 'boolean') {
+            if (!alreadyInBlessedFunction && typeof pkg.locks[0] === 'boolean') {
               // restore original lock value
-              pkg.locked = currentLockValue;
+              pkg.locks[0] = currentLockValue;
             }
             // return result of function call
             return rslt;
@@ -1951,7 +1979,7 @@
         isInt = typeof idx === 'number' && ~~idx === idx
       ;
 
-      if (pkg.allowed() || !pkg.locked) {
+      if (pkg.allowed() || !pkg.locks[0]) {
         // return cparray of arguments
         if (argCnt === 0) {
           return [].concat(pkgArgs);
@@ -1984,7 +2012,7 @@
        // alias this package
         pkg = corePkgDef(this),
         // resolve a node index from qry, or nothing if allowed or unlocked
-        tgtIdx = (pkg.allowed() || !pkg.locked) ? pkg.vetIndexOf(qry) : -1;
+        tgtIdx = (pkg.allowed() || !pkg.locks[0]) ? pkg.vetIndexOf(qry) : -1;
 
       // if the destination node is valid, and the flow can move...
       if (~tgtIdx) {
@@ -2043,7 +2071,7 @@
       // if...
       if (
         // allowed or unlocked and ...
-        (pkg.allowed() || !pkg.locked) &&
+        (pkg.allowed() || !pkg.locks[0]) &&
         // any and all node references are valid...
         protoSlice.call(arguments).every(function (nodeRef) {
           var
