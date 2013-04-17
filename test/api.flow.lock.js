@@ -26,6 +26,20 @@ describe( 'Flow#lock()', function () {
     jailSpy.should.have.been.calledOnce;
   });
 
+  it( 'should return `true` when setting the lock state', function () {
+    var spy = sinon.spy(function () {
+      this.lock().should.equal(false);
+      this.lock(1).should.equal(true);
+      this.lock().should.equal(true);
+      this.lock(0).should.equal(true);
+      this.lock().should.equal(false);
+    });
+    flow = new Flow(spy);
+    flow.go(1);
+    spy.should.have.been.calledOnce;
+    flow.go(0).should.be.ok;
+  });
+
   it( 'should lock an instance with a truthy value', function () {
     var spy = sinon.spy(function () {
       this.lock().should.equal(false);
