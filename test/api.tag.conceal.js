@@ -28,7 +28,7 @@ describe( '_conceal tag', function () {
     flow.go('//foo/bar').should.be.ok;
   });
 
-  it( 'should have no impact on trusted queries', function () {
+  it( 'should have no impact on internal/trusted queries', function () {
     var spy = sinon.spy();
     flow = new Flow({
       _on: 'foo',
@@ -42,7 +42,21 @@ describe( '_conceal tag', function () {
     spy.should.have.been.calledOnce;
   });
 
-  it( 'should not work on the program root', function () {
+  it( 'should have no impact when falsy', function () {
+    flow = new Flow({
+      foo: {
+        _conceal: false,
+        bar: {
+          _conceal: 0
+        }
+      }
+    });
+    flow.go('//').should.be.ok;
+    flow.go('//foo').should.be.ok;
+    flow.go('//foo/bar').should.be.ok;
+  });
+
+  it( 'should be ignored by the program root', function () {
     flow = new Flow({
       _conceal: 1,
       foo: {}
