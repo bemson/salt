@@ -310,6 +310,19 @@
           } else {
             node.tail = 0;
           }
+        },
+        /*
+          Specifies when a branch should be invisible to external queries
+        */
+        _conceal: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+          node.conceal = -1;
+          if (exists && idx > 1) {
+            if (tags._conceal) {
+              node.conceal = idx;
+            }
+          } else if (parentNode) {
+            node.conceal = parentNode.conceal;
+          }
         }
       },
       // tags that depend on other tags or require cleanup
@@ -1727,7 +1740,21 @@
       ;
 
       // return true if this node is within it's restrictions (if any), or when we're within, targeting, or on the target's ingress node (if any)
-      return (!restrictingNode || targetNode.within(restrictingNode)) && (!targetIngressNode || this === targetIngressNode || targetNode === targetIngressNode || this.within(targetIngressNode));
+      return (
+          // check if the target is within the restricting node - if any
+          !restrictingNode ||
+          targetNode.within(restrictingNode)
+        ) &&
+        (
+          // check if the target is within (or is) an ingress node
+          !targetIngressNode ||
+          this === targetIngressNode ||
+          targetNode === targetIngressNode ||
+          this.within(targetIngressNode)
+        ) &&
+        // deny when the target node is hidden
+        !~targetNode.conceal
+      ;
     };
 
     // add method to de/scope defined variables
