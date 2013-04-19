@@ -1580,13 +1580,7 @@
       }
 
       // set store capture criteria
-      if (phase < 3) {
-        pkg.bin.on = node.criteria;
-      } else if (parentNode) {
-        pkg.bin.on = parentNode.criteria;
-      } else {
-        pkg.bin.on = 0;
-      }
+      pkg.bin.on = node.criteria;
 
       // prepend sequence node targets
       if (node.seq && !phase) {
@@ -2307,7 +2301,7 @@
       var
         pkg = corePkgDef(this),
         argumentsLength = arguments.length,
-        selectBufferredPkgs = cfg === 'buffer' && argumentsLength === 2,
+        selectBufferredPkgs = cfg === 'buffer',
         privileged = pkg.allowed() || pkg.owner === activeFlows[0],
         result
       ;
