@@ -94,9 +94,7 @@
         }
       },
       coreTags = {
-        /*
-          Specifies when a state is the base for rooted queries.
-        */
+        // Specifies when a state is the base for rooted queries.
         _root: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           if (idx < 2 || (exists && tags._root)) {
             node.rootIndex = idx;
@@ -104,9 +102,7 @@
             node.rootIndex = parentNode.rootIndex;
           }
         },
-        /*
-          Specifies when a state may not be exited with external calls.
-        */
+        // Specifies when a state may not be exited with external calls.
         _restrict: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           var prop = tagName.substr(1);
           if (exists && tags[tagName]) {
@@ -117,9 +113,7 @@
             node[prop] = -1;
           }
         },
-        /*
-          Specifies when an entered state will lock/unlock the flow.
-        */
+        // Specifies when an entered state will lock/unlock the flow.        
         _lock: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           if (exists) {
             node.lock = tags._lock ? 1 : 0;
@@ -127,9 +121,7 @@
             node.lock = -1;
           }
         },
-        /*
-          Defines the path to update an owning flow - if any.
-        */
+        // Defines the path to update an owning flow - if any.        
         _owner: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           node.pGate = 0;
 
@@ -144,9 +136,7 @@
             node.ping = -1;
           }
         },
-        /*
-          Define alias for this state, to use in queries.
-        */
+        // Define alias for this state, to use in queries.
         _name: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           if (
             exists && tags._name && typeof tags._name === 'string' &&
@@ -158,9 +148,7 @@
             };
           }
         },
-        /*
-          Define criteria for preserving instances created while traversing this branch.
-        */
+        // Define criteria for preserving instances created while traversing this branch.
         _store: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           if (exists) {
             node.criteria = compileFilterCriteria(tags._store);
@@ -170,14 +158,12 @@
             node.criteria = 0;
           }
         },
-        /*
-          Define data names and values for a branch.
-
-          _data: 'foo'
-          _data: ['foo']
-          _data: {foo: 'bar'}
-          _data: ['foo', {zoo:'baz'}]
-        */
+        // Define data names and values for a branch.
+        //
+        // _data: 'foo'
+        // _data: ['foo']
+        // _data: {foo: 'bar'}
+        // _data: ['foo', {zoo:'baz'}]
         _data: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           var
             cfgs = {},
@@ -219,9 +205,7 @@
             }
           }
         },
-        /*
-          Specifies a branch to navigate after targeting this state.
-        */
+        // Specifies a branch to navigate after targeting this state.
         _sequence: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           if (exists) {
             // set walk to a new or copied array, based on the booly value
@@ -244,9 +228,7 @@
             }
           }
         },
-        /*
-          Specifies when a paused state will prevent parent flow's from completing their navigation.
-        */
+        // Specifies when a paused state will prevent parent flow's from completing their navigation.
         _pendable: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           if (exists) {
             node.pendable = !!tags._pendable;
@@ -267,9 +249,7 @@
             node.fncs[traversalCallbackOrder[tagName]] = tagValue;
           }
         },
-        /*
-          Specifies where to direct the flow at the end of a sequence for a given branch
-        */
+        // Specifies where to direct the flow at the end of a sequence for a given branch
         _tail: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           var
             tagValue,
@@ -298,9 +278,7 @@
             node.tail = 0;
           }
         },
-        /*
-          Specifies when a branch should be invisible to external queries
-        */
+        // Specifies when a branch should be invisible to external queries
         _conceal: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           node.conceal = -1;
           if (exists && idx > 1) {
@@ -314,15 +292,11 @@
       },
       // tags that depend on other tags or require cleanup
       corePostTags = {
-        /*
-          Clean up lastWalk flag
-        */
+        // Clean up lastWalk flag
         _sequence: function (tagName, exists, tags, node) {
           delete node.lastWalk;
         },
-        /*
-          Specifies where to direct the flow at the end of a sequence for a given branch
-        */
+        // Specifies where to direct the flow at the end of a sequence for a given branch
         _tail: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           var
             tailData = node.tail,
@@ -374,9 +348,7 @@
             }
           }
         },
-        /*
-          Process callbacks that are redirects
-        */
+        // Process callbacks that are redirects
         _on: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           var
             tgtIdx = -1,
@@ -2220,83 +2192,6 @@
       }
     };
 
-    /*
-      Manipulate the current or master collection of captured instances,
-      in the following ways.
-
-      1) Retrieve instances:
-
-        [simple]
-          this.flows();
-
-        [simple query]
-          this.flows('somestate'); // equivalent to < states: 'somestate' >
-          this.flows('some/path'); // equivalent to < paths: 'some/path' >
-          this.flows(true); // all flows
-          this.flows(2); // all flows at state index 2
-
-        [advanced]
-          this.flows('get', criteria); // retrieve matching instaces
-          this.flows('get', 'buffer'); // retrieve bufferred instances
-
-        Returns an array of matching instances.
-        Uses flow filters by default (set by the _store tag).
-        Retrieving the buffer returns all uncommitted flows.
-
-      2) Add instances:
-
-        [simple]
-          this.flows(flow1, flow2, ...);
-
-        [advanced]
-          this.flows('add', [flow1, flow2, ...]);
-          this.flows('buffer', [flow1, flow2, ... ]);
-
-        Returns true on success. Adding is a privileged action.
-        Returns false is any of the added items are not flow instances.
-
-      3) Remove instances:
-
-        [simple]
-          this.flows('remove', true); // remove all instances
-          this.flows('remove', [flow1, flow2, ...]); // remove specific instances
-
-        [advanced]
-          this.flows('remove', criteria); // remove matching instances
-          this.flows('remove', 'buffer'); // remove bufferred instances
-
-        Returns true on succcess. Removal is a privileged action.
-
-      For retrieval and removal, a configuration object may be passed to filter which  instances are targeted.
-      Below are the optional keys for criteria, along with their defaults (where applicable).
-
-      Criteria Options
-      ---------------------------
-
-        qry_strict
-          A truthy value that is false by default.
-          Indicates when all criteria must be satisfied before including an instance.
-
-        qry_invert
-          A truthy value that is false by default.
-          Indicates when to include non-matching instances.
-
-        states
-          One or an array of criteria for the current state.
-          Selects flows where the name matches the given string.
-          Selects flows where the index matches the given whole number.
-          Selects flows where the name satisfies the given regular expression.
-
-        paths
-          One or an array of criteria for the current state's path.
-          Selects flows where the path contains the given string.
-          Selects flows where the name satisfies the given regular expression.
-
-        programs
-          One or an array of program objects.
-          Selects flows compiled from the given value.
-
-    */
     corePkgDef.proxy.flows = function (cmd, cfg) {
       var
         pkg = corePkgDef(this),
