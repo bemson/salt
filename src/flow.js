@@ -2203,30 +2203,28 @@
         ownerAccess = pkg.ownable && (pkg.allowed() || activeFlow === pkg.owner)
       ;
 
-      if (ownerAccess) {
-
-        if (arguments.length) {
-          // replace/assign owner
+      if (arguments.length) {
+        if (ownerAccess) {
+          // change owner to something other than itself
           if (arg instanceof Flow && arg !== pkg.proxy) {
             pkg.owner = corePkgDef(arg);
             return arg;
           }
-          // remove owner
-          if (arg === false && pkg.owner) {
+          // remove this flow's owner
+          if (arg === false) {
             pkg.owner = 0;
             return true;
           }
-        } else if (pkg.owner) {
-          // retrieve current owner
-          return pkg.owner.proxy;
         }
-
-        // fail passed arguments
+        // do nothing if not permitted
         return false;
-
+      } else {
+        if (ownerAccess && pkg.owner) {
+          return pkg.owner.proxy;
+        } else {
+          return !!pkg.owner;
+        }
       }
-      // test presence of an owner
-      return !!pkg.owner;
     };
 
     /*
