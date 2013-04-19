@@ -131,29 +131,17 @@
           Defines the path to update an owning flow - if any.
         */
         _owner: function (tagName, exists, tags, node, parentNode, pkg, idx) {
-          var
-            typeofTag,
-            tagValue
-          ;
-
           node.pGate = 0;
-          node.ping = -1;
 
           if (exists) {
-            pkg.ownable = 1;
-
-            tagValue = tags._owner;
-            typeofTag = typeof value;
-
-            if (
-              (typeofTag === 'string' && tagValue) ||
-              (typeofTag === 'number' && tagValue >= 0)
-            ) {
-              node.pGate = 1;
-              node.ping = tagValue;
-            }
+            pkg.ownable =
+            node.pGate =
+              1;
+            node.ping = tags._owner;
           } else if (parentNode) {
             node.ping = parentNode.ping;
+          } else {
+            node.ping = -1;
           }
         },
         /*
@@ -1695,6 +1683,15 @@
             parentFlow.tank.stop();
           }
         } else {
+
+          // inform owner that we've stopped
+          if (~node.ping) {
+            pkg.pingOwner(node.ping);
+            // exit if owners end up directing this flow
+            if (pkg.paused || pkg.pending || pkg.targets.length) {
+              return;
+            }
+          }
 
           // reset sequence trackers
           pkg.args = [];
