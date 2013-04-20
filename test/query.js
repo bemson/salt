@@ -464,6 +464,36 @@ describe( 'Query', function () {
 
     });
 
+    describe( 'with the _conceal tag', function () {
+
+      before(function () {
+        flow = new Flow({
+          superman: {
+            identity: {
+              _conceal: 1,
+              loves: {
+                loise_lane: {
+                  _conceal: 0
+                }
+              }
+            }
+          }
+        });
+      });
+
+      it( 'should deny resolving paths to and within a state', function () {
+        flow.query('//superman').should.be.ok;
+        flow.query('//superman/identity').should.not.be.ok;
+      });
+
+      it( 'should allow resolving revealed paths within a hidden branch', function () {
+        flow.query('//superman').should.be.ok;
+        flow.query('//superman/identity').should.not.be.ok;
+        flow.query('//superman/identity/loves').should.not.be.ok;
+        flow.query('//superman/identity/loves/loise_lane').should.be.ok;
+      });
+    });
+
     describe( 'with the _ingress tag', function () {
 
       before(function () {
