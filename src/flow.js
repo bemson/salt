@@ -999,7 +999,7 @@
     corePkgDef.attrKey = /^_/;
 
     // pattern for identifying invalid state names
-    corePkgDef.badKey = /\W|^toString$/;
+    corePkgDef.badKey = /^\d|^\W|[^a-zA-Z\d\-_\+=\(\)\*\&\^\%\$\#\!\~\`\{\}\"\'\:\;\?\, ]+|^toString$/;
 
     corePkgDef.prepTree = function () {
       import_cacheTagKeyTests();
