@@ -1001,8 +1001,13 @@
     // pattern for identifying invalid state names
     corePkgDef.badKey = /^\d|^\W|[^a-zA-Z\d\-_\+=\(\)\*\&\^\%\$\#\!\~\`\{\}\"\'\:\;\?\, ]+|^toString$/;
 
-    corePkgDef.prepTree = function () {
+    corePkgDef.prepTree = function (orig) {
       import_cacheTagKeyTests();
+
+      if (orig instanceof Flow) {
+        // when given a Flow instance, return the original instance's program
+        return corePkgDef(orig).nodes[1].value;
+      }
     };
 
     corePkgDef.prepNode = function ( state, program ) {

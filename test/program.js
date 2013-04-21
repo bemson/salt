@@ -56,20 +56,41 @@ describe( 'Program', function () {
 
   describe( 'compilation', function () {
 
-    var programSource;
+    var source;
 
-    before(function () {
-      programSource = {
-        'another state': [],
-        num: 1,
-        _data: {
-          foo: 'bar'
+    it( 'should use the first constructor argument as the source object', function () {
+      source = {
+        a: {
+          b: {
+            c: {}
+          }
         }
       };
+      flow = new Flow(source);
+      flow.query('//a/b/c/').should.be.ok;
     });
 
+    it( 'should recompile the source of a given Flow instance', function () {
+      var clonedFlow;
+      source = {
+        dog: {
+          cat: {
+          }
+        }
+      }
+      flow = new Flow(source);
+      clonedFlow = new Flow(flow);
+      clonedFlow.query('//dog/cat').should.be.ok;
+    });
+
+    it( 'should recursively index source object members', function () {
+    });
+
+    it( 'should ignore inherited source object members', function () {
+    });
     it( 'should not augment the source object/value', function () {
       "use strict";
+      var programSource = {};
       Object.freeze(programSource);
       Object.isFrozen(programSource).should.be.ok;
       expect(function () {
