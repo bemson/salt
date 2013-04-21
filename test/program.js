@@ -1,6 +1,83 @@
 describe( 'Program', function () {
 
-  var flow;
+  var
+    flow,
+    corePkgDef,
+    coreInst
+  ;
+
+  before(function () {
+    corePkgDef = Flow.pkg('core');
+  });
+
+  describe( 'first state', function () {
+
+    before(function () {
+      flow = new Flow();
+      coreInst = corePkgDef(flow);
+    });
+
+    it( 'should have a value of `undefined`', function () {
+      expect(coreInst.nodes[0].value).to.equal(undefined);
+    });
+
+    it( 'should be named "_null"', function () {
+      coreInst.nodes[0].name.should.equal('_null');
+    });
+
+    it( 'should have the path "..//"', function () {
+      coreInst.nodes[0].path.should.equal('..//');
+    });
+
+  });
+
+  describe( 'second state', function () {
+
+    var programSource = {};
+
+    before(function () {
+      flow = new Flow(programSource);
+      coreInst = corePkgDef(flow);
+    });
+
+    it( 'should have a value that is the source object', function () {
+      coreInst.nodes[1].value.should.equal(programSource);
+    });
+
+    it( 'should be named "_program"', function () {
+      coreInst.nodes[1].name.should.equal('_program');
+    });
+
+    it( 'should have the path "..//"', function () {
+      coreInst.nodes[1].path.should.equal('//');
+    });
+
+  });
+
+  describe( 'compilation', function () {
+
+    var programSource;
+
+    before(function () {
+      programSource = {
+        'another state': [],
+        num: 1,
+        _data: {
+          foo: 'bar'
+        }
+      };
+    });
+
+    it( 'should not augment the source object/value', function () {
+      "use strict";
+      Object.freeze(programSource);
+      Object.isFrozen(programSource).should.be.ok;
+      expect(function () {
+        new Flow(programSource);
+      }).to.not.throw();
+    });
+
+  });
 
   describe( 'state', function () {
 
@@ -68,6 +145,19 @@ describe( 'Program', function () {
         flow.query('// fail').should.not.be.ok;
       });
 
+    });
+
+    describe( 'attributes/tags', function () {
+
+      it( 'should begin with an underscore ("_")', function () {
+        flow = new Flow({
+          _tag: 1,
+          state: 1
+        });
+        flow.query('//_tag').should.not.be.ok;
+        flow.query('//state').should.be.ok;
+        corePkgDef(flow).nodes[1].attrs.should.include.keys('_tag');
+      });
 
     });
 
