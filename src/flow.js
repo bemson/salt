@@ -1273,12 +1273,11 @@
                 pipeSegmentsLn = pipeSegments.length;
                 for (pipeSegmentsIdx = 0; pipeSegmentsIdx < pipeSegmentsLn; pipeSegmentsIdx++) {
                   token = pipeSegments[pipeSegmentsIdx];
+                  resolvedIndex = -1;
                   // fail when an empty string
                   if (!token) {
-                    idx = -1;
                     break resolution;
                   }
-                  resolvedIndex = -1;
                   if (r_hasNonAlphanumericCharacter.test(token)) {
                     // resolve dynamic token
                     if (token.charAt(0) === tokenPrefix) {
