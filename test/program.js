@@ -2,12 +2,86 @@ describe( 'Program', function () {
 
   var
     flow,
+    source,
     corePkgDef,
     coreInst
   ;
 
   before(function () {
     corePkgDef = Flow.pkg('core');
+  });
+
+  describe( 'source object', function () {
+
+    it( 'should be the first initialization argument', function () {
+      source = {};
+      corePkgDef(new Flow(source)).nodes[1].value.should.equal(source);
+    });
+
+    it( 'should be any value', function () {
+      (new Flow()).should.be.ok;
+      (new Flow(undefined)).should.be.ok;
+      (new Flow(null)).should.be.ok;
+      (new Flow('')).should.be.ok;
+      (new Flow('foo bar')).should.be.ok;
+      (new Flow([])).should.be.ok;
+      (new Flow([1,'foo', {}])).should.be.ok;
+      (new Flow({})).should.be.ok;
+      (new Flow({hello: {world: 'foobar'}})).should.be.ok;
+      (new Flow(1)).should.be.ok;
+      (new Flow(true)).should.be.ok;
+      (new Flow(false)).should.be.ok;
+      (new Flow(/foo/)).should.be.ok;
+    });
+
+    it( 'should be reused from a given Flow instance', function () {
+      source = {
+        cats: {
+          dogs: {}
+        }
+      };
+      flow = new Flow(source);
+      flow.query('//cats/dogs').should.be.ok;
+      var clonedFlow = new Flow(flow);
+      clonedFlow.query('//cats/dogs').should.be.ok;
+    });
+
+  });
+
+  describe( 'compilation', function () {
+
+    it( 'should recursively index members, depth-first', function () {
+      source = {
+        a: {
+          b: {
+            c: {}
+          }
+        }
+      };
+      flow = new Flow(source);
+      flow.query('//a/b/c/').should.be.ok;
+    });
+
+    it( 'should ignore inherited members', function () {
+      function Obj() {}
+      Obj.prototype.foo = 1;
+      source = new Obj();
+      source.bar = 1;
+      flow = new Flow(source);
+      flow.query('//foo').should.not.be.ok;
+      flow.query('//bar').should.be.ok;
+    });
+
+    it( 'should preserve the source object', function () {
+      "use strict";
+      source = {};
+      Object.freeze(source);
+      Object.isFrozen(source).should.be.ok;
+      expect(function () {
+        new Flow(source);
+      }).to.not.throw();
+    });
+
   });
 
   describe( 'first state', function () {
@@ -33,15 +107,14 @@ describe( 'Program', function () {
 
   describe( 'second state', function () {
 
-    var programSource = {};
-
     before(function () {
-      flow = new Flow(programSource);
+      source = {};
+      flow = new Flow(source);
       coreInst = corePkgDef(flow);
     });
 
-    it( 'should have a value that is the source object', function () {
-      coreInst.nodes[1].value.should.equal(programSource);
+    it( 'should have the source object as it\'s value', function () {
+      coreInst.nodes[1].value.should.equal(source);
     });
 
     it( 'should be named "_program"', function () {
@@ -54,78 +127,42 @@ describe( 'Program', function () {
 
   });
 
-  describe( 'compilation', function () {
-
-    var source;
-
-    it( 'should use the first constructor argument as the source object', function () {
-      source = {
-        a: {
-          b: {
-            c: {}
-          }
-        }
-      };
-      flow = new Flow(source);
-      flow.query('//a/b/c/').should.be.ok;
-    });
-
-    it( 'should recompile the source of a given Flow instance', function () {
-      var clonedFlow;
-      source = {
-        dog: {
-          cat: {
-          }
-        }
-      }
-      flow = new Flow(source);
-      clonedFlow = new Flow(flow);
-      clonedFlow.query('//dog/cat').should.be.ok;
-    });
-
-    it( 'should recursively index source object members', function () {
-    });
-
-    it( 'should ignore inherited source object members', function () {
-    });
-    it( 'should not augment the source object/value', function () {
-      "use strict";
-      var programSource = {};
-      Object.freeze(programSource);
-      Object.isFrozen(programSource).should.be.ok;
-      expect(function () {
-        new Flow(programSource);
-      }).to.not.throw();
-    });
-
-  });
-
-  describe( 'state', function () {
+  describe( 'states', function () {
 
     describe( 'names', function () {
 
       it( 'should begin with a letter', function () {
         flow = new Flow({
-          '*fail': {},
-          'success': {}
+          '*fail': 1,
+          ' fail': 1,
+          '@fail': 1,
+          '|fail': 1,
+          '/fail': 1,
+          'success* 2': 1
         });
         flow.query('//*fail').should.not.be.ok;
-        flow.query('//success').should.be.ok;
+        flow.query('// fail').should.not.be.ok;
+        flow.query('//@fail').should.not.be.ok;
+        flow.query('//|fail').should.not.be.ok;
+        flow.query('///fail').should.not.be.ok;
+        flow.query('//success* 2').should.be.ok;
       });
 
       it( 'should not be "toString"', function () {
         flow = new Flow({
-          toString: {}
+          toString: 1,
+          tostring: 1
         });
         flow.query('//toString').should.not.be.ok;
+        flow.query('//tostring').should.be.ok;
       });
 
       it( 'should not contain a ".", "/", or "|" character', function () {
         flow = new Flow({
-          'hello world': {},
-          'hello.world': {},
-          'hello/world': {},
-          'hello|world': {}
+          'hello world': 1,
+          'hello.world': 1,
+          'hello/world': 1,
+          'hello|world': 1
         });
 
         flow.query('//hello world').should.be.ok;
@@ -143,41 +180,20 @@ describe( 'Program', function () {
         flow.query('//hello world/good bye, universe/').should.be.ok;
       });
 
-      it( 'should not begin with an "@" symbol', function () {
-        flow = new Flow({
-          '@fail': 1
-        });
-        flow.query('//@fail').should.not.be.ok;
-      });
-
-
-      it( 'should not begin with a number ', function () {
-        flow = new Flow({
-          '2fail': 1
-        });
-        flow.query('//2fail').should.not.be.ok;
-      });
-
-
-      it( 'should not begin with a space ', function () {
-        flow = new Flow({
-          ' fail': 1
-        });
-        flow.query('// fail').should.not.be.ok;
-      });
-
     });
 
-    describe( 'attributes/tags', function () {
+    describe( 'attributes (or tags)', function () {
 
       it( 'should begin with an underscore ("_")', function () {
         flow = new Flow({
           _tag: 1,
-          state: 1
+          state_: 1
         });
         flow.query('//_tag').should.not.be.ok;
-        flow.query('//state').should.be.ok;
-        corePkgDef(flow).nodes[1].attrs.should.include.keys('_tag');
+        flow.query('//state_').should.be.ok;
+        corePkgDef(flow).nodes[1].attrs
+          .should.include.keys('_tag')
+          .and.not.include.keys('state_');
       });
 
     });
