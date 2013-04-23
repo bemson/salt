@@ -149,9 +149,9 @@
           }
         },
         // Define criteria for preserving instances created while traversing this branch.
-        _store: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        _captures: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           if (exists) {
-            node.criteria = compileFilterCriteria(tags._store);
+            node.criteria = compileFilterCriteria(tags._captures);
           } else if (parentNode) {
             node.criteria = parentNode.criteria;
           } else {
@@ -2196,7 +2196,7 @@
       }
     };
 
-    corePkgDef.proxy.flows = function (cmd, cfg) {
+    corePkgDef.proxy.subs = function (cmd, cfg) {
       var
         pkg = corePkgDef(this),
         argumentsLength = arguments.length,
