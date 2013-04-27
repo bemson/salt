@@ -1919,50 +1919,6 @@
       return !!pkg.locks[0];
     };
 
-    // set trust flag before and after execution
-    corePkgDef.proxy.bless = function (fnc) {
-      var
-        // placeholder for package instance
-        pkg = corePkgDef(this);
-
-      // if allowed and given a function...
-      if (pkg.allowed() && typeof fnc === 'function') {
-        // return "blessed" function
-        return function () {
-            var
-              // capture initial trust value
-              currentTrustValue = pkg.trust,
-              // capture initial lock value
-              currentLockValue = pkg.locks[0],
-              // flag when we're already in a blessed function by testing type of the locked property
-              alreadyInBlessedFunction = typeof pkg.locks[0] === 'boolean',
-              // placeholder to capture execution result
-              rslt;
-
-            // ensure we're executing in a trusted environment
-            pkg.trust = 1;
-            // if not already in a blessed function, and we're currently locked...
-            if (!alreadyInBlessedFunction && currentLockValue) {
-              // ensure we're unlocked - set to boolean, since it's not set like this anywhere else
-              pkg.locks[0] = false;
-            }
-            // call and capture function result, pass along scope and args
-            rslt = fnc.apply(this, arguments);
-            // restore trust value
-            pkg.trust = currentTrustValue;
-            // if not already in a blessed function and the lock value is still a boolean (which means lock() was not called)...
-            if (!alreadyInBlessedFunction && typeof pkg.locks[0] === 'boolean') {
-              // restore original lock value
-              pkg.locks[0] = currentLockValue;
-            }
-            // return result of function call
-            return rslt;
-          };
-      }
-      // (otherwise) return false
-      return false;
-    };
-
     // access and edit the arguments passed to traversal functions
     corePkgDef.proxy.args = function (idx, value) {
       var
