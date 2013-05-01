@@ -10,13 +10,10 @@ describe( 'Flow#status()', function () {
     status.should.haveOwnProperty('trail');
     status.should.haveOwnProperty('paused');
     status.should.haveOwnProperty('pending');
-    status.should.haveOwnProperty('permit');
-    status.should.haveOwnProperty('trust');
     status.should.haveOwnProperty('loops');
     status.targets.should.be.an.instanceOf(Array);
     status.trail.should.be.an.instanceOf(Array);
     status.paused.should.be.a('boolean');
-    status.permit.should.be.a('boolean');
     status.pending.should.be.a('boolean');
     status.loops.should.be.a('number');
   });
@@ -54,10 +51,10 @@ describe( 'Flow#status()', function () {
   it( 'should indicate when the Flow is active/idle', function () {
     var spy = sinon.spy(function () {
       var status = this.status();
-      status.trust.should.be.ok;
+      status.active.should.be.ok;
     });
     flow = new Flow(spy);
-    flow.status().trust.should.not.be.ok;
+    flow.status().active.should.not.be.ok;
     flow.go(1);
   });
 

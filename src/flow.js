@@ -1095,8 +1095,8 @@
         // store cache
         store: {}
       };
-      // flag when api calls are trusted
-      pkg.trust = 0;
+      // indicates when this flow is in the stack of navigating flows
+      pkg.active = 0;
       // init index of node paths
       pkg.nids = {};
       // the number of child flows fired by this flow's program functions
@@ -1453,6 +1453,7 @@
       // add to the private and public flow stack
       activeFlows.unshift(pkg);
       corePkgDef.actives.unshift(pkg.proxy);
+      pkg.active = 1;
 
       pkg.preMove();
       // prevent going forward when pended by another flow
@@ -1541,16 +1542,12 @@
 
     corePkgDef.onEngage = function () {
       var pkg = this;
-      // trust api calls
-      pkg.trust = 1;
 
       pkg.setVars();
     };
 
     corePkgDef.onRelease = function () {
       var pkg = this;
-      // untrust api calls
-      pkg.trust = 0;
 
       pkg.delVars();
     };
@@ -1707,6 +1704,7 @@
         // remove private and public activeflow status
         activeFlows.shift();
         corePkgDef.actives.shift();
+        pkg.active = 0;
       }
     };
 
@@ -2230,12 +2228,8 @@
         return pkg.nodes[idx].path;
       }
 
-      if (all || metric === 'trust') {
-        obj.trust = !!pkg.trust;
-      }
-
-      if (all || metric === 'permit') {
-        obj.permit = !!pkg.allowed();
+      if (all || metric === 'active') {
+        obj.active = !!pkg.active;
       }
 
       if (all || metric === 'loops') {
