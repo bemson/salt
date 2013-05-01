@@ -460,8 +460,11 @@
         for (optionIdx = 0; optionIdx < optionLength; optionIdx++) {
           lastPerms = perms_parse(option[optionIdx], lastPerms);
         }
-        return lastPerms;
-      } else {
+      } else if (
+        typeofOption === 'string' ||
+        typeofOption === 'object' ||
+        typeofOption === 'boolean'
+      ) {
         perms = extend({}, lastPerms);
         if (typeofOption === 'string' && option) {
           deny = option.charAt(0) === '!';
@@ -471,17 +474,19 @@
           if (perms.hasOwnProperty(option)) {
             perms[option] = !deny;
           }
-        } else if ('boolean') {
+        } else if (typeofOption === 'boolean') {
           for (key in perms) {
             if (perms.hasOwnProperty(key)) {
               perms[key] = option;
             }
           }
-        } else if ('object') {
+        } else {
           extend(perms, option);
         }
         return perms;
       }
+      // return new or old lastPerms
+      return lastPerms;
     }
 
     // gets tag key tests for parsing state tags
