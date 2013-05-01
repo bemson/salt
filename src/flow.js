@@ -417,6 +417,22 @@
       return typeof name === 'string' && r_hasAlphanumericCharacter.test(name);
     }
 
+    // shallow object merge
+    function extend(base) {
+      var
+        argumentIdx = 1,
+        source,
+        member
+      ;
+      for (; source = arguments[argumentIdx]; argumentIdx++) {
+        for (member in source) {
+          if (source.hasOwnProperty(member)) {
+            base[member] = source[member];
+          }
+        }
+      }
+      return base;
+    }
     // gets tag key tests for parsing state tags
     function import_cacheTagKeyTests () {
       var pkgNames = Flow.pkg();
