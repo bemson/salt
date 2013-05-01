@@ -452,7 +452,8 @@
         deny,
         typeofOption = typeof option,
         optionIdx,
-        optionLength
+        optionLength,
+        key
       ;
       if (typeofOption === 'object' && isArray(option)) {
         optionLength = option.length;
@@ -471,7 +472,11 @@
             perms[option] = !deny;
           }
         } else if ('boolean') {
-          perms.world = perms.owner = option;
+          for (key in perms) {
+            if (perms.hasOwnProperty(key)) {
+              perms[key] = option;
+            }
+          }
         } else if ('object') {
           extend(perms, option);
         }
