@@ -25,6 +25,7 @@
           return obj instanceof Array;
         },
       tokenPrefix = '@',
+      defaultPermissions = {world: true, owner: true},
       // regexps
       r_queryIsTokenized = new RegExp('[\\.\\|' + tokenPrefix + ']'),
       r_validAbsolutePath = /^\/\/(?:\w+\/)+/,
@@ -113,21 +114,29 @@
             node[prop] = -1;
           }
         },
-        // Specifies when an entered state will lock/unlock the flow.        
-        _lock: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        // Specify cascading permissions when a state is entered and exited
+        _perms: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+          var perms;
           if (exists) {
-            node.lock = tags._lock ? 1 : 0;
+            perms = perms_parse(tags[tagName], parentNode.lp);
+            if (perms) {
+              node.perms = node.lp = perms;
+            }
+          } else if (parentNode) {
+            node.perms = 0;
+            node.lp = parentNode.lp;
           } else {
-            node.lock = -1;
+            // initialize perms in the null node
+            pkg.perms = [node.perms = node.lp = defaultPermissions];
           }
         },
-        // Defines the path to update an owning flow - if any.        
+        // Defines the path to update an owning flow - if any.
         _owner: function (tagName, exists, tags, node, parentNode, pkg, idx) {
-          node.pGate = 0;
+          node.oGate = 0;
 
           if (exists) {
             pkg.ownable =
-            node.pGate =
+            node.oGate =
               1;
             node.ping = tags._owner;
           } else if (parentNode) {
@@ -368,6 +377,9 @@
               node.fncs[phase] = sharedRedirectEventHandler;
             }
           }
+        },
+        _perms: function (tagName, exists, tags, node) {
+          delete node.lp;
         }
       },
       // import resolution helpers
@@ -433,6 +445,40 @@
       }
       return base;
     }
+
+    function perms_parse(option, lastPerms) {
+      var
+        perms,
+        deny,
+        typeofOption = typeof option,
+        optionIdx,
+        optionLength
+      ;
+      if (typeofOption === 'object' && isArray(option)) {
+        optionLength = option.length;
+        for (optionIdx = 0; optionIdx < optionLength; optionIdx++) {
+          lastPerms = perms_parse(option[optionIdx], lastPerms);
+        }
+        return lastPerms;
+      } else {
+        perms = extend({}, lastPerms);
+        if (typeofOption === 'string' && option) {
+          deny = option.charAt(0) === '!';
+          if (deny) {
+            option = option.substr(1);
+          }
+          if (perms.hasOwnProperty(option)) {
+            perms[option] = !deny;
+          }
+        } else if ('boolean') {
+          perms.world = perms.owner = option;
+        } else if ('object') {
+          extend(perms, option);
+        }
+        return perms;
+      }
+    }
+
     // gets tag key tests for parsing state tags
     function import_cacheTagKeyTests () {
       var pkgNames = Flow.pkg();
@@ -1340,14 +1386,17 @@
           // alias self
           pkg = this,
           // get the index of the target node
-          targetIdx = pkg.indexOf(qry, node);
+          targetIdx = pkg.indexOf(qry, node)
+        ;
 
         // if the target index exists (speed?)...
         if (~targetIdx) {
-          // use the current node, when node is omitted
-          node = node || pkg.nodes[pkg.tank.currentIndex];
+          if (!node) {
+            // use the current node, when node is omitted
+            node = pkg.nodes[pkg.tank.currentIndex];
+          }
           // return the target index or -1, based on whether the target is valid, given the trust status of the package or the restrictions of the current node
-          return pkg.allowed() || node.canTgt(pkg.nodes[targetIdx]) ? targetIdx : -1;
+          return node.canTgt(pkg.nodes[targetIdx]) ? targetIdx : -1;
         } else { // otherwise, when the index is invalid...
           // return faux no-index result
           return -1;
@@ -1389,10 +1438,33 @@
         pkg.pause = 0;
       },
 
-      // flag when the flow is allowed to perform trusted executions
-      allowed: function () {
-        // flag true when the current flow, or when active and unlocked
-        return activeFlows[0] === this || (this.trust && !this.locks[0]);
+      // flag when the caller given caller matches and has permission
+      is: function () {
+        var
+          pkg = this,
+          argumentIdx = arguments.length
+        ;
+        // short-circuit permissions when caller is SELF
+        while (argumentIdx--) {
+          switch (arguments[argumentIdx]) {
+            case 'self':
+              if (pkg === activeFlows[0]) {
+                return true;
+              }
+            break;
+            case 'owner':
+              if (pkg.perms[0].owner && pkg.owner === activeFlows[0]) {
+                return true;
+              }
+            break;
+            case 'world':
+              if (pkg.perms[0].world && !pkg.is('owner', 'self')) {
+                return true;
+              }
+            break;
+          }
+        }
+        return false
       },
 
       // direct owning flow to the given state
@@ -1403,7 +1475,7 @@
           owner = pkg.owner
         ;
         if (owner) {
-          owner.proxy.target(stateQuery, proxy, proxy.status());
+          owner.proxy.target(stateQuery, proxy, proxy.status(), extend({}, proxy.state));
         }
       },
 
@@ -1485,31 +1557,31 @@
 
         // to sibling
 
-        if (~lastNode.lock) {
-          // remove from lock stack
-          pkg.locks.shift();
+        if (lastNode.perms) {
+          // remove from perms stack
+          pkg.perms.shift();
         }
-        if (~currentNode.lock) {
-          // add to lock stack
-          pkg.locks.unshift(currentNode.lock);
+        if (currentNode.perms) {
+          // add to perms stack
+          pkg.perms.unshift(currentNode.perms);
         }
 
       } else if (currentNodeDepth > lastNodeDepth) {
 
         // to child
 
-        if (~currentNode.lock) {
-          // add to lock stack
-          pkg.locks.unshift(currentNode.lock);
+        if (currentNode.perms) {
+          // add to perms stack
+          pkg.perms.unshift(currentNode.perms);
         }
 
       } else if (lastNodeDepth > currentNodeDepth) {
 
         // to parent
 
-        if (~lastNode.lock) {
-          // remove from lock stack
-          pkg.locks.shift();
+        if (lastNode.perms) {
+          // remove from perms stack
+          pkg.perms.shift();
         }
 
       }
@@ -1535,7 +1607,7 @@
       }
 
       // notify owner before entering and after exiting this node
-      if (node.pGate && ~node.ping) {
+      if (node.oGate && ~node.ping) {
         pkg.pingOwner(node.ping);
       }
     };
@@ -1713,27 +1785,32 @@
     // add method to determine if another node can be targeted from this node
     corePkgDef.node.canTgt = function (targetNode) {
       var
+        node = this,
+        pkg = node.pkg,
         // alias the restrict node (if any)
-        restrictingNode = this.pkg.nodes[this.restrict],
+        restrictingNode = node.pkg.nodes[this.restrict],
         // alias the ingress node of the target
-        targetIngressNode = this.pkg.nodes[targetNode.ingress]
+        targetIngressNode = node.pkg.nodes[targetNode.ingress]
       ;
 
       // return true if this node is within it's restrictions (if any), or when we're within, targeting, or on the target's ingress node (if any)
-      return (
-          // check if the target is within the restricting node - if any
-          !restrictingNode ||
-          targetNode.within(restrictingNode)
-        ) &&
+      return pkg.is('self', 'owner') ||
         (
-          // check if the target is within (or is) an ingress node
-          !targetIngressNode ||
-          this === targetIngressNode ||
-          targetNode === targetIngressNode ||
-          this.within(targetIngressNode)
-        ) &&
-        // deny when the target node is hidden
-        !~targetNode.conceal
+          (
+            // check if the target is within the restricting node - if any
+            !restrictingNode ||
+            targetNode.within(restrictingNode)
+          ) &&
+          (
+            // check if the target is within (or is) an ingress node
+            !targetIngressNode ||
+            node === targetIngressNode ||
+            targetNode === targetIngressNode ||
+            this.within(targetIngressNode)
+          ) &&
+          // deny when the target node is hidden
+          !~targetNode.conceal
+        )
       ;
     };
 
@@ -1876,61 +1953,51 @@
       return false;
     };
 
-    // add method to
     corePkgDef.proxy.query = function () {
       var
-        // get package instance
         pkg = corePkgDef(this),
-        // alias for minification
-        args = arguments,
-        // node indice resolved by query
-        nodes = []
+        nodes = [],
+        nodeRef,
+        argumentIdx = arguments.length,
+        resolvedIndex
       ;
-      // return false, a string or array of strings, based on whether a single node reference fails
-      return (
-        // at least one parameter
-        args.length &&
-        // all parameters resolve to nodes
-        protoSlice.call(arguments).every(function (nodeRef) {
-          var
-            // resolve index of this reference
-            idx = pkg.vetIndexOf(nodeRef),
-            // default result
-            result = 0;
-          // if this index is not -1...
-          if (~idx) {
-            // capture the absolute path for this node
-            nodes.push(pkg.nodes[idx].path);
-            // flag that this element passed
-            result = 1;
+      if (argumentIdx) {
+        while (argumentIdx--) {
+          nodeRef = arguments[argumentIdx];
+          resolvedIndex = pkg.vetIndexOf(nodeRef);
+          if (~resolvedIndex) {
+            nodes.push(pkg.nodes[resolvedIndex].path);
+          } else {
+            return false;
           }
-          // return the result
-          return result;
-        })
-      ) ? (nodes.length > 1 ? nodes : nodes[0]) : false;
+        }
+        return nodes.length === 1 ? nodes[0] : nodes.reverse();
+      }
+      return false;
     };
 
     // access and edit the locked status of a flow
-    corePkgDef.proxy.lock = function (set) {
+    corePkgDef.proxy.perms = function (options) {
       var
-        // alias package instance
-        pkg = corePkgDef(this)
+        pkg = corePkgDef(this),
+        argumentsLength = arguments.length,
+        perms
       ;
 
-      // if arguments were passed...
-      if (arguments.length) {
-        // if allowed to change the lock status...
-        if (pkg.allowed()) {
-          // set new lock state
-          pkg.locks[0] = !!set;
-          // flag success in changing the locked property of this flow
+      if (argumentsLength) {
+        // if allowed to change permissions...
+        if (pkg.is('owner', 'self')) {
+          if (argumentsLength > 1) {
+            options = protoSlice.call(arguments);
+          }
+          pkg.perms[0] = perms_parse(options, pkg.perms[0]);
           return true;
         }
-        // (otherwise) flag failure to change lock status
+        // (otherwise) flag inability to change permissions
         return false;
       }
-      // (otherwise) return current locked status
-      return !!pkg.locks[0];
+      // return copy of current permissions
+      return extend({}, pkg.perms[0]);
     };
 
     // access and edit the arguments passed to traversal functions
@@ -1942,7 +2009,7 @@
         isInt = typeof idx === 'number' && ~~idx === idx
       ;
 
-      if (pkg.allowed() || !pkg.locks[0]) {
+      if (pkg.is('owner', 'self')) {
         // return cparray of arguments
         if (argCnt === 0) {
           return [].concat(pkgArgs);
@@ -1975,7 +2042,7 @@
        // alias this package
         pkg = corePkgDef(this),
         // resolve a node index from qry, or nothing if allowed or unlocked
-        tgtIdx = (pkg.allowed() || !pkg.locks[0]) ? pkg.vetIndexOf(qry) : -1;
+        tgtIdx = (pkg.is('world', 'owner', 'self')) ? pkg.vetIndexOf(qry) : -1;
 
       // if the destination node is valid, and the flow can move...
       if (~tgtIdx) {
@@ -1999,13 +2066,9 @@
           // false when exiting outside of phase 0 (_on)
           // true when the traversal result is undefined
           // the traversal result otherwise the traversal result is returned
-      if (pkg.pending) {
+      if (pkg.pending || pkg.pause || pkg.phase) {
         return false;
-      } else if (pkg.allowed()) {
-        return true;
-      } else if (pkg.pause || pkg.phase) {
-        return false;
-      } else if (pkg.result === undefined) {
+      } else if (pkg.active || pkg.result === undefined) {
         return true;
       } else {
         return pkg.result;
@@ -2034,7 +2097,7 @@
       // if...
       if (
         // allowed or unlocked and ...
-        (pkg.allowed() || !pkg.locks[0]) &&
+        pkg.is('world', 'owner', 'self') &&
         // any and all node references are valid...
         protoSlice.call(arguments).every(function (nodeRef) {
           var
@@ -2087,7 +2150,7 @@
         time = args[noAction ? 0 : 1]
       ;
       // if allowed and the the argument's are valid...
-      if (pkg.allowed() && (!argLn || (time >= 0 && typeof time === 'number' && (noAction || ~delayNodeIdx || isFnc)))) {
+      if (pkg.is('owner', 'self') && (!argLn || (time >= 0 && typeof time === 'number' && (noAction || ~delayNodeIdx || isFnc)))) {
         // flag that we've paused this flow
         pkg.pause = 1;
         // stop the tank
@@ -2134,35 +2197,33 @@
     // retrieve the flow that owns this one, if any
     // owner may be set by the owner or child
     // owner may be removed by the owner or child
-    corePkgDef.proxy.owner = function (arg) {
+    corePkgDef.proxy.owner = function (owner) {
       var
+        argumentsLength = arguments.length,
         pkg = corePkgDef(this),
         activeFlow = activeFlows[0],
-        // flag when allowed or the active flow is the owner
-        ownerAccess = pkg.ownable && (pkg.allowed() || activeFlow === pkg.owner)
+        readAccess = pkg.is('owner', 'self'),
+        writeAccess = readAccess || !pkg.owner
       ;
 
-      if (arguments.length) {
-        if (ownerAccess) {
+      if (argumentsLength) {
+        if (writeAccess) {
           // change owner to something other than itself
-          if (arg instanceof Flow && arg !== pkg.proxy) {
-            pkg.owner = corePkgDef(arg);
-            return arg;
+          if (owner instanceof Flow && owner !== pkg.proxy) {
+            pkg.owner = corePkgDef(owner);
+            return owner;
           }
           // remove this flow's owner
-          if (arg === false) {
+          if (owner === false) {
             pkg.owner = 0;
             return true;
           }
         }
-        // do nothing if not permitted
         return false;
+      } else if (readAccess) {
+        return pkg.owner.proxy;
       } else {
-        if (ownerAccess && pkg.owner) {
-          return pkg.owner.proxy;
-        } else {
-          return !!pkg.owner;
-        }
+        return !!pkg.owner;
       }
     };
 
@@ -2171,7 +2232,7 @@
         pkg = corePkgDef(this),
         argumentsLength = arguments.length,
         selectBufferredPkgs = cfg === 'buffer',
-        privileged = pkg.allowed() || pkg.owner === activeFlows[0],
+        privileged = pkg.is('owner', 'self'),
         result
       ;
 
