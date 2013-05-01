@@ -80,7 +80,7 @@ describe( 'Flow#args()', function () {
         expect(z).to.equal(val);
       },
       lock: {
-        _lock: true
+        _perms: false
       }
     });
     flow.target(1, 'foo', 'bar');
@@ -91,7 +91,7 @@ describe( 'Flow#args()', function () {
 
     flow.state.path.should.equal('//');
     flow.target('//lock', 'chick', 'zebra');
-    flow.lock().should.be.ok;
+    flow.perms().world.should.equal(false);
     flow.args().should.equal(false);
     flow.args(1).should.equal(false);
     flow.args(1, 'pop').should.equal(false);

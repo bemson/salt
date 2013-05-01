@@ -2014,7 +2014,7 @@
         isInt = typeof idx === 'number' && ~~idx === idx
       ;
 
-      if (pkg.is('owner', 'self')) {
+      if (pkg.is('world', 'owner', 'self')) {
         // return cparray of arguments
         if (argCnt === 0) {
           return [].concat(pkgArgs);
