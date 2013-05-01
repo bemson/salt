@@ -125,11 +125,11 @@ describe( 'Flow#go()', function () {
 
   it( 'should return false when called externally on a locked instance', function () {
     flow = new Flow({
-      _lock: 1
+      _perms: '!world'
     });
-    flow.lock().should.not.be.ok;
+    flow.perms().world.should.be.ok;
     flow.go(1);
-    flow.lock().should.be.ok;
+    flow.perms().world.should.not.be.ok;
     flow.go(0).should.equal(false);
   });
 
