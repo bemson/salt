@@ -793,24 +793,6 @@
       flow.go(pkg.nodes[pkg.tank.currentIndex].reds[pkg.phase]);
     }
 
-    function sharedNodeCallbackInitializer(node, parentNode) {
-      // define custom, curried, and linked calls to .target
-      node.cb = function () {
-        var
-          args = protoSlice.call(arguments),
-          pkg = node.pkg
-        ;
-        args.unshift(node.index);
-        return pkg.proxy.target.apply(pkg.proxy, args);
-      };
-      node.cb.toString = function () {
-        return node.path;
-      };
-      if (parentNode) {
-        parentNode.cb[node.name] = node.cb;
-      }
-    }
-
     function FlowStorage() {
       this.all = {};
       this.tmp = {};
@@ -1126,7 +1108,7 @@
       // collection of custom query tokens
       pkg.tokens = {};
       // collection of custom callback queries
-      pkg.cbs = {};
+      pkg.cq = {};
       // collection of arguments for traversal functions
       pkg.args = [];
       // collection of node calls made while traversing
@@ -1153,6 +1135,8 @@
       };
       // indicates when this flow is in the stack of navigating flows
       pkg.active = 0;
+      // flag when being invoked by a blessed function
+      pkg.blessed = 0;
       // init index of node paths
       pkg.nids = {};
       // the number of child flows fired by this flow's program functions
@@ -1196,9 +1180,6 @@
           tagName = coreTagKeys[j];
           coreTags[tagName](tagName, node.attrs.hasOwnProperty(tagName), node.attrs, node, parentNode, pkg, i);
         }
-
-        // add callback-tree
-        sharedNodeCallbackInitializer(node, parentNode);
 
         // if there is no _on[0] function and this node's value is a function...
         if (!node.fncs[0] && typeof node.value === 'function') {
@@ -1458,23 +1439,23 @@
         while (argumentIdx--) {
           switch (arguments[argumentIdx]) {
             case 'self':
-              if (pkg === activeFlows[0]) {
-                return true;
+              if (pkg.blessed || pkg === activeFlows[0]) {
+                return 1;
               }
             break;
             case 'owner':
               if (pkg.perms[0].owner && pkg.owner === activeFlows[0]) {
-                return true;
+                return 1;
               }
             break;
             case 'world':
               if (pkg.perms[0].world && !pkg.is('owner', 'self')) {
-                return true;
+                return 1;
               }
             break;
           }
         }
-        return false
+        return 0;
       },
 
       // direct owning flow to the given state
@@ -1890,77 +1871,49 @@
     // Flow prototype methods
 
     // add method to return callbacks to this flow's states
-    corePkgDef.proxy.callbacks = function (origQry) {
+    corePkgDef.proxy.callbacks = function (qry, waypoint, bless) {
       var
         pkg = corePkgDef(this),
         nodes = pkg.nodes,
-        qry = origQry,
-        qryType = typeof qry,
-        customCallback;
+        customCallback,
+        cacheId
+      ;
 
-      /*
-        Not passing arguments returns the program root state.
-        From here, the callback for every program state may be targeted with dot-notation.
-
-        eg: flow.callbacks().any.state.in.the.tree();
-      */
-      if (!arguments.length) {
-        return nodes[1].cb;
-      }
-
-      /*
-        Pass boolean true for the callback of the current state.
-
-        eg: flow.callbacks(true);
-      */
       if (qry === true) {
-        return nodes[pkg.tank.currentIndex].cb;
+        qry = pkg.tank.currentIndex;
       }
 
-      /*
-        Pass a valid index to retrieve the callback of a matching state node.
+      waypoint = +!!waypoint;
+      bless = +bless && pkg.is('self');
 
-        eg: flow.callbacks(4);
-      */
-      if (qryType === 'number' && nodes[qry]) {
-        return nodes[qry].cb;
+      cacheId = '' + waypoint + bless;
+
+      if (pkg.cq.hasOwnProperty(cacheId)) {
+        return pkg.cq[cacheId];
       }
 
-      // ensure strings have an ending slash
-      if (qryType === 'string' && qry.charAt(qry.length - 1) !== '/') {
-        qry += '/';
-      }
-
-      /*
-        Compare string with existing current id.
-
-        eg: flow.callbacks(obj);
-      */
-      if (pkg.nids.hasOwnProperty(qry)) {
-        return nodes[pkg.nids[qry]].cb;
-      }
-
-      /*
-        Check out whether this path has already been processed and cache.
-      */
-      if (qryType === 'string') {
-        if (pkg.cbs.hasOwnProperty(origQry)) {
-          return pkg.cbs[origQry];
+      customCallback = function () {
+        var
+          rslt,
+          setBlessed
+        ;
+        if (bless && !pkg.blessed) {
+          setBlessed = 1;
+          pkg.blessed = 1;
         }
+        if (waypoint) {
+          rslt = pkg.proxy.go(qry);
+        } else {
+          rslt = pkg.proxy.target.apply(pkg.proxy, [qry].concat(protoSlice.call(arguments)));
+        }
+        if (setBlessed) {
+          pkg.blessed = 0;
+        }
+        return rslt;
+      };
 
-        customCallback = function () {
-          return pkg.proxy.target.apply(pkg.proxy, [origQry].concat(protoSlice.call(arguments)));
-        };
-        // preserve query via the .toString() method
-        customCallback.toString = function () {
-          return origQry;
-        };
-
-        // return cached custom callback
-        return pkg.cbs[origQry] = customCallback;
-      }
-
-      return false;
+      // return cached custom callback
+      return pkg.cq[cacheId] = customCallback;
     };
 
     corePkgDef.proxy.query = function () {

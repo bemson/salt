@@ -2,110 +2,86 @@ describe( 'Flow#callbacks()', function () {
 
   var
     flow,
-    spyTarget,
-    arg
+    callback,
+    val
   ;
 
   before(function () {
-    flow = new Flow({
-      a: {
-        b: {}
-      },
-      c: {}
-    });
-    spyTarget = sinon.spy(flow, 'target');
-    arg = {};
+    val = {};
   });
 
-  beforeEach(function () {
-    flow.go(0);
-    spyTarget.reset();
-  });
-
-  it( 'should return a network of curried Flow#target() calls, matching the program structure', function () {
+  it( 'should return a curried call to `.target()`', function () {
     var
-      arg = {},
-      network = flow.callbacks()
+      flow = new Flow(),
+      spyTarget = sinon.spy(flow, 'target'),
+      callback = flow.callbacks()
     ;
-
-    flow.state.path.should.equal('..//');
-    spyTarget.should.not.have.been.called;
-
-    network.should.be.a('function');
-    network(arg);
+    callback.should.be.a('function');
+    callback();
     spyTarget.should.have.been.calledOnce;
-    spyTarget.should.have.been.calledWithExactly(1, arg);
-    flow.state.path.should.equal('//');
-
-    network.a.should.be.a('function');
-    network.a.b.should.be.a('function');
-    network.c.should.be.a('function');
-
-    network.a.b(arg);
-    spyTarget.should.have.been.calledTwice;
-    spyTarget.should.have.been.calledWithExactly(3, arg);
-    flow.state.path.should.equal('//a/b/');
   });
 
-  it( 'should return a sub-network when given an absolute query', function () {
+  it( 'should navigate to the given "query"', function () {
     var
-      arg = {},
-      subnetwork = flow.callbacks('//a/')
+      queryIdx = 1,
+      flow = new Flow(function () {
+        return val;
+      }),
+      callback = flow.callbacks(queryIdx)
     ;
+    flow.state.index.should.equal(0);
+    callback().should.equal(val);
+    flow.state.index.should.equal(queryIdx);
+  });
 
-    subnetwork.should.be.a('function');
-    subnetwork.b.should.be.a('function');
+  it( 'should use `.go()` when the "waypoints" flag is truthy', function () {
+    var
+      flow = new Flow(),
+      spyGo = sinon.spy(flow, 'go'),
+      callback = flow.callbacks(0, true)
+    ;
+    callback();
+    spyGo.should.have.been.calledOnce;
+  });
 
-    subnetwork(arg);
+  it( 'should ignore permissions when the "blessed" flag is truthy', function () {
+    var
+      flow = new Flow({
+        _perms: '!world',
+        _on: function () {
+          callback = flow.callbacks(0, 0, true);
+        }
+      }),
+      spyTarget = sinon.spy(flow, 'target'),
+      callback
+    ;
+    flow.perms().world.should.be.ok;
+    flow.go(1);
+    flow.state.index.should.equal(1);
+    flow.perms().world.should.not.be.ok;
+    flow.go(0).should.not.be.ok;
+    callback();
+    flow.state.index.should.equal(0);
     spyTarget.should.have.been.calledOnce;
-    spyTarget.should.have.been.calledWithExactly(2, arg);
   });
 
-  it( 'should return a sub-network for the current branch when passed `true`', function () {
-    flow.go('//a/');
-    var subnetwork = flow.callbacks(true);
-
-    subnetwork.should.be.a('function');
-    subnetwork.b.should.be.a('function');
-    subnetwork.b(arg);
-    spyTarget.should.have.been.called;
-    spyTarget.should.have.been.calledWithExactly(3, arg);
-  });
-
-  it( 'should return a (network of) function with local .toString() methods, for use as queries', function () {
+  it( 'should ignore the "blessed" flag if used outside the Flow program', function () {
     var
-      network = flow.callbacks(),
-      query = '.',
-      curriedQuery = flow.callbacks(query)
+      flow = new Flow({
+        _perms: '!world'
+      }),
+      spyTarget = sinon.spy(flow, 'target'),
+      callback = flow.callbacks(0, false, true)
     ;
-    network.should.itself.respondTo('toString');
-    curriedQuery.should.itself.respondTo('toString');
-    flow.query(network).should.be.ok;
-    flow.query(curriedQuery).should.be.ok;
+    flow.perms().world.should.be.ok;
+    flow.go(1);
+    flow.state.index.should.equal(1);
+    flow.perms().world.should.not.be.ok;
+    flow.go(0).should.not.be.ok;
+    callback();
+    flow.state.index.should.not.equal(0);
+    spyTarget.should.have.been.calledOnce;
   });
 
-  it( 'should return a cached and curried Flow#target() call for non-absolute queries', function () {
-    var
-      query = '@next|@child',
-      curriedQuery = flow.callbacks(query)
-    ;
-
-    curriedQuery.should.be.a('function');
-    curriedQuery(arg);
-    spyTarget.should.have.been.called;
-    spyTarget.should.have.been.calledWithExactly(query, arg);
-
-    curriedQuery.should.equal(flow.callbacks(query));
-  });
-
-  it( 'should not expose any network of calls for non-absolute queries', function () {
-    var
-      query = '@next|@child',
-      curriedQuery = flow.callbacks(query)
-    ;
-
-    curriedQuery.should.be.a('function');
-    curriedQuery.should.have.keys('toString');
-  });
 
 });

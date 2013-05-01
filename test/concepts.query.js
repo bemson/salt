@@ -126,24 +126,6 @@ describe( 'Query', function () {
 
     });
 
-    describe( 'functions from .callbacks()', function () {
-
-      before(function () {
-        flow.go(1);
-      });
-
-      it( 'should behave like strings', function () {
-        var
-          absQuery = flow.callbacks().a.b,
-          tokenizedQuery = flow.callbacks('@child/@oldest')
-        ;
-
-        flow.query(absQuery).should.equal('//a/b/');
-        flow.query(tokenizedQuery).should.equal('//b/');
-      });
-
-    });
-
   });
 
   describe( 'token', function () {
