@@ -424,6 +424,9 @@
     reservedQueryTokens['..'] = reservedQueryTokens.parent;
     reservedQueryTokens.youngest = reservedQueryTokens.oldest;
 
+    function isFlow(thing) {
+      return thing instanceof Flow;
+    }
     // returns true when the argument is a valid data name
     function isDataDefinitionNameValid(name) {
       return typeof name === 'string' && r_hasAlphanumericCharacter.test(name);
@@ -1058,7 +1061,7 @@
     corePkgDef.prepTree = function (orig) {
       import_cacheTagKeyTests();
 
-      if (orig instanceof Flow) {
+      if (isFlow(orig)) {
         // when given a Flow instance, return the original instance's program
         return corePkgDef(orig).nodes[1].value;
       }
@@ -2172,7 +2175,7 @@
       if (argumentsLength) {
         if (writeAccess) {
           // change owner to something other than itself
-          if (owner instanceof Flow && owner !== pkg.proxy) {
+          if (isFlow(owner) && owner !== pkg.proxy) {
             pkg.owner = corePkgDef(owner);
             return owner;
           }
