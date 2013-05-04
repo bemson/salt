@@ -382,6 +382,79 @@
           delete node.lp;
         }
       },
+      // actions to take when entering and exiting a node
+      nodeScopeActions = {
+        // ping owner
+        0: function (node, pkg) {
+          // notify owner before entering and after exiting this node
+          if (node.oGate && ~node.ping) {
+            pkg.pingOwner(node.ping);
+          }
+        },
+        // scope data
+        1: function (node, pkg, add) {
+          var
+            data = pkg.proxy.data,
+            dataCfgs = node.dcfgs,
+            dataCfgLn = dataCfgs.length,
+            dataCfgIdx = 0,
+            dataCfg,
+            dataName,
+            dataTrackingObject,
+            scopeAction
+          ;
+          // exit when there are no configurations for this node
+          if (!node.dcfgs.length) {
+            return;
+          }
+          // define scoping routine
+          if (add) {
+            // scope new value to stack - set value from config
+            scopeAction = function () {
+              // capture current value in stack (if any)
+              if (data.hasOwnProperty(dataName)) {
+                // capture current value in stack
+                dataTrackingObject.stack.unshift(data[dataName]);
+              }
+              if (dataCfg.use) {
+                // set key to value from config
+                data[dataName] = dataCfg.value;
+              } else {
+                // set key to last value or undefined (by default)
+                data[dataName] = dataTrackingObject.stack[0];
+              }
+            };
+          } else {
+            // set value form stack and remove
+            scopeAction = function () {
+              if (dataTrackingObject.stack.length) {
+                // use and remove value from stack
+                data[dataName] = dataTrackingObject.stack.shift();
+              } else {
+                // remove tracking object and data member
+                delete pkg.dtos[dataName];
+                delete data[dataName];
+              }
+            };
+          }
+
+          for (; dataCfgIdx < dataCfgLn; dataCfgIdx++) {
+            dataCfg = dataCfgs[dataCfgIdx];
+            dataName = dataCfg.name;
+            dataTrackingObject = pkg.getDTO(dataName);
+            scopeAction();
+          }
+        },
+        // permissions stack
+        2: function (node, pkg, add) {
+          shared_nodeStackHandler(pkg.perms, node.perms, add);
+        },
+        // capture criteria stack
+        3: function (node, pkg, add) {
+          shared_nodeStackHandler(pkg.caps, node.caps, add);
+        }
+      },
+      nodeScopeActionsLength = 4,
       // import resolution helpers
       import_pkgCnt,
       import_tagKeyTests,
@@ -426,6 +499,17 @@
 
     function isFlow(thing) {
       return thing instanceof Flow;
+    }
+
+    // add or remove from stack when there is an item
+    function shared_nodeStackHandler(stack, item, add) {
+      if (item) {
+        if (add) {
+          stack.unshift(item);
+        } else {
+          stack.shift();
+        }
+      }
     }
     // returns true when the argument is a valid data name
     function isDataDefinitionNameValid(name) {
@@ -1523,11 +1607,7 @@
       var
         pkg = this,
         state = pkg.proxy.state,
-        nodes = pkg.nodes,
-        currentNode = nodes[currentNodeIndex],
-        lastNode = nodes[lastNodeIndex],
-        lastNodeDepth = lastNode.depth,
-        currentNodeDepth = currentNode.depth
+        currentNode = pkg.nodes[currentNodeIndex]
       ;
 
       // set nodal info
@@ -1537,39 +1617,6 @@
       state.path = currentNode.path;
       state.pendable = currentNode.pendable;
       state.phase = -1;
-
-      if (currentNodeDepth === lastNodeDepth) {
-
-        // to sibling
-
-        if (lastNode.perms) {
-          // remove from perms stack
-          pkg.perms.shift();
-        }
-        if (currentNode.perms) {
-          // add to perms stack
-          pkg.perms.unshift(currentNode.perms);
-        }
-
-      } else if (currentNodeDepth > lastNodeDepth) {
-
-        // to child
-
-        if (currentNode.perms) {
-          // add to perms stack
-          pkg.perms.unshift(currentNode.perms);
-        }
-
-      } else if (lastNodeDepth > currentNodeDepth) {
-
-        // to parent
-
-        if (lastNode.perms) {
-          // remove from perms stack
-          pkg.perms.shift();
-        }
-
-      }
 
     };
 
@@ -1586,15 +1633,7 @@
         pkg.phase = 2;
       }
 
-      // scope node data
-      if (node.dcfgs.length) {
-        node.scopeData(entering);
-      }
-
-      // notify owner before entering and after exiting this node
-      if (node.oGate && ~node.ping) {
-        pkg.pingOwner(node.ping);
-      }
+      node.scope(entering);
     };
 
     corePkgDef.onEngage = function () {
@@ -1767,6 +1806,19 @@
 
     // Node prototype methods
 
+    // handle various asepcts of entering and exiting a node
+    corePkgDef.node.scope = function (entering) {
+      var
+        node = this,
+        pkg = node.pkg,
+        actionIdx = nodeScopeActionsLength
+      ;
+
+      while (actionIdx--) {
+        nodeScopeActions[actionIdx](node, pkg, entering);
+      }
+    };
+
     // add method to determine if another node can be targeted from this node
     corePkgDef.node.canTgt = function (targetNode) {
       var
@@ -1797,59 +1849,6 @@
           !~targetNode.conceal
         )
       ;
-    };
-
-    // add method to de/scope defined variables
-    corePkgDef.node.scopeData = function (add) {
-      var
-        node = this,
-        pkg = node.pkg,
-        data = pkg.proxy.data,
-        dataCfgs = node.dcfgs,
-        dataCfgLn = dataCfgs.length,
-        dataCfgIdx = 0,
-        dataCfg,
-        dataName,
-        dataTrackingObject,
-        scopeAction
-      ;
-      // define scoping routine
-      if (add) {
-        // scope new value to stack - set value from config
-        scopeAction = function () {
-          // capture current value in stack (if any)
-          if (data.hasOwnProperty(dataName)) {
-            // capture current value in stack
-            dataTrackingObject.stack.unshift(data[dataName]);
-          }
-          if (dataCfg.use) {
-            // set key to value from config
-            data[dataName] = dataCfg.value;
-          } else {
-            // set key to last value or undefined (by default)
-            data[dataName] = dataTrackingObject.stack[0];
-          }
-        };
-      } else {
-        // set value form stack and remove
-        scopeAction = function () {
-          if (dataTrackingObject.stack.length) {
-            // use and remove value from stack
-            data[dataName] = dataTrackingObject.stack.shift();
-          } else {
-            // remove tracking object and data member
-            delete pkg.dtos[dataName];
-            delete data[dataName];
-          }
-        };
-      }
-
-      for (; dataCfgIdx < dataCfgLn; dataCfgIdx++) {
-        dataCfg = dataCfgs[dataCfgIdx];
-        dataName = dataCfg.name;
-        dataTrackingObject = pkg.getDTO(dataName);
-        scopeAction();
-      }
     };
 
     // add method to determine when this node is a descendant of the given/current node
