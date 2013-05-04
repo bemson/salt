@@ -1161,15 +1161,6 @@
         node = nodes[i];
         parentNode = nodes[node.parentIndex];
 
-        // define node path
-        if (i == 1) {
-          node.path = '//';
-        } else if (i) {
-          node.path = parentNode.path + node.name + '/';
-        } else {
-          node.path = '..//';
-        }
-
         // index this node path
         pkg.nids[node.path] = i;
 
