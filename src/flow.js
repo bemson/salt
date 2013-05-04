@@ -2077,7 +2077,7 @@
           pkg.targets = waypoints.concat(pkg.targets);
         }
         // capture result of move attempt or true when paused
-        result = pkg.go(1) || wasPaused;
+        result = pkg.go() || wasPaused;
       }
       // return result as boolean
       return !!result;
