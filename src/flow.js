@@ -1486,7 +1486,7 @@
           proxy = pkg.proxy
         ;
         // set and delete vars member
-        if (typeof proxy.vars === 'object') {
+        if (proxy.vars !== pkg.vars && typeof proxy.vars === 'object') {
           pkg.vars = proxy.vars;
         }
         if (pkg.hasOwnProperty('tvars')) {
