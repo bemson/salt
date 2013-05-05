@@ -15,9 +15,11 @@
 
     var
       Flow = ((inCJS || inAMD) ? require('Panzer') : scope.Panzer).create(),
+      rand_string = (Math.ceil(Math.random() * 5000) + 3000).toString(18),
       corePkgDef = Flow.pkg('core'),
       staticUnusedArray = [],
       protoSlice = Array.prototype.slice,
+      RxpProto = RegExp.prototype,
       i, // loop vars
       isArray = (typeof Array.isArray === 'function') ?
         Array.isArray :
@@ -32,6 +34,7 @@
       r_trimSlashes = /^\/+|\/+$/g,
       r_hasNonAlphanumericCharacter = /\W/,
       r_hasAlphanumericCharacter = /\w/,
+      r_rxpIsForPath = /^\/.*\/.*\//,
       traversalCallbackOrder = {
         _on: 0,
         _in: 1,
@@ -94,6 +97,16 @@
           }
         }
       },
+      criteriaCache = {},
+      // in reverse-order of complexity
+      criteriaKeys = [
+        'has',
+        'within',
+        'on',
+        'from',
+        'is'
+      ],
+      criteriaKeysLength = criteriaKeys.length,
       coreTags = {
         // Specifies when a state is the base for rooted queries.
         _root: function (tagName, exists, tags, node, parentNode, pkg, idx) {
@@ -158,13 +171,14 @@
           }
         },
         // Define criteria for preserving instances created while traversing this branch.
-        _captures: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        _capture: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           if (exists) {
-            node.criteria = compileFilterCriteria(tags._captures);
+            node.caps = subs_sanitizeCriteria(tags._capture);
           } else if (parentNode) {
-            node.criteria = parentNode.criteria;
+            node.caps = parentNode.caps;
           } else {
-            node.criteria = 0;
+            node.caps = 0;
+            pkg.caps = [];
           }
         },
         // Define data names and values for a branch.
@@ -511,6 +525,525 @@
         }
       }
     }
+
+    function sharedNullFunction() {}
+
+    function subs_addInsts (collection, subInsts, pkg) {
+      var
+        node = pkg.nodes[pkg.tank.currentIndex],
+        i = 0,
+        subInst,
+        subId,
+        totalAdded = 0
+      ;
+      for (; subInst = subInsts[i]; i++) {
+        subId = subInst.tank.id;
+        if (!collection.hasOwnProperty(subId)) {
+          totalAdded++;
+          collection[subId] = {
+            inst: subInst,
+            cap: node
+          };
+        }
+      }
+      return totalAdded;
+    }
+
+    function subs_removeInsts (collection, subInsts) {
+      var
+        i = subInsts.length,
+        subInst,
+        subId,
+        totalRemoved = 0
+      ;
+      while (i--) {
+        subInst = subInsts[i];
+        subId = subInst.tank.id;
+        if (collection.hasOwnProperty(subId)) {
+          totalRemoved++;
+          delete collection[subId];
+        }
+      }
+      return totalRemoved;
+    }
+
+    function subs_getInsts (collection, criteria, criteriaToIgnore) {
+      var
+        criteriaKey,
+        criteriaKeyIdx,
+        criteriaOption,
+        criteriaOptions,
+        criteriaOptionIdx,
+        criteriaOptionsLength,
+        passed = 1,
+        subSet,
+        subSetId,
+        matches = []
+      ;
+      nextSubset:
+      for (subSetId in collection) {
+        if (collection.hasOwnProperty(subSetId)) {
+          // get subSet to test
+          subSet = collection[subSetId];
+          // reset criteria key index
+          criteriaKeyIdx = criteriaKeysLength;
+          nextCriteria:
+          while (criteriaKeyIdx--) {
+            // get the criteria key
+            criteriaKey = criteriaKeys[criteriaKeyIdx];
+            // setup criteria option loop vars
+            criteriaOptions = criteria[criteriaKey];
+            criteriaOptionsLength = criteriaOptions.length;
+            // if this key has options and is not to be ignored...
+            if (criteriaOptionsLength && criteriaKey !== criteriaToIgnore) {
+              for (criteriaOptionIdx = 0; criteriaOptionIdx < criteriaOptionsLength; criteriaOptionIdx++) {
+                criteriaOption = criteriaOptions[criteriaOptionIdx];
+                // if this criteria option has not not compiled...
+                if (criteriaOptionIdx >= criteriaOptions.made) {
+                  // capture and replace option at index with compiled version
+                  criteriaOption = criteriaOptions[criteriaOptionIdx] = subs_compileCriteriaOption(criteriaKey, criteriaOption, typeof criteriaOption);
+                  // flag that this option is now compiled
+                  criteriaOptions.made++;
+                }
+                // test result of compiled criteria option's function
+                // pass in the subset, and criteria object
+                if (criteriaOption.f(subSet, criteriaOption)) {
+                  // add subset instance to matches
+                  matches[matches.length] = subSet.inst;
+                  // continue to the next criteria, since it's been satisfied
+                  continue nextCriteria;
+                }
+              }
+              // since no options of this criteria were satisfied, skip to the next subSet in the collection
+              continue nextSubset;
+            }
+          }
+        }
+      }
+      return matches;
+    }
+
+    function subs_sanitizeCriteria(raw) {
+      var
+        criteria,
+        criteriaKey,
+        criteriaKeyIdx,
+        criteriaCacheId,
+        rxpOldToJSON,
+        typeofRaw,
+        isRegExp,
+        specifiesCriteria
+      ;
+
+      // if raw is null or undefined...
+      if (raw === null || raw === undefined) {
+        // set to false (capture nothing)
+        raw = false;
+      }
+
+      // get type or raw value
+      typeofRaw = typeof raw;
+
+      // if not an object, or does not have "is" criteria...
+      if (typeofRaw !== 'object' || !raw.hasOwnProperty('is')) {
+        if (RxpProto.hasOwnProperty('toJSON')) {
+          // capture existing .toJSON() method
+          rxpOldToJSON = RxpProto.toJSON;
+        }
+        // augment .toJSON() for any array's with nested RegExp's
+        RxpProto.toJSON = subs_stainRxpInJSON;
+        // get cache id for this criteria - prefix to avoid native collisiions
+        criteriaCacheId = 'c' + JSON.stringify(raw);
+        // reset .toJSON() for RegExp's
+        if (rxpOldToJSON) {
+          RxpProto.toJSON = rxpOldToJSON;
+        } else {
+          delete RxpProto.toJSON;
+        }
+
+        if (criteriaCache.hasOwnProperty(criteriaCacheId)) {
+          // exit when this criteria has already been sanitized
+          return criteriaCache[criteriaCacheId];
+        }
+      }
+
+      // define criteria to return
+      criteria = {buffer: -1};
+
+      // handle short-forms
+      if (typeofRaw === 'boolean' && raw) {
+        // `true` means match all sub-instances at or within this index
+        criteria.on = ['/'];
+        criteria.on.made = 0;
+      } else if (
+        // calculate here - only when necessary
+        (isRegExp = raw instanceof RegExp) ||
+        (typeofRaw === 'string' && raw) ||
+        (typeofRaw === 'number' && raw === ~~raw)
+      ) {
+        criteria.on = [raw];
+        criteria.on.made = 0;
+      } else if (typeofRaw === 'object' && !isRegExp) {
+        // sanitize known criteria from the raw object
+        criteriaKeyIdx = criteriaKeysLength;
+        while(criteriaKeyIdx--) {
+          criteriaKey = criteriaKeys[criteriaKeyIdx];
+          if (raw.hasOwnProperty(criteriaKey)) {
+            // extract object criteria, as a set of options (i.e., an array)
+            criteria[criteriaKey] = isArray(raw[criteriaKey]) ? protoSlice.call(raw[criteriaKey]) : [raw[criteriaKey]];
+            criteria[criteriaKey].made = 0;
+            specifiesCriteria = 1;
+          }
+        }
+      }
+
+      // ensure all criteria are present
+      criteriaKeyIdx = criteriaKeysLength;
+      while (criteriaKeyIdx--) {
+        criteriaKey = criteriaKeys[criteriaKeyIdx];
+        if (!criteria.hasOwnProperty(criteriaKey)) {
+          // use default empty option list (no need to track compiled options)
+          criteria[criteriaKey] = staticUnusedArray;
+        }
+      }
+
+      // sanitize buffer
+      if (raw.hasOwnProperty('buffer')) {
+        // capture all, when only option is buffer
+        if (!specifiesCriteria) {
+          criteria.on = ['/'];
+          criteria.on.made = 0;
+        }
+        if (raw.buffer !== -1) {
+          criteria.buffer = raw.buffer ? 1 : 0;
+        }
+      }
+
+      if (criteriaCacheId) {
+        // add sanitized criteria to cache
+        criteriaCache[criteriaCacheId] = criteria;
+      }
+
+      return criteria;
+    }
+
+    // compilation will usually involve searching a set or string with a regexp or string
+    function subs_compileCriteriaOption(criteriaKey, value, typeofValue) {
+      var
+        isRegExp = value instanceof RegExp,
+        option = {
+          v: value,
+          f: sharedNullFunction
+        }
+      ;
+      if (criteriaKey === 'has') {
+        // compile "has" criteria
+        if (isRegExp) {
+          option.f = subs_filter_searchSetRxp;
+          option.g = subs_filter_getSubInstMember;
+          if (r_rxpIsForPath.test(value)) {
+            option.m = 'pAry';
+          } else {
+            option.m = 'sAry';
+          }
+        } else if (value && typeofValue === 'string') {
+          option.g = subs_filter_getSubInstMember;
+          if (~value.indexOf('/')) {
+            option.f = subs_filter_searchSet;
+            option.m = 'pAry';
+            // wrap in slashes to match whole sub-paths
+            if (option.v.charAt(0) !== '/') {
+              option.v = '/' + option.v;
+            }
+            if (option.v.substr(-1) !== '/') {
+              option.v += '/';
+            }
+          } else {
+            option.f = subs_filter_matchSet;
+            option.m = 'sAry';
+          }
+        } else if (
+          typeofValue === 'number' &&
+          value >= 0 &&
+          value === ~~value
+        ) {
+          option.f = subs_filter_has_index;
+        }
+      } else if (criteriaKey === 'from') {
+        // compile "from" criteria
+        if (isRegExp) {
+          if (r_rxpIsForPath.test(value)) {
+            option.f = subs_filter_searchRxp;
+            option.g = subs_filter_from_path;
+          } else {
+            option.f = subs_filter_searchSetRxp;
+            option.g = subs_filter_from_pathParts;
+          }
+        } else if (value && typeofValue === 'string') {
+          if (~value.indexOf('/')) {
+            option.f = subs_filter_search;
+            option.g = subs_filter_from_path;
+            // wrap in slashes to match whole sub-paths
+            if (option.v.charAt(0) !== '/') {
+              option.v = '/' + option.v;
+            }
+            if (option.v.substr(-1) !== '/') {
+              option.v += '/';
+            }
+          } else {
+            option.f = subs_filter_matchSet;
+            option.g = subs_filter_from_pathParts;
+          }
+        } else if (
+          typeofValue === 'number' &&
+          value >= 0 &&
+          value === ~~value
+        ) {
+          option.f = subs_filter_match;
+          option.g = subs_filter_from_index;
+        }
+      } else if (criteriaKey === 'is') {
+        // compile "is" criteria
+        option.f = subs_filter_is;
+      } else if (criteriaKey === 'on') {
+        // compile "on" criteria
+        if (isRegExp) {
+          option.f = subs_filter_searchRxp;
+          if (r_rxpIsForPath.test(value)) {
+            option.g = subs_filter_getStateProperty;
+            option.m = 'path';
+          } else {
+            option.g = subs_filter_getStateProperty;
+            option.m = 'name';
+          }
+        } else if (value && typeofValue === 'string') {
+          if (~value.indexOf('/')) {
+            option.f = subs_filter_search;
+            option.g = subs_filter_getStateProperty;
+            option.m = 'path';
+            // wrap in slashes to match whole sub-paths
+            if (option.v.charAt(0) !== '/') {
+              option.v = '/' + option.v;
+            }
+            if (option.v.substr(-1) !== '/') {
+              option.v += '/';
+            }
+          } else {
+            option.f = subs_filter_match;
+            option.g = subs_filter_getStateProperty;
+            option.m = 'name';
+          }
+        } else if (
+          typeofValue === 'number' &&
+          value >= 0 &&
+          value === ~~value
+        ) {
+          option.f = subs_filter_match;
+          option.g = subs_filter_getStateProperty;
+          option.m = 'index';
+        }
+      } else if (criteriaKey === 'within') {
+        // compile "within" criteria
+        if (isRegExp) {
+          if (r_rxpIsForPath.test(value)) {
+            option.f = subs_filter_searchRxp;
+            option.g = subs_filter_within_path;
+          } else {
+            option.f = subs_filter_searchSetRxp;
+            option.g = subs_filter_within_pathParts;
+          }
+        } else if (value && typeofValue === 'string') {
+          if (~value.indexOf('/')) {
+            option.f = subs_filter_search;
+            option.g = subs_filter_within_path;
+            // wrap in slashes to match whole sub-paths
+            if (option.v.charAt(0) !== '/') {
+              option.v = '/' + option.v;
+            }
+            if (option.v.substr(-1) !== '/') {
+              option.v += '/';
+            }
+          } else {
+            option.f = subs_filter_matchSet;
+            option.g = subs_filter_within_pathParts;
+          }
+        } else if (
+          typeofValue === 'number' &&
+          value > -1 &&
+          value === ~~value
+        ) {
+          option.f = subs_filter_within_index;
+        }
+      }
+      return option;
+    }
+
+    // sub-instance helper functions
+
+    // prepend regex with random string
+    function subs_stainRxpInJSON() {
+      return rand_string + this;
+    }
+
+    // generic needle search a string
+    // expects params.v to be the needle
+    // expects params.g to be a function that gets the haystack
+    function subs_filter_search(subSet, params) {
+      return ~params.g(subSet, params).indexOf(params.v);
+    }
+
+    // generic regexp search a string
+    // expects params.v to be the regexp
+    // expects params.g to be a function that gets the string
+    function subs_filter_searchRxp(subSet, params) {
+      return params.v.test(params.g(subSet, params));
+    }
+
+    // generic regexp search over set of strings
+    // expects params.v to be the regexp
+    // expects params.g to be a function that gets the set
+    function subs_filter_searchSetRxp(subSet, params) {
+      var
+        set = params.g(subSet, params),
+        setIdx = set.length,
+        rxp = params.v
+      ;
+      while (setIdx--) {
+        if (rxp.test(set[setIdx])) {
+          return 1;
+        }
+      }
+    }
+
+    // generic string set search
+    // expects params.v to be the needle
+    // expects params.g to be a function that gets the set
+    function subs_filter_searchSet(subSet, params) {
+      var
+        set = params.g(subSet, params),
+        setIdx = set.length,
+        hay,
+        match = params.v
+      ;
+      while (setIdx--) {
+        hay = set[setIdx];
+        if (~hay.indexOf(match)) {
+          return 1;
+        }
+      }
+    }
+
+    // generic match between values
+    // expects params.v to be the match
+    // expects params.g to be a function that gets the comparison value
+    function subs_filter_match(subSet, params) {
+      return params.v === params.g(subSet, params);
+    }
+
+    // generic string set match
+    // expects params.v to be the match
+    // expects params.g to be a function that gets the set
+    function subs_filter_matchSet(subSet, params) {
+      var
+        set = params.g(subSet, params),
+        setIdx = set.length,
+        match = params.v
+      ;
+      while (setIdx--) {
+        if (set[setIdx] === match) {
+          return 1;
+        }
+      }
+    }
+
+    // returns property of subInst
+    // expects params.m to be a member of the sub-instance
+    function subs_filter_getSubInstMember(subSet, params) {
+      return subSet.inst[params.m];
+    }
+
+    // returns property of subInst
+    // expects params.m to be a member of the sub-instance
+    function subs_filter_getStateProperty(subSet, params) {
+      var subInst = subSet.inst;
+      return subInst.nodes[subInst.tank.currentIndex][params.m];
+    }
+
+    // criteria "is" filter functions
+
+    function subs_filter_is(subSet, params) {
+      // the sub-instance must be sourced by the parameterized value
+      return subSet.inst.nodes[1].value === params.v;
+    }
+
+    // criteria "has" filter functions
+
+    // returns true when params.v is within the given index
+    function subs_filter_has_index(subSet, params) {
+      return params.v < subSet.inst.nodes.length;
+    }
+
+    // criteria "from" filter functions
+
+    // returns subSet capture path
+    function subs_filter_from_path(subSet, params) {
+      return subSet.cap.path;
+    }
+
+    // returns subSet capture path as an array of states
+    // returns an empty array when the path is the null or program state
+    function subs_filter_from_pathParts(subSet, params) {
+      var captureNode = subSet.cap;
+      if (captureNode.index > 1) {
+        return captureNode.path.slice(2, -1).split('/');
+      }
+      return staticUnusedArray;
+    }
+
+    // returns index that sub-instance was capture
+    function subs_filter_from_index(subSet, params) {
+      return subSet.cap.index;
+    }
+
+    // returns path of current state's parent
+    function subs_filter_within_path(subSet, params) {
+      var
+        subInst = subSet.inst,
+        currentNode = subInst.nodes[subInst.tank.currentIndex]
+      ;
+      if (~currentNode.parentIndex) {
+        return subInst.nodes[currentNode.parentIndex].path;
+      }
+      return '';
+    }
+
+    // returns path parts of current state's parent path
+    function subs_filter_within_pathParts(subSet, params) {
+      var
+        subInst = subSet.inst,
+        currentNode = subInst.nodes[subInst.tank.currentIndex]
+      ;
+      if (currentNode.parentIndex > 1) {
+        return subInst.nodes[currentNode.parentIndex].path.slice(2, -1).split('/');
+      }
+      return staticUnusedArray;
+    }
+
+    // returns true when the sub-instance's current node is within the given state index
+    function subs_filter_within_index(subSet, params) {
+      var
+        subInst = subSet.inst,
+        nodes = subInst.nodes,
+        currentNode = nodes[subInst.tank.currentIndex],
+        targetNode = nodes[params.v]
+      ;
+      if (targetNode) {
+        return currentNode.within(targetNode);
+      }
+    }
+
+
+
     // returns true when the argument is a valid data name
     function isDataDefinitionNameValid(name) {
       return typeof name === 'string' && r_hasAlphanumericCharacter.test(name);
@@ -752,126 +1285,6 @@
       return resolvedState;
     }
 
-    function compileFilterCriteria(rawCriteria) {
-      var
-        typeofRaw = typeof rawCriteria,
-        values,
-        // default filter flags
-        criteria = {
-          // include matches for any filter
-          strict: 0,
-          // retrieve non-matches
-          invert: 0
-        },
-        flag,
-        didParseCriteria
-      ;
-
-      // return compiled criteria to collect all or zero items
-      if (typeofRaw === 'boolean') {
-        if (rawCriteria) {
-          criteria.all = 1;
-          criteria.opts = 0;
-          return criteria;
-        } else {
-          return 0;
-        }
-      }
-
-      // return compiled criteria for paths or states
-      if (typeofRaw === 'string') {
-        if (!rawCriteria) {
-          return 0;
-        }
-        criteria.opts = [{
-          matches: [rawCriteria]
-        }];
-        if (r_hasNonAlphanumericCharacter.test(rawCriteria)) {
-          criteria.opts[0].name = 's_paths';
-        } else {
-          criteria.opts[0].name = 's_states';
-        }
-        return criteria;
-      }
-
-      // return compiled criteria for state numbers
-      if (typeofRaw === 'number') {
-        if (rawCriteria >= 0 && rawCriteria === ~~rawCriteria) {
-          criteria.opts = [{
-            name: 'n_states',
-            matches: [rawCriteria]
-          }];
-          return criteria;
-        } else {
-          return 0;
-        }
-      }
-
-      // parse object criteria
-      if (typeofRaw === 'object') {
-
-        // update matching flags
-        for (flag in criteria) {
-          if (criteria.hasOwnProperty(flag) && rawCriteria.hasOwnProperty('qry_' + flag)) {
-            didParseCriteria = 1;
-            criteria[flag] = !!rawCriteria['qry_' + flag];
-          }
-        }
-
-        // init filter options
-        criteria.opts = [];
-
-        // sanitize matching options from raw criteria
-        ['paths', 'states', 'programs'].forEach(function (filter) {
-          if (rawCriteria.hasOwnProperty(filter)) {
-            values = rawCriteria[filter];
-            if (!isArray(values)) {
-              values = [values];
-            }
-            if (filter !== 'programs') {
-              // states and paths may be numbers, strings and/or regexps
-              if (!values.some(
-                function (value) {
-                  var typeofValue = typeof value;
-                  return (typeofValue === 'string' && !value) ||
-                        // only states may be whole numbers
-                        (typeofValue === 'number' &&
-                          (filter !== 'states' || value !== ~~value)
-                        ) ||
-                        (typeofValue === 'object' && !(value instanceof RegExp));
-                }
-              )) {
-                // define options for each kind of filter value
-                ['string', 'object', 'number'].forEach(function (typeofValue) {
-                  var set = values.filter(function (value) {
-                    return typeof value === typeofValue;
-                  });
-                  if (set.length) {
-                    didParseCriteria = 1;
-                    criteria.opts.push({
-                      name: typeofValue.charAt(0) + '_' + filter,
-                      matches: set
-                    });
-                  }
-                });
-              }
-            } else {
-              didParseCriteria = 1;
-              criteria.opts.push({
-                name: filter,
-                matches: values
-              });
-            }
-          }
-        });
-      }
-      if (didParseCriteria) {
-        return criteria;
-      } else {
-        return 0;
-      }
-    }
-
     function sharedRedirectEventHandler() {
       var
         flow = this,
@@ -879,259 +1292,6 @@
       ;
       flow.go(pkg.nodes[pkg.tank.currentIndex].reds[pkg.phase]);
     }
-
-    function FlowStorage() {
-      this.all = {};
-      this.tmp = {};
-    }
-
-    FlowStorage.prototype = {
-
-      on: 0,
-
-      put: function (flows, bin) {
-        var
-          i = 0,
-          flow
-        ;
-        // add corresponding package instance to the master collection
-        if (flows.length &&
-          flows.every(function (flow) {
-            return flow instanceof Flow;
-          })
-        ) {
-          for (; flow = flows[i]; i++) {
-            bin[flow.tank.id] = corePkgDef(flow);
-          }
-          return true;
-        }
-        return false;
-      },
-
-      commit: function () {
-        var
-          mgr = this,
-          pkgs = this.filter(mgr.on, mgr.tmp),
-          pkgId
-        ;
-        for (pkgId in pkgs) {
-          if (pkgs.hasOwnProperty(pkgId)) {
-            mgr.all[pkgId] = pkg;
-          }
-        }
-        mgr.tmp = {};
-      },
-
-      // filters
-
-      f: {
-        programs: function (pkg, matches) {
-          var
-            i = 0,
-            j = matches.length,
-            originalProgram = pkg.nodes[1].value
-          ;
-          for (; i < j; i++) {
-            if (originalProgram === matches[i]) {
-              return 1;
-            }
-          }
-          return 0;
-        },
-        s_states: function (pkg, matches) {
-          var
-            i = 0,
-            j = matches.length,
-            currentStateName = pkg.nodes[0].name
-          ;
-          for (; i < j; i++) {
-            if (currentStateName === matches[i]) {
-              return 1;
-            }
-          }
-          return 0;
-        },
-        n_states: function (pkg, matches) {
-          var
-            i = 0,
-            j = matches.length,
-            currentIndex = pkg.tank.currentIndex
-          ;
-          for (; i < j; i++) {
-            if (currentIndex === matches[i]) {
-              return 1;
-            }
-          }
-          return 0;
-        },
-        o_states: function (pkg, matches) {
-          var
-            i = 0,
-            j = matches.length,
-            currentStateName = pkg.nodes[0].name
-          ;
-          for (; i < j; i++) {
-            if (matches[i].test(currentStateName)) {
-              return 1
-            }
-          }
-          return 0;
-        },
-        s_paths: function (pkg, matches) {
-          var
-            i = 0,
-            j = matches.length,
-            currentPath = pkg.nodes[0].path
-          ;
-          for (; i < j; i++) {
-            if (~currentPath.indexOf(matches[i])) {
-              return 1;
-            }
-          }
-          return 0;
-        },
-        o_paths: function (pkg, matches) {
-          var
-            i = 0,
-            j = matches.length,
-            currentPath = pkg.nodes[0].path
-          ;
-          for (; i < j; i++) {
-            if (matches[i].test(currentPath)) {
-              return 1
-            }
-          }
-          return 0;
-        }
-      },
-
-      filter: function (criteria, bins) {
-        var
-          mgr = this,
-          pkg,
-          pkgId,
-          bin,
-          binIdx = 0,
-          options,
-          option,
-          optionIdx,
-          captureAllPackages,
-          mustSatisfyAllCriteria,
-          getNonMatchingPackages,
-          lastOptionIdx,
-          filtered = {}
-        ;
-        // use default bins and criteria
-        if (!criteria) {
-          return filtered;
-        } else if (!(captureAllPackages = criteria.hasOwnProperty('all'))) {
-          mustSatisfyAllCriteria = criteria.strict;
-          getNonMatchingPackages = criteria.invert;
-          if (criteria.opts) {
-            options = criteria.opts;
-            lastOptionIdx = options.length - 1;
-          }
-        }
-        // use default bins
-        if (!bins) {
-          bins = [mgr.all, mgr.tmp];
-        }
-        if (!isArray(bins)) {
-          bins = [bins];
-        }
-        for (; bin = bins[binIdx]; binIdx++) {
-          if (!bin) {
-            continue;
-          }
-          nextPackage:
-          for (pkgId in bin) {
-            if (bin.hasOwnProperty(pkgId)) {
-              pkg = bin[pkgId];
-              if (captureAllPackages) {
-                filtered[pkgId] = pkg;
-              } else {
-                for (optionIdx = 0; option = options[optionIdx]; optionIdx++) {
-                  if (mgr.f[option.name](pkg, option.matches)) {
-                    // capture successfully matched packages
-                    if (!getNonMatchingPackages && (!mustSatisfyAllCriteria || optionIdx === lastOptionIdx)) {
-                      filtered[pkgId] = pkg;
-                      continue nextPackage;
-                    }
-                  } else {
-                    // capture non-matching packages
-                    if (getNonMatchingPackages && (mustSatisfyAllCriteria || optionIdx === lastOptionIdx)) {
-                      filtered[pkgId] = pkg;
-                    }
-                    // stop testing for strict criteria
-                    if (mustSatisfyAllCriteria) {
-                      continue nextPackage;
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-        return filtered;
-      },
-
-      // exposed interfaces
-
-      get: function (criteria, bins) {
-        var
-          mgr = this,
-          pkgs = mgr.filter(criteria, bins),
-          ary = [],
-          pkgId
-        ;
-        for (pkgId in pkgs) {
-          if (pkgs.hasOwnProperty(pkgId)) {
-            ary.push(pkgs[pkgId].proxy);
-          }
-        }
-        return ary;
-      },
-
-      remove: function (criteria, bins) {
-        var
-          mgr = this,
-          pkgs,
-          pkgId,
-          deletedAtLeastOnePackage = 0
-        ;
-        if (isArray(criteria)) {
-          if (criteria.every(function (flow) {
-            return flow instanceof Flow;
-          })) {
-            criteria.forEach(function (flow) {
-              pkgId = corePkgDef(flow).tank.id;
-              delete mgr.all[pkgId];
-              delete mgr.tmp[pkgId];
-            });
-            deletedAtLeastOnePackage = 1;
-          }
-        } else {
-          pkgs = mgr.filter(criteria, bins);
-          for (pkgId in pkgs) {
-            if (pkgs.hasOwnProperty(pkgId)) {
-              deletedAtLeastOnePackage = 1;
-              delete mgr.all[pkgId];
-              delete mgr.tmp[pkgId];
-            }
-          }
-        }
-        return !!deletedAtLeastOnePackage;
-      },
-
-      add: function (flows) {
-        return this.put(flows, this.all);
-      },
-
-      buffer: function (flows) {
-        return this.put(flows, this.tmp);
-      }
-
-    };
 
     // collection of active package-trees - exposed to support package integration
     corePkgDef.actives = [];
@@ -1188,8 +1348,15 @@
         pkgId
       ;
 
-      // define stored instance manager
-      pkg.bin = new FlowStorage();
+      // init sub-instances hashes
+      pkg.bin = {};
+      pkg.tin = {};
+      // sub-instance "has" criteria search helpers
+      pkg.nStr =
+      pkg.pStr =
+        '|';
+      pkg.sAry = [];
+      pkg.pAry = [];
       // define initial vars member
       pkg.vars = {};
       // collection of custom query tokens
@@ -1248,6 +1415,15 @@
         // index this node path
         pkg.nids[node.path] = i;
 
+        if (i > 1) {
+          // add to delimited string of names (for sub-instances "has" matching)
+          pkg.nStr += node.name + '|';
+          pkg.sAry[pkg.sAry.length] = node.name;
+        }
+        // add to delimited string of paths (for sub-instances "has" matching)
+        pkg.pStr += node.path + '|';
+        pkg.pAry[pkg.pAry.length] = node.path;
+
         // prep for tag compilation
         node.pkg = pkg;
         node.fncs = [0,0,0,0,0];
@@ -1291,9 +1467,9 @@
           pkg.owner = activeFlow;
         }
 
-        // auto capture to the active flow's store
-        if (activeFlow.bin.on) {
-          activeFlow.bin.tmp[pkg.id] = pkg;
+        // auto capture to the active flow's temporary store
+        if (activeFlow.caps[0]) {
+          subs_addInsts(activeFlow.tin, [pkg], activeFlow);
         }
       }
 
@@ -1664,9 +1840,6 @@
         pkg.tgtTrail = pkg.targets.shift();
       }
 
-      // set store capture criteria
-      pkg.bin.on = node.criteria;
-
       // prepend sequence node targets
       if (node.seq && !phase) {
         pkg.proxy.go.apply(pkg.proxy, node.seq);
@@ -1706,8 +1879,11 @@
         node = pkg.nodes[pkg.tank.currentIndex]
       ;
 
-      // reconcile qualifying instances
-      pkg.bin.commit();
+      // capture qualifying instances and empty the tin
+      if (node.caps) {
+        subs_addInsts(pkg.bin, subs_getInsts(pkg.tin, node.caps, 'buffer'), pkg);
+      }
+      pkg.tin = {};
 
       // when completing the "on" phase
       if (pkg.phase) {
@@ -2183,50 +2359,108 @@
       }
     };
 
-    corePkgDef.proxy.subs = function (cmd, cfg) {
+    corePkgDef.proxy.subs = function () {
       var
         pkg = corePkgDef(this),
-        argumentsLength = arguments.length,
-        selectBufferredPkgs = cfg === 'buffer',
-        privileged = pkg.is('owner', 'self'),
-        result
+        args = protoSlice.call(arguments),
+        argLn = args.length,
+        allowed = pkg.is('owner','self'),
+        tin = pkg.tin,
+        bin = pkg.bin,
+        criteria,
+        results,
+        usingNodeCaptureCriteria,
+        i,
+        subId
       ;
 
-      // route simplified 'add'
-      if (typeof cmd === 'object') {
-        cmd = 'add';
-        cfg = protoSlice.call(arguments);
-      } else if (argumentsLength < 2) {
-        // route simplified 'get'
-        cmd = 'get';
-        if (argumentsLength) {
-          cfg = compileFilterCriteria(cmd);
-        } else {
-          cfg = pkg.nodes[pkg.tank.currentIndex].criteria || compileFilterCriteria(true);
+      // remove sub-instances
+
+      if (argLn > 1 && args[0] === 'remove') {
+        if (!allowed) {
+          // deny unauthorized removal attempts
+          return false;
         }
+        // focus on remaining arguments
+        args.shift();
+        if (isFlow(args[0])) {
+          i = args.length;
+          // get core package instances
+          while (i--) {
+            if (!(args[i] = corePkgDef(args[i]))) {
+              // fail when not a flow instance
+              return false;
+            }
+          }
+          // remove these sub-instances from the bin and tin
+          return subs_removeInsts(pkg.bin, args) + subs_removeInsts(pkg.tin, args);
+        } else if (argLn > 2) {
+          // sanitize criteria
+          criteria = subs_sanitizeCriteria(args[0]);
+          // remove from the targeted collections
+          if (!~criteria.buffer) {
+            return subs_removeInsts(subs_getInsts(tin, criteria)) + subs_removeInsts(subs_getInsts(bin, criteria));
+          } else if (criteria.buffer) {
+            return subs_removeInsts(subs_getInsts(tin, criteria));
+          } else {
+            return subs_removeInsts(subs_getInsts(bin, criteria));
+          }
+        }
+        return false;
       }
 
-      // validate and invoke commmand on insts
-      if (
-        // allow all gets except unprivileged ones searching all items
-        cmd === 'get' ||
-        // only remove, add, or buffer when privileged
-        (privileged &&
-          (cmd === 'remove' || cmd === 'add' || cmd === 'buffer')
-        )
-      ) {
-        if (selectBufferredPkgs && (cmd === 'remove' || cmd === 'get')) {
-          cfg = compileFilterCriteria(true);
+      // add sub-instances
+
+      if (isFlow(args[0])) {
+        if (!allowed) {
+          // deny unauthorized additions
+          return false;
         }
-        result = pkg.bin[cmd](cfg, selectBufferredPkgs ? pkg.bin.tmp : 0);
-        // only return match count to unprivileged calls
-        if (cmd === 'get' && !privileged) {
-          return result.length;
+        i = argLn;
+        // get core package instances
+        while (i--) {
+          if (!(args[i] = corePkgDef(args[i]))) {
+            // fail when not adding a flow instance
+            return false;
+          }
         }
-        return result;
+        // remove from tin and add to bin
+        subs_removeInsts(tin, args);
+        subs_addInsts(bin, args, pkg);
+        return true;
       }
 
-      return false;
+      // retrieve sub-instances
+
+      if (argLn) {
+        // retrieve subs with the given criteria
+        criteria = subs_sanitizeCriteria(args[0]);
+      } else if (pkg.nodes[pkg.tank.currentIndex].caps) {
+        // retrieve the current state's criteria
+        criteria = pkg.nodes[pkg.tank.currentIndex].caps;
+        usingNodeCaptureCriteria = 1;
+      } else {
+        // retrieve all sub-instances by default
+        criteria = subs_sanitizeCriteria(true);
+      }
+      // search the collections identified by the criteria
+      if (usingNodeCaptureCriteria || !~criteria.buffer) {
+        results = subs_getInsts(tin, criteria).concat(subs_getInsts(bin, criteria));
+      } else if (criteria.buffer) {
+        results = subs_getInsts(tin, criteria);
+      } else {
+        results = subs_getInsts(bin, criteria);
+      }
+      i = results.length;
+      if (allowed) {
+        // return matching proxies
+        while (i--) {
+          results[i] = results[i].proxy;
+        }
+        return results;
+      }
+      // return number of results
+      return i;
     };
 
     // return an object with status information about the flow and it's current state
