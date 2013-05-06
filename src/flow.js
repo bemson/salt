@@ -567,7 +567,7 @@
       return totalRemoved;
     }
 
-    function subs_getInsts (collection, criteria, criteriaToIgnore) {
+    function subs_getInsts (collection, criteria) {
       var
         criteriaKey,
         criteriaKeyIdx,
@@ -594,8 +594,8 @@
             // setup criteria option loop vars
             criteriaOptions = criteria[criteriaKey];
             criteriaOptionsLength = criteriaOptions.length;
-            // if this key has options and is not to be ignored...
-            if (criteriaOptionsLength && criteriaKey !== criteriaToIgnore) {
+            // if this key has options...
+            if (criteriaOptionsLength) {
               for (criteriaOptionIdx = 0; criteriaOptionIdx < criteriaOptionsLength; criteriaOptionIdx++) {
                 criteriaOption = criteriaOptions[criteriaOptionIdx];
                 // if this criteria option has not not compiled...
@@ -1881,7 +1881,7 @@
 
       // capture qualifying instances and empty the tin
       if (node.caps) {
-        subs_addInsts(pkg.bin, subs_getInsts(pkg.tin, node.caps, 'buffer'), pkg);
+        subs_addInsts(pkg.bin, subs_getInsts(pkg.tin, node.caps), pkg);
       }
       pkg.tin = {};
 
@@ -2369,7 +2369,6 @@
         bin = pkg.bin,
         criteria,
         results,
-        usingNodeCaptureCriteria,
         i,
         subId
       ;
@@ -2434,16 +2433,12 @@
       if (argLn) {
         // retrieve subs with the given criteria
         criteria = subs_sanitizeCriteria(args[0]);
-      } else if (pkg.nodes[pkg.tank.currentIndex].caps) {
-        // retrieve the current state's criteria
-        criteria = pkg.nodes[pkg.tank.currentIndex].caps;
-        usingNodeCaptureCriteria = 1;
       } else {
-        // retrieve all sub-instances by default
-        criteria = subs_sanitizeCriteria(true);
+        // retrieve all sub-instances using precompiled default
+        criteria = criteriaCache.ctrue;
       }
       // search the collections identified by the criteria
-      if (usingNodeCaptureCriteria || !~criteria.buffer) {
+      if (!~criteria.buffer) {
         results = subs_getInsts(tin, criteria).concat(subs_getInsts(bin, criteria));
       } else if (criteria.buffer) {
         results = subs_getInsts(tin, criteria);
