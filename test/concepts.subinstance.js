@@ -28,7 +28,7 @@ describe( 'Sub-instance', function () {
     subInst = new Flow();
     flow = new Flow(function () {
       this.subs().should.have.lengthOf(0);
-      this.subs(subInst).should.equal(true);
+      this.subs(subInst).should.equal(1);
       this.subs()
         .should.have.lengthOf(1)
         .and.contain(subInst);

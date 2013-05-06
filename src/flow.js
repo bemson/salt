@@ -2379,7 +2379,7 @@
       if (argLn > 1 && args[0] === 'remove') {
         if (!allowed) {
           // deny unauthorized removal attempts
-          return false;
+          return 0;
         }
         // focus on remaining arguments
         args.shift();
@@ -2389,24 +2389,24 @@
           while (i--) {
             if (!(args[i] = corePkgDef(args[i]))) {
               // fail when not a flow instance
-              return false;
+              return 0;
             }
           }
           // remove these sub-instances from the bin and tin
-          return subs_removeInsts(pkg.bin, args) + subs_removeInsts(pkg.tin, args);
-        } else if (argLn > 2) {
+          return subs_removeInsts(bin, args) + subs_removeInsts(tin, args);
+        } else if (argLn > 1) {
           // sanitize criteria
           criteria = subs_sanitizeCriteria(args[0]);
           // remove from the targeted collections
           if (!~criteria.buffer) {
-            return subs_removeInsts(subs_getInsts(tin, criteria)) + subs_removeInsts(subs_getInsts(bin, criteria));
+            return subs_removeInsts(tin, subs_getInsts(tin, criteria)) + subs_removeInsts(bin, subs_getInsts(bin, criteria));
           } else if (criteria.buffer) {
-            return subs_removeInsts(subs_getInsts(tin, criteria));
+            return subs_removeInsts(tin, subs_getInsts(tin, criteria));
           } else {
-            return subs_removeInsts(subs_getInsts(bin, criteria));
+            return subs_removeInsts(bin, subs_getInsts(bin, criteria));
           }
         }
-        return false;
+        return 0;
       }
 
       // add sub-instances
@@ -2414,20 +2414,19 @@
       if (isFlow(args[0])) {
         if (!allowed) {
           // deny unauthorized additions
-          return false;
+          return 0;
         }
         i = argLn;
         // get core package instances
         while (i--) {
-          if (!(args[i] = corePkgDef(args[i]))) {
-            // fail when not adding a flow instance
-            return false;
+          if (!(args[i] = corePkgDef(args[i])) && args[i] === pkg) {
+            // fail when not adding a flow instance or adding self
+            return 0;
           }
         }
         // remove from tin and add to bin
         subs_removeInsts(tin, args);
-        subs_addInsts(bin, args, pkg);
-        return true;
+        return subs_addInsts(bin, args, pkg);
       }
 
       // retrieve sub-instances
