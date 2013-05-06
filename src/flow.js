@@ -727,6 +727,9 @@
       return criteria;
     }
 
+    // pre-cache the criteria compilation of `true`
+    subs_sanitizeCriteria(true);
+
     // compilation will usually involve searching a set or string with a regexp or string
     function subs_compileCriteriaOption(criteriaKey, value, typeofValue) {
       var
