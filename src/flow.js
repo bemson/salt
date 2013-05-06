@@ -2418,7 +2418,7 @@
         i = argLn;
         // get core package instances
         while (i--) {
-          if (!(args[i] = corePkgDef(args[i])) && args[i] === pkg) {
+          if (!(args[i] = corePkgDef(args[i]))) {
             // fail when not adding a flow instance or adding self
             return 0;
           }
