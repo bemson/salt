@@ -104,14 +104,14 @@ describe( '_over tag', function () {
   });
 
   it( 'should cause an infinite sequence when a query points to a younger/ancestor state', function () {
-    var spy = sinon.spy(function () {
+    var spy = sinon.spy();
+    flow = new Flow({
+      _on: function () {
         if (this.status().loops > 100) {
           this.target(0);
         }
-      })
-    ;
-    flow = new Flow({
-      _on: spy,
+        spy();
+      },
       a: {
         _over: '@parent'
       },

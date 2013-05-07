@@ -41,16 +41,15 @@ describe( '_sequence tag', function () {
   });
 
   it( 'should add descendants as waypoints', function () {
-    var
-      aSpy = sinon.spy(function () {
-        this.status().targets.should.eql(['//seq/a/','//end/']);
-      })
-    ;
+    var aSpy = sinon.spy();
     flow = new Flow({
       seq: {
         _sequence: 1,
         a: {
-          _in: aSpy
+          _in: function () {
+            this.status().targets.should.eql(['//seq/a/','//end/']);
+            aSpy();
+          }
         }
       },
       end: {}

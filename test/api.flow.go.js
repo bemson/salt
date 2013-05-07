@@ -16,11 +16,12 @@ describe( 'Flow#go()', function () {
   });
 
   it( 'should add a waypoint for each query', function () {
-    var spy = sinon.spy(function () {
-      this.status().targets.should.have.lengthOf(2);
-    });
+    var spy = sinon.spy();
     flow = new Flow({
-      _on: spy,
+      _on: function () {
+        this.status().targets.should.have.lengthOf(2);
+        spy();
+      },
       a: {},
       b: {}
     });
@@ -31,16 +32,17 @@ describe( 'Flow#go()', function () {
   it( 'should ignore the last query if it matches the last waypoint', function () {
     var
       sameQuery = '//a/',
-      inSpy = sinon.spy(function () {
+      inSpy = sinon.spy()
+    ;
+    flow = new Flow({
+      _in: function () {
         var targetCnt = this.status().targets.length;
         this.go(sameQuery);
         targetCnt.should.equal(this.status().targets.length);
         this.go('//b/');
         this.status().targets.should.have.length.above(targetCnt);
-      })
-    ;
-    flow = new Flow({
-      _in: inSpy,
+        inSpy();
+      },
       a: {},
       b: {}
     });
@@ -49,13 +51,14 @@ describe( 'Flow#go()', function () {
   });
 
   it( 'should set a new destination when at the `_on` phase of the current one', function () {
-    var spy = sinon.spy(function () {
-      this.status().targets.should.have.lengthOf(0);
-      this.go('//b/');
-      this.status().targets.should.have.lengthOf(1);
-    });
+    var spy = sinon.spy();
     flow = new Flow({
-      a: spy,
+      a: function () {
+        this.status().targets.should.have.lengthOf(0);
+        this.go('//b/');
+        this.status().targets.should.have.lengthOf(1);
+        spy();
+      },
       b: {}
     });
     flow.go('//a');
@@ -66,12 +69,13 @@ describe( 'Flow#go()', function () {
   it( 'should cancel delayed callbacks via `.wait()`', function () {
     var
       fncSpy = sinon.spy(),
-      delaySpy = sinon.spy(function () {
-        this.wait(fncSpy, 0);
-      })
+      delaySpy = sinon.spy()
     ;
     flow = new Flow({
-      delay: delaySpy
+      delay: function () {
+        this.wait(fncSpy, 0);
+        delaySpy();
+      }
     });
 
     flow.go('//delay');

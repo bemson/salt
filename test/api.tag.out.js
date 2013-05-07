@@ -47,17 +47,16 @@ describe( '_out tag', function () {
   });
 
   it( 'should cause an infinite sequence when a query points inside the state', function () {
-    var
-      spy = sinon.spy(function () {
-        if (this.status().loops > 100) {
-          this.target('stop');
-        }
-      })
-    ;
+    var spy = sinon.spy();
     flow = new Flow({
       _out: '//a/',
       a: {
-        _on: spy,
+        _on: function () {
+          if (this.status().loops > 100) {
+            this.target('stop');
+          }
+          spy();
+        },
         stop: {}
       }
     });

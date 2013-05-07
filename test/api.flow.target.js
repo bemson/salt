@@ -17,13 +17,14 @@ describe( 'Flow#target()', function () {
     var
       arg1 = {},
       arg2 = {},
-      inSpy = sinon.spy(function () {
-        this.args().should.eql([arg1, arg2]);
-      }),
+      inSpy = sinon.spy(),
       onSpy = sinon.spy()
     ;
     flow = new Flow({
-      _in: inSpy,
+      _in: function () {
+        this.args().should.eql([arg1, arg2]);
+        inSpy();
+      },
       _on: onSpy
     });
     flow.target(1, arg1, arg2);
@@ -32,13 +33,14 @@ describe( 'Flow#target()', function () {
   });
 
   it( 'should define a new destination state', function () {
-    var inSpy = sinon.spy(function () {
-      var originalDestination = this.status().targets.slice(-1)[0];
-      this.target('@self');
-      this.status().targets.slice(-1)[0].should.not.equal(originalDestination);
-    });
+    var inSpy = sinon.spy();
     flow = new Flow({
-      _in: inSpy,
+      _in: function () {
+        var originalDestination = this.status().targets.slice(-1)[0];
+        this.target('@self');
+        this.status().targets.slice(-1)[0].should.not.equal(originalDestination);
+        inSpy();
+      },
       a: {},
       b: {}
     });
@@ -48,13 +50,14 @@ describe( 'Flow#target()', function () {
   });
 
   it( 'should clear all waypoints', function () {
-    var inSpy = sinon.spy(function () {
-      this.status().targets.should.have.length.above(1);
-      this.target('@self');
-      this.status().targets.should.have.lengthOf(1);
-    });
+    var inSpy = sinon.spy();
     flow = new Flow({
-      _in: inSpy,
+      _in: function () {
+        this.status().targets.should.have.length.above(1);
+        this.target('@self');
+        this.status().targets.should.have.lengthOf(1);
+        inSpy();
+      },
       a: {},
       b: {},
       c: {}
@@ -124,16 +127,18 @@ describe( 'Flow#target()', function () {
 
   it( 'should return false if the navigation sequence is paused/delayed', function () {
     var
-      pauseSpy = sinon.spy(function () {
-        this.wait();
-      }),
-      delaySpy = sinon.spy(function () {
-        this.wait(0);
-      })
+      pauseSpy = sinon.spy(),
+      delaySpy = sinon.spy()
     ;
     flow = new Flow({
-      pause: pauseSpy,
-      delay: delaySpy
+      pause: function () {
+        this.wait();
+        pauseSpy();
+      },
+      delay: function () {
+        this.wait(0);
+        delaySpy();
+      }
     });
 
     flow.target('//pause').should.equal(false);

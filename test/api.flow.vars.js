@@ -24,10 +24,11 @@ describe( 'Flow#vars', function () {
   });
 
   it( 'should be an object', function () {
-    var spy = sinon.spy(function () {
+    var spy = sinon.spy();
+    flow = new Flow(function () {
       this.vars.should.be.an('object');
+      spy();
     });
-    flow = new Flow(spy);
     flow.go(1);
     spy.should.have.been.calledOnce;
   });
@@ -112,13 +113,14 @@ describe( 'Flow#vars', function () {
   it( 'should preserve pre-existing `.vars`', function () {
     var
       externalValue = {},
-      spy = sinon.spy(function () {
-        this.vars.should.be.empty;
-        this.vars.should.be.an('object');
-        this.vars.should.not.equal(externalValue);
-      })
+      spy = sinon.spy()
     ;
-    flow = new Flow(spy);
+    flow = new Flow(function () {
+      this.vars.should.be.empty;
+      this.vars.should.be.an('object');
+      this.vars.should.not.equal(externalValue);
+      spy();
+    });
     flow.vars = externalValue;
     flow.go(1);
     spy.should.have.been.calledOnce;

@@ -101,18 +101,18 @@ describe( '_bover tag', function () {
   });
 
   it( 'should cause an infinite sequence when a query points to an older/descendent state', function () {
-    var spy = sinon.spy(function () {
-        if (this.status().loops > 100) {
-          this.target('//b/');
-        }
-      })
-    ;
+    var spy = sinon.spy();
     flow = new Flow({
       a: {
         _bover: '//c/'
       },
       b: {},
-      c: spy
+      c: function () {
+        if (this.status().loops > 100) {
+          this.target('//b/');
+        }
+        spy();
+      }
     });
     flow.go('//b/', 0);
     spy.callCount.should.equal(102);
