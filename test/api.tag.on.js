@@ -50,6 +50,7 @@ describe( '_on tag', function () {
     });
     flow.go('//');
     spyTraverse.should.have.been.calledTwice;
+    Flow.pkg('core').onTraverse.restore();
   });
 
 });

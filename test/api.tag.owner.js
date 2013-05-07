@@ -150,9 +150,6 @@ describe( '_owner tag', function () {
   });
 
   it( 'should apply a query with `.target()`, passing the owned flow and it\'s then status, as arguments', function () {
-    var
-      targetSpy = sinon.spy(Flow.pkg('core').proxy, 'target')
-    ;
     owner = new Flow({
       _on: function () {
         owned = new Flow({
@@ -161,9 +158,11 @@ describe( '_owner tag', function () {
         owned.owner().should.equal(this);
       }
     });
+    var targetSpy = sinon.spy(owner, 'target');
     owner.go(1).should.be.ok;
     owned.go(1).should.be.ok;
     targetSpy.should.have.been.called;
+    owner.target.restore();
   });
 
 });

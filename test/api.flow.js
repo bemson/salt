@@ -52,6 +52,7 @@ describe( 'Flow', function () {
 
     new Flow('anything', nonObjArg);
     coreInitSpy.should.not.have.been.calledWith(nonObjArg);
+    Flow.pkg('core').init.restore();
   });
 
   describe( '::pkg()', function () {

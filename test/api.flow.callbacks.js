@@ -19,6 +19,7 @@ describe( 'Flow#callbacks()', function () {
     callback.should.be.a('function');
     callback();
     spyTarget.should.have.been.calledOnce;
+    flow.target.restore();
   });
 
   it( 'should navigate to the given "query"', function () {
@@ -42,6 +43,7 @@ describe( 'Flow#callbacks()', function () {
     ;
     callback();
     spyGo.should.have.been.calledOnce;
+    flow.go.restore();
   });
 
   it( 'should ignore permissions when the "blessed" flag is truthy', function () {
@@ -63,6 +65,7 @@ describe( 'Flow#callbacks()', function () {
     callback();
     flow.state.index.should.equal(0);
     spyTarget.should.have.been.calledOnce;
+    flow.target.restore();
   });
 
   it( 'should ignore the "blessed" flag if used outside the Flow program', function () {
@@ -81,6 +84,7 @@ describe( 'Flow#callbacks()', function () {
     callback();
     flow.state.index.should.not.equal(0);
     spyTarget.should.have.been.calledOnce;
+    flow.target.restore();
   });
 
 
