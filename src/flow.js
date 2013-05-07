@@ -1094,9 +1094,7 @@
           if (deny) {
             option = option.substr(1);
           }
-          if (perms.hasOwnProperty(option)) {
-            perms[option] = !deny;
-          }
+          perms[option] = !deny;
         } else if (typeofOption === 'boolean') {
           for (key in perms) {
             if (perms.hasOwnProperty(key)) {
