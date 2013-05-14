@@ -33,6 +33,24 @@ describe( '_import tag', function () {
     flow.query('//a/b/c/').should.be.ok;
   });
 
+  it( 'should assume an imported function as the _on callback', function () {
+    var
+      inSpy = sinon.spy(),
+      onSpy = sinon.spy()
+    ;
+    flow = new Flow({
+      a: {
+        _import: '//x/',
+        _in: inSpy
+      },
+      x: onSpy
+    });
+    flow.query('//a/').should.be.ok;
+    flow.go('//a/');
+    inSpy.should.have.been.calledOnce;
+    onSpy.should.have.been.calledOnce;
+  });
+
   it( 'should support same-state imports', function () {
     flow = new Flow({
       a: {
@@ -99,7 +117,6 @@ describe( '_import tag', function () {
     });
     flow.query('//c/c/d/').should.be.ok;
   });
-
 
   it( 'should prepend imported states', function () {
     var

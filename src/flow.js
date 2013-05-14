@@ -1200,7 +1200,7 @@
         };
       } else if (typeofState === 'function') {
         return {
-          _on: baseState
+          _on: state
         };
       } else if (typeofState === 'object') {
         return state;
