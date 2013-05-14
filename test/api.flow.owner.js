@@ -72,7 +72,26 @@ describe( 'Flow#owner()', function () {
   });
 
   it( 'should deny external or non-owning flows to change the owner', function () {
+    var
+      spy = sinon.spy(),
+      sub,
+      flow = new Flow(function () {
+        var that = this;
+        that.owner(ownerInst);
+        sub = new Flow(function () {
+          that.owner(unownedInst).should.equal(false);
+          spy();
+        });
+        that.subs(sub).should.equal(1);
+        that.subs().should.contain(sub);
+        sub.go(1);
+      })
+    ;
     ownedInst.owner(unownedInst).should.equal(false);
+    flow.go(1);
+    flow.subs().should.equal(1);
+    sub.go(1);
+    spy.should.have.been.calledTwice;
   });
 
 });

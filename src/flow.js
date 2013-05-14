@@ -27,7 +27,7 @@
           return obj instanceof Array;
         },
       tokenPrefix = '@',
-      defaultPermissions = {world: true, owner: true},
+      defaultPermissions = {world: true, owner: true, sub: true},
       // regexps
       r_queryIsTokenized = new RegExp('[\\.\\|' + tokenPrefix + ']'),
       r_validAbsolutePath = /^\/\/(?:\w+\/)+/,
@@ -1688,23 +1688,29 @@
       is: function () {
         var
           pkg = this,
+          activeFlow = activeFlows[0],
           argumentIdx = arguments.length
         ;
         // short-circuit permissions when caller is SELF
         while (argumentIdx--) {
           switch (arguments[argumentIdx]) {
             case 'self':
-              if (pkg.blessed || pkg === activeFlows[0]) {
+              if (pkg.blessed || pkg === activeFlow) {
                 return 1;
               }
             break;
             case 'owner':
-              if (pkg.perms[0].owner && pkg.owner === activeFlows[0]) {
+              if (pkg.perms[0].owner && pkg.owner === activeFlow) {
+                return 1;
+              }
+            break;
+            case 'sub':
+              if (activeFlow && pkg.bin.hasOwnProperty(activeFlow.tank.id)) {
                 return 1;
               }
             break;
             case 'world':
-              if (pkg.perms[0].world && !pkg.is('owner', 'self')) {
+              if (pkg.perms[0].world && !pkg.is('sub', 'owner', 'self')) {
                 return 1;
               }
             break;
@@ -2008,7 +2014,7 @@
       ;
 
       // return true if this node is within it's restrictions (if any), or when we're within, targeting, or on the target's ingress node (if any)
-      return pkg.is('self', 'owner') ||
+      return pkg.is('sub', 'owner', 'self') ||
         (
           (
             // check if the target is within the restricting node - if any
@@ -2119,7 +2125,7 @@
 
       if (argumentsLength) {
         // if allowed to change permissions...
-        if (pkg.is('owner', 'self')) {
+        if (pkg.is('sub', 'owner', 'self')) {
           if (argumentsLength > 1) {
             options = protoSlice.call(arguments);
           }
@@ -2142,7 +2148,7 @@
         isInt = typeof idx === 'number' && ~~idx === idx
       ;
 
-      if (pkg.is('world', 'owner', 'self')) {
+      if (pkg.is('world', 'sub', 'owner', 'self')) {
         // return cparray of arguments
         if (argCnt === 0) {
           return [].concat(pkgArgs);
@@ -2175,7 +2181,7 @@
        // alias this package
         pkg = corePkgDef(this),
         // resolve a node index from qry, or nothing if allowed or unlocked
-        tgtIdx = (pkg.is('world', 'owner', 'self')) ? pkg.vetIndexOf(qry) : -1;
+        tgtIdx = (pkg.is('world', 'sub', 'owner', 'self')) ? pkg.vetIndexOf(qry) : -1;
 
       // if the destination node is valid, and the flow can move...
       if (~tgtIdx) {
@@ -2230,7 +2236,7 @@
       // if...
       if (
         // allowed or unlocked and ...
-        pkg.is('world', 'owner', 'self') &&
+        pkg.is('world', 'sub', 'owner', 'self') &&
         // any and all node references are valid...
         protoSlice.call(arguments).every(function (nodeRef) {
           var
@@ -2283,7 +2289,7 @@
         time = args[noAction ? 0 : 1]
       ;
       // if allowed and the the argument's are valid...
-      if (pkg.is('owner', 'self') && (!argLn || (time >= 0 && typeof time === 'number' && (noAction || ~delayNodeIdx || isFnc)))) {
+      if (pkg.is('sub', 'owner', 'self') && (!argLn || (time >= 0 && typeof time === 'number' && (noAction || ~delayNodeIdx || isFnc)))) {
         // flag that we've paused this flow
         pkg.pause = 1;
         // stop the tank
@@ -2365,7 +2371,7 @@
         pkg = corePkgDef(this),
         args = protoSlice.call(arguments),
         argLn = args.length,
-        allowed = pkg.is('owner','self'),
+        allowed = pkg.is('sub', 'owner','self'),
         tin = pkg.tin,
         bin = pkg.bin,
         criteria,

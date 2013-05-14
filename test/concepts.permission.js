@@ -31,9 +31,9 @@ describe( 'Permission', function () {
     flow.state.index.should.equal(0);
   });
 
-  it( 'should allow "owner" and "world" by default', function () {
+  it( 'should allow "owner", "sub", and "world" by default', function () {
     flow = new Flow();
-    flow.perms().should.eql({owner:true, world: true});
+    flow.perms().should.eql({owner:true, world: true, sub: true});
   });
 
   describe ( 'format', function () {
@@ -122,9 +122,9 @@ describe( 'Permission', function () {
         flow = new Flow({
           _perms: false,
           _on: function () {
-            this.perms().should.eql({world:false, owner: false});
+            this.perms().should.eql({world:false, owner: false, sub: false});
             this.perms(true);
-            this.perms().should.eql({world:true, owner: true});
+            this.perms().should.eql({world:true, owner: true, sub: true});
             spy();
           }
         });
@@ -137,9 +137,9 @@ describe( 'Permission', function () {
         flow = new Flow({
           _perms: true,
           _on: function () {
-            this.perms().should.eql({world:true, owner: true});
+            this.perms().should.eql({world:true, owner: true, sub: true});
             this.perms(false);
-            this.perms().should.eql({world:false, owner: false});
+            this.perms().should.eql({world:false, owner: false, sub: false});
             spy();
           }
         });
