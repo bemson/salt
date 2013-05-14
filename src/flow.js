@@ -2360,7 +2360,7 @@
       }
     };
 
-    corePkgDef.proxy.subs = function () {
+    corePkgDef.proxy.subs = function (rawCriteria) {
       var
         pkg = corePkgDef(this),
         args = protoSlice.call(arguments),
@@ -2376,7 +2376,7 @@
 
       // remove sub-instances
 
-      if (argLn > 1 && args[0] === 'remove') {
+      if (argLn > 1 && rawCriteria === 'remove') {
         if (!allowed) {
           // deny unauthorized removal attempts
           return 0;
@@ -2395,8 +2395,13 @@
           // remove these sub-instances from the bin and tin
           return subs_removeInsts(bin, args) + subs_removeInsts(tin, args);
         } else if (argLn > 1) {
-          // sanitize criteria
-          criteria = subs_sanitizeCriteria(args[0]);
+          if (argLn === 2 && args[0] === null && pkg.caps[0]) {
+            // use branch criteria
+            criteria = pkg.caps[0];
+          } else {
+            // sanitize criteria
+            criteria = subs_sanitizeCriteria(args[0]);
+          }
           // remove from the targeted collections
           if (!~criteria.buffer) {
             return subs_removeInsts(tin, subs_getInsts(tin, criteria)) + subs_removeInsts(bin, subs_getInsts(bin, criteria));
@@ -2411,7 +2416,7 @@
 
       // add sub-instances
 
-      if (isFlow(args[0])) {
+      if (isFlow(rawCriteria)) {
         if (!allowed) {
           // deny unauthorized additions
           return 0;
@@ -2431,9 +2436,12 @@
 
       // retrieve sub-instances
 
-      if (argLn) {
+      if (rawCriteria === null && pkg.caps[0]) {
+        // use branch criteria
+        criteria = pkg.caps[0];
+      } else if (argLn) {
         // retrieve subs with the given criteria
-        criteria = subs_sanitizeCriteria(args[0]);
+        criteria = subs_sanitizeCriteria(rawCriteria);
       } else {
         // retrieve all sub-instances using precompiled default
         criteria = criteriaCache.ctrue;

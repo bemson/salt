@@ -19,6 +19,27 @@ describe( 'Flow#subs()', function () {
     spy.should.have.been.calledOnce;
   });
 
+  it( 'should filter sub-instances by the branch criteria when passed `null`', function () {
+    var
+      fooProgram = {},
+      barProgram = {},
+      spy = sinon.spy()
+    ;
+    flow = new Flow({
+      _capture: {is:fooProgram},
+      _on: function () {
+        new Flow(fooProgram);
+        new Flow(barProgram);
+        this.subs().should.have.lengthOf(2);
+        this.subs(null).should.have.lengthOf(1);
+        this.subs(null)[0].should.eql(this.subs({is:fooProgram})[0]);
+        spy();
+      }
+    });
+    flow.go(1);
+    spy.should.have.been.calledOnce;
+  });
+
   it( 'should filter sub-instances by the given criteria', function () {
     var
       fooProgram = {},
@@ -163,6 +184,30 @@ describe( 'Flow#subs()', function () {
       this.subs('remove', {on:1}).should.equal(1);
       this.subs().should.have.lengthOf(1);
       spy();
+    });
+    flow.go(1);
+    spy.should.have.been.calledOnce;
+  });
+
+  it( 'should remove sub-instances matching branch criteria when passed `null`', function () {
+    var
+      fooProgram = {},
+      spy = sinon.spy()
+    ;
+    flow = new Flow({
+      _capture: {is:fooProgram},
+      _in: function () {
+        new Flow();
+        new Flow();
+        new Flow(fooProgram);
+        this.subs().should.have.lengthOf(3);
+        this.subs('remove', null).should.equal(1);
+        this.subs().should.have.lengthOf(2);
+      },
+      _on: function () {
+        this.subs().should.have.lengthOf(0);
+        spy();
+      }
     });
     flow.go(1);
     spy.should.have.been.calledOnce;
