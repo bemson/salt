@@ -29,27 +29,23 @@ describe( 'Flow#state', function () {
     state.should.be.an('object');
   });
 
-  it( 'should have a "name" member', function () {
+  it( 'should have a string "name" member', function () {
     state.should.haveOwnProperty('name');
   });
 
-  it( 'should have an "index" member', function () {
+  it( 'should have a numeric "index" member', function () {
     state.should.haveOwnProperty('index');
   });
 
-  it( 'should have a "depth" member', function () {
+  it( 'should have a numeric "depth" member', function () {
     state.should.haveOwnProperty('depth');
   });
 
-  it( 'should have an "path" member', function () {
+  it( 'should have a string "path" member', function () {
     state.should.haveOwnProperty('path');
   });
 
-  it( 'should have an "phase" member', function () {
-    state.should.haveOwnProperty('phase');
-  });
-
-  it( 'should have an "pendable" member', function () {
+  it( 'should have a boolean "pendable" member', function () {
     state.should.haveOwnProperty('pendable');
   });
 
@@ -59,7 +55,6 @@ describe( 'Flow#state', function () {
     expect(state.index).to.equal(0);
     expect(state.depth).to.equal(0);
     expect(state.path).to.equal('..//');
-    expect(state.phase).to.equal('_on');
     expect(state.pendable).to.equal(true);
   });
 
@@ -69,7 +64,6 @@ describe( 'Flow#state', function () {
     state.index.should.equal(2);
     state.depth.should.equal(2);
     state.path.should.equal('//a/');
-    state.phase.should.equal('_on');
     state.pendable.should.equal(true);
 
     flow.go('//c/');
@@ -77,7 +71,6 @@ describe( 'Flow#state', function () {
     state.index.should.equal(4);
     state.depth.should.equal(2);
     state.path.should.equal('//c/');
-    state.phase.should.equal('_in');
     state.pendable.should.equal(false);
   });
 

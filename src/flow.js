@@ -1339,7 +1339,6 @@
           path: '..//',
           depth: 0,
           index: 0,
-          phase: traversalCallbackOrder[0],
           pendable: true
         },
         nodes = pkg.nodes,
@@ -1799,7 +1798,6 @@
       state.depth = currentNode.depth;
       state.path = currentNode.path;
       state.pendable = currentNode.pendable;
-      state.phase = -1;
 
     };
 
@@ -1840,7 +1838,7 @@
         parentNode = pkg.nodes[node.parentIndex]
       ;
 
-      pkg.proxy.state.phase = traversalCallbackOrder[pkg.phase = phase];
+      pkg.phase = phase;
 
       // capture when this node was a tank target
       if (!~tank.targetIndex) {
@@ -2498,6 +2496,10 @@
 
       if (all || metric === 'paused') {
         obj.paused = !!pkg.pause;
+      }
+
+      if (all || metric === 'phase') {
+        obj.phase = pkg.active ? traversalCallbackOrder[pkg.phase].substr(1) : '';
       }
 
       if (all || metric === 'pending') {

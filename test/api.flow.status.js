@@ -50,6 +50,38 @@ describe( 'Flow#status()', function () {
     spy.should.have.been.calledOnce;
   });
 
+  it( 'should indicate the current traversal phase', function () {
+    var spy = sinon.spy();
+    flow = new Flow({
+      _in: function () {
+        this.status('phase').should.equal('in');
+      },
+      _on: function () {
+        this.status('phase').should.equal('on');
+      },
+      _out: function () {
+        this.status('phase').should.equal('out');
+        spy();
+      },
+      middle: {
+        _over: function () {
+          this.status('phase').should.equal('over');
+        },
+        _bover: function () {
+          this.status('phase').should.equal('bover');
+        }
+      },
+      end: {}
+    });
+    flow.go(1,'//end',0);
+    spy.should.have.been.calledOnce;
+  });
+
+  it( 'should have an empty phase when idle', function () {
+    flow = new Flow();
+    flow.status('phase').should.equal('');
+  });
+
   it( 'should indicate when the Flow is active/idle', function () {
     var spy = sinon.spy();
     flow = new Flow(function () {
@@ -130,7 +162,5 @@ describe( 'Flow#status()', function () {
     expect(flow.status('foo')).to.equal(undefined);
     expect(flow.status(null)).to.equal(undefined);
   });
-
-
 
 });
