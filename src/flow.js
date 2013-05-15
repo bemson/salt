@@ -2188,7 +2188,7 @@
         // reset targets array
         pkg.targets = [tgtIdx];
         // navigate towards the targets (unpauses the flow)
-        pkg.go(1);
+        pkg.go();
       } else { // otherwise, when the target node is invalid...
         // return false
         return false;
@@ -2318,7 +2318,7 @@
                   pkg.waitArgs = callbackArgs;
                 }
                 // traverse towards the current target
-                pkg.go(1);
+                pkg.go();
               }
             },
             ~~time // number of milliseconds to wait (converted to an integer)
