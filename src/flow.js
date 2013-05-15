@@ -1278,7 +1278,7 @@
       ) {
         importedPaths[importPath] = 1;
         if (typeof sourceState === 'string') {
-          resolvedState = baseState;
+          resolvedState = import_mergeStates_convertToObject(baseState);
         } else {
           resolvedState = import_mergeStates(baseState, sourceState);
         }

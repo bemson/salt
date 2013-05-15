@@ -33,22 +33,32 @@ describe( '_import tag', function () {
     flow.query('//a/b/c/').should.be.ok;
   });
 
-  it( 'should assume an imported function as the _on callback', function () {
+  it( 'should assume an imported function is the _on callback', function () {
     var
       inSpy = sinon.spy(),
       onSpy = sinon.spy()
     ;
     flow = new Flow({
       a: {
-        _import: '//x/',
+        _import: '//b/',
         _in: inSpy
       },
-      x: onSpy
+      b: onSpy
     });
-    flow.query('//a/').should.be.ok;
     flow.go('//a/');
     inSpy.should.have.been.calledOnce;
     onSpy.should.have.been.calledOnce;
+    inSpy.should.have.been.calledBefore(onSpy);
+  });
+
+  it( 'should assume an imported (short-form) function is the _on callback', function () {
+    var spy = sinon.spy();
+    flow = new Flow({
+      a: '//b/',
+      b: spy
+    });
+    flow.go('//a');
+    spy.should.have.been.calledOnce;
   });
 
   it( 'should support same-state imports', function () {
