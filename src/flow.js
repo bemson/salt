@@ -2058,9 +2058,9 @@
       }
 
       waypoint = +!!waypoint;
-      bless = +bless && pkg.is('self');
+      bless = +!!bless && pkg.is('self');
 
-      cacheId = '' + waypoint + bless;
+      cacheId = '' + qry + waypoint + bless;
 
       if (pkg.cq.hasOwnProperty(cacheId)) {
         return pkg.cq[cacheId];

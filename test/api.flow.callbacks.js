@@ -87,5 +87,15 @@ describe( 'Flow#callbacks()', function () {
     flow.target.restore();
   });
 
+  it( 'should cache callbacks to the same state', function () {
+    var
+      flow = new Flow(),
+      cb1 = flow.callbacks('//a'),
+      cb2 = flow.callbacks('//a'),
+      cb3 = flow.callbacks('//b')
+    ;
+    cb1.should.equal(cb2);
+    cb3.should.not.equal(cb1);
+  });
 
 });
