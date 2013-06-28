@@ -16,6 +16,34 @@ describe( '_import tag', function () {
     flow.query('//b/c/d/').should.be.ok;
   });
 
+  it( 'should deep clone an object reference', function () {
+    var cPath = {
+      c: {
+        d: {}
+      }
+    };
+    flow = new Flow({
+      b: {
+        _import: cPath
+      }
+    });
+    flow.query('//b/c/d/').should.be.ok;
+  });
+
+  it( 'should deep clone a Flow instance', function () {
+    var cFlow = new Flow({
+      c: {
+        d: {}
+      }
+    });
+    flow = new Flow({
+      b: {
+        _import: cFlow
+      }
+    });
+    flow.query('//b/c/d/').should.be.ok;
+  });
+
   it( 'should support descendent imports', function () {
     flow = new Flow({
       a: {

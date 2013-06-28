@@ -1146,19 +1146,6 @@
       return typeMap;
     }
 
-    function import_extractBasePath (state) {
-      var importPath;
-      if (typeof state === 'string') {
-        importPath = state;
-      } else if (state && state.hasOwnProperty('_import') && typeof state._import === 'string') {
-        importPath = state._import;
-      }
-      if (importPath && r_validAbsolutePath.test(importPath)) {
-        return importPath;
-      }
-      return '';
-    }
-
     // flag when the given state member is a state (otherwise a tag)
     function import_isState ( name, value ) {
       var
@@ -1260,18 +1247,45 @@
       var
         resolvedState,
         baseState,
-        importPath = import_extractBasePath(sourceState)
+        sourceStateType = typeof sourceState,
+        importTagValue,
+        importPath
       ;
 
+      if (sourceStateType === 'string') {
+        importPath = sourceState;
+      } else if (
+        sourceStateType === 'object' &&
+        sourceState.hasOwnProperty('_import')
+      ) {
+        importTagValue = sourceState._import;
+        // determine whether we're importing a path or an (external) object
+        if (typeof importTagValue === 'object') {
+          if (importTagValue instanceof Flow) {
+            importTagValue = corePkgDef(importTagValue).nodes[1].value;
+          }
+          baseState = corePkgDef.prepNode(importTagValue, importTagValue) || importTagValue;
+        } else {
+          importPath = importTagValue;
+        }
+      }
+
+      // verify and resolve new program path
       if (
         importPath &&
         !importedPaths.hasOwnProperty(importPath) &&
-        (baseState = import_getStateByAbsolutePath(importPath, program))
+        r_validAbsolutePath.test(importPath)
       ) {
-        importedPaths[importPath] = 1;
-        if (typeof sourceState === 'string') {
+        baseState = import_getStateByAbsolutePath(importPath, program);
+      }
+
+      // merge resolved state
+      if (baseState) {
+        if (sourceStateType === 'string') {
+          // use base state directly
           resolvedState = import_mergeStates_convertToObject(baseState);
-        } else {
+        } else if (sourceStateType === 'object') {
+          // merge base state with this state
           resolvedState = import_mergeStates(baseState, sourceState);
         }
       }
