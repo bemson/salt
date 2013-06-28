@@ -8,10 +8,11 @@
  * Copyright, Bemi Faison
  * Released under the MIT License
  */
+/* global define, require, module */
 !function (inAMD, inCJS, Array, Math, Object, RegExp, scope, undefined) {
 
   // dependent module initializer
-  function initFlow(require, exports, module) {
+  function initFlow(require) {
 
     var
       Flow = ((inCJS || inAMD) ? require('Panzer') : scope.Panzer).create(),
@@ -128,7 +129,7 @@
           }
         },
         // Specify cascading permissions when a state is entered and exited
-        _perms: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        _perms: function (tagName, exists, tags, node, parentNode, pkg) {
           var perms;
           if (exists) {
             perms = perms_parse(tags[tagName], parentNode.lp);
@@ -144,7 +145,7 @@
           }
         },
         // Defines the path to update an owning flow - if any.
-        _owner: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        _owner: function (tagName, exists, tags, node, parentNode, pkg) {
           node.oGate = 0;
 
           if (exists) {
@@ -171,7 +172,7 @@
           }
         },
         // Define criteria for preserving instances created while traversing this branch.
-        _capture: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        _capture: function (tagName, exists, tags, node, parentNode, pkg) {
           if (exists) {
             node.caps = subs_sanitizeCriteria(tags._capture);
           } else if (parentNode) {
@@ -187,7 +188,7 @@
         // _data: ['foo']
         // _data: {foo: 'bar'}
         // _data: ['foo', {zoo:'baz'}]
-        _data: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        _data: function (tagName, exists, tags, node) {
           var
             cfgs = {},
             key
@@ -229,7 +230,7 @@
           }
         },
         // Specifies a branch to navigate after targeting this state.
-        _sequence: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        _sequence: function (tagName, exists, tags, node, parentNode) {
           if (exists) {
             // set walk to a new or copied array, based on the booly value
             node.seq = tags[tagName] ? [] : 0;
@@ -252,7 +253,7 @@
           }
         },
         // Specifies when a paused state will prevent parent flow's from completing their navigation.
-        _pendable: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        _pendable: function (tagName, exists, tags, node, parentNode) {
           if (exists) {
             node.pendable = !!tags._pendable;
           } else if (parentNode) {
@@ -264,7 +265,7 @@
         /*
           Defines one of five callback methods to invoke.
         */
-        _on: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        _on: function (tagName, exists, tags, node) {
           var
             tagValue = tags[tagName]
           ;
@@ -273,11 +274,10 @@
           }
         },
         // Specifies where to direct the flow at the end of a sequence for a given branch
-        _tail: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        _tail: function (tagName, exists, tags, node, parentNode, pkg) {
           var
             tagValue,
-            tailData,
-            tailNode
+            tailData
           ;
           if (exists) {
             tagValue = tags._tail;
@@ -320,7 +320,7 @@
           delete node.lastWalk;
         },
         // Specifies where to direct the flow at the end of a sequence for a given branch
-        _tail: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        _tail: function (tagName, exists, tags, node, parentNode, pkg) {
           var
             tailData = node.tail,
             tailNode
@@ -575,7 +575,6 @@
         criteriaOptions,
         criteriaOptionIdx,
         criteriaOptionsLength,
-        passed = 1,
         subSet,
         subSetId,
         matches = []
@@ -989,13 +988,13 @@
     // criteria "from" filter functions
 
     // returns subSet capture path
-    function subs_filter_from_path(subSet, params) {
+    function subs_filter_from_path(subSet) {
       return subSet.cap.path;
     }
 
     // returns subSet capture path as an array of states
     // returns an empty array when the path is the null or program state
-    function subs_filter_from_pathParts(subSet, params) {
+    function subs_filter_from_pathParts(subSet) {
       var captureNode = subSet.cap;
       if (captureNode.index > 1) {
         return captureNode.path.slice(2, -1).split('/');
@@ -1004,12 +1003,12 @@
     }
 
     // returns index that sub-instance was capture
-    function subs_filter_from_index(subSet, params) {
+    function subs_filter_from_index(subSet) {
       return subSet.cap.index;
     }
 
     // returns path of current state's parent
-    function subs_filter_within_path(subSet, params) {
+    function subs_filter_within_path(subSet) {
       var
         subInst = subSet.inst,
         currentNode = subInst.nodes[subInst.tank.currentIndex]
@@ -1021,7 +1020,7 @@
     }
 
     // returns path parts of current state's parent path
-    function subs_filter_within_pathParts(subSet, params) {
+    function subs_filter_within_pathParts(subSet) {
       var
         subInst = subSet.inst,
         currentNode = subInst.nodes[subInst.tank.currentIndex]
@@ -1043,13 +1042,6 @@
       if (targetNode) {
         return currentNode.within(targetNode);
       }
-    }
-
-
-
-    // returns true when the argument is a valid data name
-    function isDataDefinitionNameValid(name) {
-      return typeof name === 'string' && r_hasAlphanumericCharacter.test(name);
     }
 
     // shallow object merge
@@ -1315,12 +1307,11 @@
     corePkgDef.prepNode = function ( state, program ) {
       var
         finalState,
-        tmpState = state,
-        importedPaths = {}
+        tmpState = state
       ;
       // resolve all top-level imports for this state - avoid shallow-recursion
       // this is similar to sub-classing
-      while (tmpState = import_resolveBase(tmpState, program, importedPaths)) {
+      while (tmpState = import_resolveBase(tmpState, program, {})) {
         finalState = tmpState;
       }
 
@@ -1329,7 +1320,7 @@
 
     // initialize the package instance with custom properties
     // only argument is the object passed after the program when calling "new Flow(program, extraArg)"
-    corePkgDef.init = function (cfg) {
+    corePkgDef.init = function () {
       var
         pkg = this,
         activeFlow = activeFlows[0],
@@ -1486,12 +1477,10 @@
       indexOf: function (qry, node) {
         var
           pkg = this,
-          tank = pkg.tank,
           nodes = pkg.nodes,
           nids = pkg.nids,
           qryNode,
           simpleQuery,
-          tokens,
           token,
           qryCacheId,
           slashSegments,
@@ -1768,7 +1757,7 @@
     };
 
     // do something when the tank starts moving
-    corePkgDef.onBegin = function (evtName) {
+    corePkgDef.onBegin = function () {
       var
         pkg = this
       ;
@@ -1785,7 +1774,7 @@
       }
     };
 
-    corePkgDef.onNode = function (evtName, currentNodeIndex, lastNodeIndex) {
+    corePkgDef.onNode = function (evtName, currentNodeIndex) {
       var
         pkg = this,
         state = pkg.proxy.state,
@@ -1834,8 +1823,7 @@
       var
         pkg = this,
         tank = pkg.tank,
-        node = pkg.nodes[tank.currentIndex],
-        parentNode = pkg.nodes[node.parentIndex]
+        node = pkg.nodes[tank.currentIndex]
       ;
 
       pkg.phase = phase;
@@ -1863,7 +1851,7 @@
     };
 
     // execute delayed functions
-    corePkgDef.onTraversing = function (evtName, phase) {
+    corePkgDef.onTraversing = function () {
       var pkg = this;
 
       // execute any delay function
@@ -1877,7 +1865,7 @@
     };
 
     // complete traversing a node facet
-    corePkgDef.onTraversed = function (evtName, phase) {
+    corePkgDef.onTraversed = function () {
       var
         pkg = this,
         proxy = pkg.proxy,
@@ -1909,7 +1897,7 @@
     };
 
     // do something when the tank stops
-    corePkgDef.onEnd = function (evtName) {
+    corePkgDef.onEnd = function () {
       var
         pkg = this,
         tank = pkg.tank,
@@ -2048,7 +2036,6 @@
     corePkgDef.proxy.callbacks = function (qry, waypoint, bless) {
       var
         pkg = corePkgDef(this),
-        nodes = pkg.nodes,
         customCallback,
         cacheId
       ;
@@ -2117,8 +2104,7 @@
     corePkgDef.proxy.perms = function (options) {
       var
         pkg = corePkgDef(this),
-        argumentsLength = arguments.length,
-        perms
+        argumentsLength = arguments.length
       ;
 
       if (argumentsLength) {
@@ -2220,7 +2206,7 @@
       go() - resume traversal
       go(waypoints) - add or insert waypoints
     **/
-    corePkgDef.proxy.go = function (waypoint) {
+    corePkgDef.proxy.go = function () {
       var
         // alias self
         pkg = corePkgDef(this),
@@ -2338,7 +2324,6 @@
       var
         argumentsLength = arguments.length,
         pkg = corePkgDef(this),
-        activeFlow = activeFlows[0],
         readAccess = pkg.is('owner', 'self'),
         writeAccess = readAccess || !pkg.owner
       ;
@@ -2374,8 +2359,7 @@
         bin = pkg.bin,
         criteria,
         results,
-        i,
-        subId
+        i
       ;
 
       // remove sub-instances
@@ -2475,8 +2459,6 @@
       var
         // get the package instance
         pkg = corePkgDef(this),
-        // alias the current node
-        currentNode = pkg.nodes[pkg.tank.currentIndex],
         obj = {},
         all = !arguments.length
       ;
@@ -2528,7 +2510,7 @@
   if (inAMD) {
     define(initFlow);
   } else if (inCJS) {
-    module.exports = initFlow(require, exports, module);
+    module.exports = initFlow(require);
   } else if (!scope.Flow) {
     scope.Flow = initFlow();
   }
