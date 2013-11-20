@@ -169,6 +169,9 @@
               i: idx,
               f: 0
             };
+            node.alias = tags._name;
+          } else {
+            node.alias = '';
           }
         },
         // Define criteria for preserving instances created while traversing this branch.
@@ -369,6 +372,17 @@
             } else {
               node.tail = tailData.t;
             }
+          }
+        },
+        // ensure node alias was not overridden
+        _name: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+          var alias = node.alias;
+          if (idx === 0) {
+            node.alias = 'null';
+          } else if (idx === 1) {
+            node.alias = 'program';
+          } else if (alias && pkg.tokens[alias].i !== idx) {
+            node.alias = '';
           }
         },
         // Process callbacks that are redirects
@@ -1344,7 +1358,8 @@
           path: '..//',
           depth: 0,
           index: 0,
-          pendable: true
+          pendable: true,
+          alias: 'null'
         },
         nodes = pkg.nodes,
         nodeCount = nodes.length,
@@ -1801,6 +1816,7 @@
       state.depth = currentNode.depth;
       state.path = currentNode.path;
       state.pendable = currentNode.pendable;
+      state.alias = currentNode.alias;
 
     };
 

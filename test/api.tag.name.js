@@ -48,4 +48,31 @@ describe( '_name tag', function () {
     flow.query('@program').should.equal('//');
   });
 
+  it( 'should be reflected in the .state.alias property', function () {
+    var alias = 'foo';
+    flow = new Flow({
+      a: {
+        _name: alias
+      }
+    });
+    flow.go('@' + alias);
+    flow.state.alias.should.equal(alias);
+  });
+
+  it( 'should be applied to the last state using a given alias', function () {
+    var alias = 'foo';
+    flow = new Flow({
+      a: {
+        _name: alias
+      },
+      b: {
+        _name: alias
+      }
+    });
+    flow.go('@' + alias);
+    flow.state.name.should.equal('b');
+    flow.go('//a');
+    flow.state.alias.should.be.empty;
+  });
+
 });

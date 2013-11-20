@@ -2,7 +2,8 @@ describe( 'Flow#state', function () {
 
   var
     state,
-    flow
+    flow,
+    stateAlias = 'foo'
   ;
 
   before(function () {
@@ -12,6 +13,7 @@ describe( 'Flow#state', function () {
       },
       c: {
         _pendable: false,
+        _name: stateAlias,
         _in: function () {
           this.wait();
         }
@@ -31,31 +33,51 @@ describe( 'Flow#state', function () {
 
   it( 'should have a string "name" member', function () {
     state.should.haveOwnProperty('name');
+    state.name.should.be.a('string');
+  });
+
+  it( 'should have a string "alias" member', function () {
+    state.should.haveOwnProperty('alias');
+    state.alias.should.be.a('string');
   });
 
   it( 'should have a numeric "index" member', function () {
     state.should.haveOwnProperty('index');
+    state.index.should.be.a('number');
   });
 
   it( 'should have a numeric "depth" member', function () {
     state.should.haveOwnProperty('depth');
+    state.depth.should.be.a('number');
   });
 
   it( 'should have a string "path" member', function () {
     state.should.haveOwnProperty('path');
+    state.path.should.be.a('string');
   });
 
   it( 'should have a boolean "pendable" member', function () {
     state.should.haveOwnProperty('pendable');
+    state.pendable.should.be.a('boolean');
   });
 
+  it( 'should reflect the "null" state by default', function () {
+    state.name.should.equal('_null');
+    state.index.should.equal(0);
+    state.depth.should.equal(0);
+    state.alias.should.equal('null');
+    state.path.should.equal('..//');
+    state.pendable.should.equal(true);
+  });
 
-  it( 'should reflect the null state by default', function () {
-    expect(state.name).to.equal('_null');
-    expect(state.index).to.equal(0);
-    expect(state.depth).to.equal(0);
-    expect(state.path).to.equal('..//');
-    expect(state.pendable).to.equal(true);
+  it( 'should reflect the "program" state as expected', function () {
+    flow.go(1);
+    state.name.should.equal('_program');
+    state.index.should.equal(1);
+    state.depth.should.equal(1);
+    state.alias.should.equal('program');
+    state.path.should.equal('//');
+    state.pendable.should.equal(true);
   });
 
   it( 'should reflect the current state', function () {
@@ -63,6 +85,7 @@ describe( 'Flow#state', function () {
     state.name.should.equal('a');
     state.index.should.equal(2);
     state.depth.should.equal(2);
+    state.alias.should.equal('');
     state.path.should.equal('//a/');
     state.pendable.should.equal(true);
 
@@ -70,6 +93,7 @@ describe( 'Flow#state', function () {
     state.name.should.equal('c');
     state.index.should.equal(4);
     state.depth.should.equal(2);
+    state.alias.should.equal(stateAlias);
     state.path.should.equal('//c/');
     state.pendable.should.equal(false);
   });
