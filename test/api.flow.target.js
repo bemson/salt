@@ -22,7 +22,7 @@ describe( 'Flow#target()', function () {
     ;
     flow = new Flow({
       _in: function () {
-        this.args().should.eql([arg1, arg2]);
+        this.args.should.eql([arg1, arg2]);
         inSpy();
       },
       _on: onSpy

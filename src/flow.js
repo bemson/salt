@@ -1748,8 +1748,8 @@
         }
       },
 
-      // set vars member
-      setVars: function () {
+      // set private members
+      setPrivs: function () {
         var
           pkg = this,
           proxy = pkg.proxy
@@ -1759,12 +1759,19 @@
         if (proxy.hasOwnProperty('vars')) {
           pkg.tvars = proxy.vars;
         }
+
+        // preserve untrusted args member (if any)
+        if (proxy.hasOwnProperty('args')) {
+          pkg.targs = proxy.args;
+        }
         // set "private" vars member
         proxy.vars = pkg.vars;        
+        // set "private" args member
+        proxy.args = pkg.args;
       },
 
       // unset vars member
-      delVars: function () {
+      delPrivs: function () {
         var
           pkg = this,
           proxy = pkg.proxy
@@ -1773,6 +1780,10 @@
         if (proxy.vars !== pkg.vars && typeof proxy.vars === 'object') {
           pkg.vars = proxy.vars;
         }
+        // set and delete args member
+        if (proxy.args !== pkg.args && isArray(proxy.args)) {
+          pkg.args = proxy.args;
+        }
         if (pkg.hasOwnProperty('tvars')) {
           // restore public vars member
           proxy.vars = pkg.tvars;
@@ -1780,6 +1791,14 @@
         } else {
           // remove "private" vars member
           delete proxy.vars;
+        }
+        if (pkg.hasOwnProperty('targs')) {
+          // restore public args member
+          proxy.args = pkg.targs;
+          delete pkg.targs;
+        } else {
+          // remove "private" args member
+          delete proxy.args;
         }
       }
 
@@ -1839,13 +1858,13 @@
     corePkgDef.onEngage = function () {
       var pkg = this;
 
-      pkg.setVars();
+      pkg.setPrivs();
     };
 
     corePkgDef.onRelease = function () {
       var pkg = this;
 
-      pkg.delVars();
+      pkg.delPrivs();
     };
 
     // do something when the tank traverses a node
@@ -1919,6 +1938,10 @@
         if (!pkg.targets.length && ~node.ping) {
           pkg.pingOwner(node.ping);
         }
+      }
+      // use altered args if present
+      if (proxy.args !== pkg.args && isArray(proxy.args)) {
+        pkg.args = proxy.args;
       }
       if (typeof proxy.vars === 'object') {
         pkg.vars = proxy.vars;
@@ -2151,42 +2174,6 @@
       }
       // return copy of current permissions
       return extend({}, pkg.perms[0]);
-    };
-
-    // access and edit the arguments passed to traversal functions
-    corePkgDef.proxy.args = function (idx, value) {
-      var
-        pkg = corePkgDef(this),
-        pkgArgs = pkg.args,
-        argCnt = arguments.length,
-        isInt = typeof idx === 'number' && ~~idx === idx
-      ;
-
-      if (pkg.is('world', 'sub', 'owner', 'self')) {
-        // return cparray of arguments
-        if (argCnt === 0) {
-          return [].concat(pkgArgs);
-        }
-        if (argCnt === 1) {
-          if (isInt) {
-            // return specific argument
-            return pkgArgs[idx];
-          }
-          if (isArray(idx)) {
-            // set new arguments
-            pkg.args = [].concat(idx);
-            return idx;
-          }
-        }
-        if (argCnt === 2 && isInt) {
-          if (idx === pkgArgs.length - 1 && value === undefined) {
-            pkgArgs.pop();
-            return true;
-          }
-          return pkgArgs[idx] = value;
-        }
-      }
-      return false;
     };
 
     // add method to program api

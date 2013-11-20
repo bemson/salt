@@ -1,101 +1,82 @@
-describe( 'Flow#args()', function () {
+describe( 'Flow#args', function () {
 
   var flow;
 
-  it( 'should return a unique array of sequence arguments when called with no arguments', function () {
+  it( 'should be an array', function () {
     flow = new Flow(function (x, y) {
-      this.args()
+      this.args
         .should.be.an.instanceOf(Array)
         .and.have.lengthOf(2)
-        .and.contain(x, y)
-        .and.eql(this.args())
-        .and.not.equal(this.args());
+        .and.contain(x, y);
     });
     flow.target(1, 'foo', 'bar');
   });
 
-  it( 'should return the argument at the given index', function () {
+  it( 'should be a navigation only member', function () {
+    flow = new Flow(function () {
+      this.should.haveOwnProperty('args');
+    });
+    flow.go(1);
+    flow.should.not.haveOwnProperty('args');
+  });
+
+  it( 'should reflect navigation arguments', function () {
+    var
+      xVal = {},
+      yVal = {}
+    ;
     flow = new Flow(function (x, y) {
-      this.args(1).should.equal(y);
+      this.args.should.have.lengthOf(2);
+      this.args[0].should.equal(xVal);
+      this.args[1].should.equal(yVal);
+      expect(x).to.equal(xVal);
+      expect(y).to.equal(yVal);
     });
-    flow.target(1, 'foo', 'bar');
+    flow.target(1, xVal, yVal);
   });
 
-  it( 'should set the argument at the given index and return the given value', function () {
-    var val = 'pop';
+  it( 'should be the same array betwen states and state-phases', function () {
+    var argRef;
     flow = new Flow({
       _in: function () {
-        this.args(1, val).should.equal(val);
+        argRef = this.args;
       },
-      _on: function (x, y) {
-        this.args(1)
-          .should.equal(val)
-          .and.equal(y);
+      a: function (x, y) {
+        this.args.should.equal(argRef);
       }
     });
-    flow.target(1, 'foo', 'bar');
+    flow.go('//a');
+    flow.should.not.haveOwnProperty('args');
   });
 
-  it( 'should set all sequence arguments and return the given array', function () {
-    var replacementArgs = ['zee', 'bop', 'ping'];
-    flow = new Flow({
-      _in: function () {
-        this.args().should.have.lengthOf(2);
-        this.args(replacementArgs).should.equal(replacementArgs);
-        this.args().should.not.equal(replacementArgs);
-      },
-      _on: function (x, y, z) {
-        this.args()
-          .should.include(x, y, z)
-          .and.eql(replacementArgs);
-      }
+  it( 'should preserve and restore an existing .args property, when active to idle', function () {
+    var
+      priv = {}
+    ;
+    flow = new Flow(function () {
+      this.args.should.not.equal(priv);
     });
-    flow.target(1, 'foo', 'bar');
+    flow.args = priv;
+    flow.go(1);
+    expect(flow.args).to.equal(priv);
   });
 
-  it( 'should remove the last sequence argument when given it\'s index and `undefined`', function () {
+  it( 'should accept entirely new arrays', function () {
+    var
+      badArg = {},
+      goodArg = {},
+      spy = sinon.spy
+    ;
     flow = new Flow({
       _in: function () {
-        this.args().should.have.lengthOf(2);
-        this.args(1, undefined)
-          .should.equal(true);
-        this.args().should.have.lengthOf(1);
+        this.args = [badArg];
       },
-      _on: function () {
-        [].slice.call(arguments)
-          .should.have.lengthOf(1)
-          .and.include('foo');
+      _on: function (x) {
+        spy();
+        expect(x).to.equal(badArg);
       }
     });
-    flow.target(1, 'foo', 'bar');
-  });
-
-  it( 'should return false when called externally and locked', function () {
-    var val = 'pop';
-    flow = new Flow({
-      _in: function () {
-        this.wait();
-      },
-      _on: function (x, y, z) {
-        expect(z).to.equal(val);
-      },
-      lock: {
-        _perms: false
-      }
-    });
-    flow.target(1, 'foo', 'bar');
-
-    flow.args().should.eql(['foo', 'bar']);
-    flow.args(2, val).should.equal(val);
-    flow.go();
-
-    flow.state.path.should.equal('//');
-    flow.target('//lock', 'chick', 'zebra');
-    flow.perms().world.should.equal(false);
-    flow.args().should.equal(false);
-    flow.args(1).should.equal(false);
-    flow.args(1, 'pop').should.equal(false);
-    flow.args([]).should.equal(false);
+    flow.target(0, badArg);
   });
 
 });
