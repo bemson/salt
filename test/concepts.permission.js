@@ -36,7 +36,7 @@ describe( 'Permission', function () {
     flow.perms().should.eql({owner:true, world: true, sub: true});
   });
 
-  describe ( 'format', function () {
+  describe( 'format', function () {
 
     it( 'should be read as an object via `.perms()`', function () {
       flow = new Flow();
@@ -151,7 +151,7 @@ describe( 'Permission', function () {
 
   });
 
-  describe ( 'setting', function () {
+  describe( 'setting', function () {
 
     it( 'should be done via `_capture` and `.perms()`', function () {
       flow = new Flow({
@@ -181,6 +181,91 @@ describe( 'Permission', function () {
       flow.perms().should.include.key(permName);
       flow.go(0);
       flow.perms().should.not.include.key(permName);
+    });
+
+    it.skip( 'should ignore unknown groups', function () {
+
+    });
+
+  });
+
+  describe( 'group', function () {
+
+    var corePkgDef;
+
+    before(function () {
+      corePkgDef = Flow.pkg('core');
+      corePkgDef.proxy.groupIs = function (group) {
+        return corePkgDef(this).is(group);
+      };
+    });
+
+    after(function () {
+      delete corePkgDef.proxy.groupIs;
+    });
+
+    describe( 'self', function () {
+
+      it( 'should apply when the invoker is the invokee', function () {
+        flow = new Flow(function () {
+          this.groupIs('self').should.be.ok;
+          this.groupIs('owner').should.not.be.ok;
+          this.groupIs('sub').should.not.be.ok;
+          this.groupIs('world').should.not.be.ok;
+        });
+        flow.go(1);
+      });
+
+    });
+
+    describe( 'owner', function () {
+
+      it( 'should apply when the invoker is a flow instance that owns the invokee', function () {
+        flow = new Flow(function () {
+          var owned = new Flow({
+            _owner: -1
+          });
+          owned.groupIs('self').should.not.be.ok;
+          owned.groupIs('owner').should.be.ok;
+          owned.groupIs('sub').should.not.be.ok;
+          owned.groupIs('world').should.not.be.ok;
+        });
+        flow.go(1);
+      });
+
+    });
+
+    describe( 'sub', function () {
+
+      it( 'should apply when the invoker is a flow instance that was captured by the invokee', function () {
+        flow = new Flow({
+          _capture: true,
+          _on: function () {
+            new Flow(function () {
+              flow.groupIs('self').should.not.be.ok;
+              flow.groupIs('owner').should.not.be.ok;
+              flow.groupIs('sub').should.be.ok;
+              flow.groupIs('world').should.not.be.ok;
+            });
+            this.subs()[0].go(1);
+          }
+        });
+        flow.go(1);
+      });
+
+    });
+
+    describe( 'world', function () {
+
+      it( 'should apply when the invoker is not a flow instance', function () {
+        flow = new Flow();
+        flow.groupIs('self').should.not.be.ok;
+        flow.groupIs('owner').should.not.be.ok;
+        flow.groupIs('sub').should.not.be.ok;
+        flow.groupIs('world').should.be.ok;
+      });
+
+
     });
 
   });

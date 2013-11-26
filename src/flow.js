@@ -1705,6 +1705,7 @@
       is: function () {
         var
           pkg = this,
+          activeId,
           activeFlow = activeFlows[0],
           argumentIdx = arguments.length
         ;
@@ -1722,7 +1723,7 @@
               }
             break;
             case 'sub':
-              if (activeFlow && pkg.bin.hasOwnProperty(activeFlow.tank.id)) {
+              if (activeFlow && (pkg.bin.hasOwnProperty((activeId = activeFlow.tank.id)) || pkg.tin.hasOwnProperty(activeId))) {
                 return 1;
               }
             break;
