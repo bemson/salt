@@ -107,4 +107,15 @@ describe( 'Flow#wait()', function () {
     spy.should.have.been.calledOnce;
   });
 
+  it( 'should invoke callback with same permissions as caller', function (done) {
+    flow = new Flow({
+      _perms: '!world',
+      _on: function () {
+        this.wait('a', 0);
+      },
+      a: done
+    });
+    flow.go(1);
+  });
+
 });
