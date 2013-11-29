@@ -9,6 +9,19 @@ describe( 'Flow#wait()', function () {
     flow.wait('//', 0, 'foo').should.not.be.ok;
   });
 
+  it( 'should fail when the delay is not a number', function () {
+    flow = new Flow(function () {
+      var f = this;
+      [ 'a', {}, /a/, [] ].forEach(function (nonNumber) {
+        // test with target
+        f.wait(0, nonNumber).should.equal(false);
+        // test without
+        f.wait(nonNumber).should.equal(false);
+      });
+    });
+
+  });
+
   it( 'should pause navigation', function () {
     flow = new Flow({
       _in: function () {
@@ -107,13 +120,17 @@ describe( 'Flow#wait()', function () {
     spy.should.have.been.calledOnce;
   });
 
-  it( 'should invoke callback with same permissions as caller', function (done) {
+  it( 'should invoke callback with permissions of "self"', function (done) {
     flow = new Flow({
       _perms: '!world',
       _on: function () {
-        this.wait('a', 0);
+        this.wait('a', 0).should.be.ok;
       },
-      a: done
+      a: function () {
+        // using internal/package-method "is" (for testing purposes only)
+        Flow.pkg('core')(this).is('self').should.be.ok;
+        done();
+      }
     });
     flow.go(1);
   });

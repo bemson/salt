@@ -2271,67 +2271,65 @@
     // delay traversing
     corePkgDef.proxy.wait = function () {
       var
-        // get package
-        pkg = corePkgDef(this),
-        // alias arguments
+        proxy = this,
+        pkg = corePkgDef(proxy),
         args = arguments,
-        // capture number of arguments passed
         argLn = args.length,
-        // flag when no action will be taken after a delay
+        hasArgs = argLn > 2,
         noAction = argLn < 2,
-        // collect remaining arguments when there is an action
-        callbackArgs = noAction ? [] : protoSlice.call(args, 2),
-        // capture first argument as action to take after the delay, when more than one argument is passed
-        delayFnc = noAction ? 0 : args[0],
-        // flag when the delay is a function
-        isFnc = typeof delayFnc === 'function',
-        // get node referenced by delayFnc (the first argument) - no vet check, since this would be a privileged call
-        delayNodeIdx = pkg.indexOf(delayFnc),
-        // use first or last argument as a time
-        time = args[noAction ? 0 : 1]
+        callback,
+        delayNodeIdx,
+        delay
       ;
-      // if allowed and the the argument's are valid...
-      if (pkg.is('sub', 'owner', 'self') && (!argLn || (time >= 0 && typeof time === 'number' && (noAction || ~delayNodeIdx || isFnc)))) {
-        // flag that we've paused this flow
-        pkg.pause = 1;
-        // stop the tank
-        pkg.tank.stop();
-        // clear any timer
-        clearTimeout(pkg.waitTimer);
-        // set delay to truthy value, callback, or traversal call
-        pkg.waitTimer = argLn ?
-          setTimeout(
-            function () {
-              // if there is a delay action and it's a node index...
-              if (!noAction && ~delayNodeIdx) {
-                // if passing arguments to this target...
-                if (callbackArgs.length) {
-                  // prepend target to arguments
-                  callbackArgs.unshift(delayNodeIdx);
-                  // target this node index and pass arguments
-                  pkg.proxy.target.apply(pkg.proxy, callbackArgs);
-                } else {
-                  // target this node index
-                  pkg.proxy.target(delayNodeIdx);
-                }
-              } else { // otherwise, when there is no delay, or the action is a callback...
-                // if there is a callback function...
-                if (isFnc) {
-                  // set delay callback (fired during subsequent "begin" event)
-                  pkg.waitFnc = delayFnc;
-                  pkg.waitArgs = callbackArgs;
+      if (pkg.is('sub', 'owner', 'self')) {
+        if (argLn) {
+          if (noAction) {
+            delay = args[0];
+          } else {
+            delay = args[1];
+            callback = args[0];
+            // assume action is a query, if not a function
+            if (typeof callback !== 'function') {
+              delayNodeIdx = pkg.indexOf(callback);
+              if (~delayNodeIdx) {
+                callback = function () {
+                  if (hasArgs) {
+                    proxy.target.apply(proxy, [delayNodeIdx].concat(protoSlice.call(args, 2)));
+                  } else {
+                    proxy.target.call(proxy, delayNodeIdx);
+                  }
+                };
+              }
+            }
+          }
+        }
+        // pause when called with no args, a delay, or a delay and action
+        if (!argLn || (typeof delay === 'number' && (noAction || typeof callback === 'function'))) {
+          pkg.pause = 1;
+          pkg.tank.stop();
+          // clear any existing delay
+          clearTimeout(pkg.waitTimer);
+          // set timeout when given a delay
+          if (argLn) {
+            pkg.waitTimer = setTimeout(
+              function () {
+                // set delay callback (fired during subsequent "begin" event)
+                if (typeof callback === 'function') {
+                  pkg.waitFnc = callback;
+                  // only pass for function-actions
+                  pkg.waitArgs = (hasArgs && delayNodeIdx === undefined) ? protoSlice.call(args, 2) : [];
                 }
                 // traverse towards the current target
                 pkg.go();
-              }
-            },
-            ~~time // number of milliseconds to wait (converted to an integer)
-          ) :
-          1; // set to 1 to pause indefinitely
-        // indicate that this flow has been delayed
-        return true;
+              },
+              ~~delay // number of milliseconds to wait (converted to an integer)
+            );
+          }
+          // indicate success with pausing flow
+          return true;
+        }
       }
-      // return whether this function caused a delay
+      // indicate failure to pause flow
       return false;
     };
 
