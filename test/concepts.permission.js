@@ -155,36 +155,31 @@ describe( 'Permission', function () {
 
     it( 'should be done via `_capture` and `.perms()`', function () {
       flow = new Flow({
-        _perms: 'foo',
+        _perms: '!owner',
         _on: function () {
+          this.perms().owner.should.not.be.ok;
           this.perms('!world');
         }
       });
       flow.go(1);
-      flow.perms().should.include.keys('foo', 'world', 'owner');
       flow.perms().world.should.not.be.ok;
     });
 
-    it( 'should expose new groups within the nearest `_perms` ancestor', function () {
-      var permName = 'bar';
+    it( 'should impact nearest `_perms` ancestor branch', function () {
       flow = new Flow({
         _perms: 'world',
         a: function () {
-          this.perms(permName);
+          this.perms('!owner');
         }
       });
       flow.go(1);
-      flow.perms().should.not.include.key(permName);
+      flow.perms().owner.should.be.ok;
       flow.go('//a');
-      flow.perms().should.include.key(permName);
+      flow.perms().owner.should.not.be.ok;
       flow.go(1);
-      flow.perms().should.include.key(permName);
+      flow.perms().owner.should.not.be.ok;
       flow.go(0);
-      flow.perms().should.not.include.key(permName);
-    });
-
-    it.skip( 'should ignore unknown groups', function () {
-
+      flow.perms().owner.should.be.ok;
     });
 
   });
