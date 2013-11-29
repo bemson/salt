@@ -1059,7 +1059,7 @@
     }
 
     // shallow object merge
-    function extend(base) {
+    function mix(base) {
       var
         argumentIdx = 1,
         source,
@@ -1094,7 +1094,7 @@
         typeofOption === 'object' ||
         typeofOption === 'boolean'
       ) {
-        perms = extend({}, lastPerms);
+        perms = mix({}, lastPerms);
         if (typeofOption === 'string' && option) {
           deny = option.charAt(0) === '!';
           if (deny) {
@@ -1108,7 +1108,7 @@
             }
           }
         } else {
-          extend(perms, option);
+          mix(perms, option);
         }
         return perms;
       }
@@ -1745,7 +1745,7 @@
           owner = pkg.owner
         ;
         if (owner) {
-          owner.proxy.target(stateQuery, proxy, proxy.status(), extend({}, proxy.state));
+          owner.proxy.target(stateQuery, proxy, proxy.status(), mix({}, proxy.state));
         }
       },
 
@@ -2174,7 +2174,7 @@
         return false;
       }
       // return copy of current permissions
-      return extend({}, pkg.perms[0]);
+      return mix({}, pkg.perms[0]);
     };
 
     // add method to program api
