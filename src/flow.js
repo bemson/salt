@@ -476,6 +476,8 @@
         // permissions stack
         2: function (node, pkg, add) {
           shared_nodeStackHandler(pkg.perms, node.perms, add);
+          // copy to public state.perms
+          pkg.proxy.state.perms = merge(pkg.perms[0]);
         },
         // capture criteria stack
         3: function (node, pkg, add) {
@@ -1383,7 +1385,8 @@
           depth: 0,
           index: 0,
           pendable: true,
-          alias: 'null'
+          alias: 'null',
+          perms: merge(defaultPermissions)
         },
         nodes = pkg.nodes,
         nodeCount = nodes.length,
@@ -2184,21 +2187,16 @@
         pkg = corePkgDef(this),
         argumentsLength = arguments.length
       ;
-
-      if (argumentsLength) {
-        // if allowed to change permissions...
-        if (pkg.is('sub', 'owner', 'self')) {
+      if (pkg.is('sub', 'owner', 'self')) {
+        if (argumentsLength) {
           if (argumentsLength > 1) {
             options = protoSlice.call(arguments);
           }
-          pkg.perms[0] = perms_parse(options, pkg.perms[0]);
-          return true;
+          this.state.perms = merge(pkg.perms[0] = perms_parse(options, pkg.perms[0]));
         }
-        // (otherwise) flag inability to change permissions
-        return false;
+        return true;
       }
-      // return copy of current permissions
-      return mix({}, pkg.perms[0]);
+      return false;
     };
 
     // add method to program api
