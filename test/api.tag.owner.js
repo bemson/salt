@@ -149,7 +149,7 @@ describe( '_owner tag', function () {
     ownerSpyCall3.should.have.been.calledAfter(ownedSpy);
   });
 
-  it( 'should apply a query with `.target()`, passing the owned flow and it\'s then status, as arguments', function () {
+  it( 'should apply a query with `.target()`, passing the owned flow, it\'s then status, and then state as arguments', function () {
     owner = new Flow({
       _on: function () {
         owned = new Flow({
@@ -162,6 +162,11 @@ describe( '_owner tag', function () {
     owner.go(1).should.be.ok;
     owned.go(1).should.be.ok;
     targetSpy.should.have.been.called;
+    targetSpy.getCall(0).args.should.have.lengthOf(4);
+    targetSpy.getCall(0).args[0].should.equal(0);
+    targetSpy.getCall(0).args[1].should.be.an.instanceOf(Flow);
+    targetSpy.getCall(0).args[2].should.be.an('object');
+    targetSpy.getCall(0).args[3].should.be.an('object');
     owner.target.restore();
   });
 
