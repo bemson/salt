@@ -1401,6 +1401,7 @@
       // sub-instance "has" criteria search helpers
       pkg.nStr =
       pkg.pStr =
+      pkg.lastPing = // use same value for lastPingId
         '|';
       pkg.sAry = [];
       pkg.pAry = [];
@@ -1769,10 +1770,15 @@
         var
           pkg = this,
           proxy = pkg.proxy,
-          owner = pkg.owner
+          owner = pkg.owner,
+          lastPingId
         ;
         if (owner) {
-          owner.proxy.target(stateQuery, proxy, proxy.status(), merge(proxy.state));
+          lastPingId = '' + pkg.tank.currentIndex + pkg.phase + owner.tank.id + stateQuery;
+          if (lastPingId !== pkg.lastPing) {
+            pkg.lastPing = lastPingId;
+            owner.proxy.target(stateQuery, proxy, proxy.status(), merge(proxy.state));
+          }
         }
       },
 
@@ -1955,19 +1961,12 @@
       }
       pkg.tin = {};
 
-      // when completing the "on" phase
-      if (pkg.phase) {
-        // track completed target
-        if (~pkg.tgtTrail) {
-          pkg.trail[pkg.trail.length] = pkg.tgtTrail;
-          pkg.tgtTrail = -1;
-        }
-        // update owning flow
-        if (!pkg.targets.length && ~node.ping) {
-          pkg.pingOwner(node.ping);
-        }
+      // track completed target, when completing the "on" phase
+      if (!pkg.phase && ~pkg.tgtTrail) {
+        pkg.trail[pkg.trail.length] = pkg.tgtTrail;
+        pkg.tgtTrail = -1;
       }
-      // use altered args if present
+      // consume altered args if present
       if (proxy.args !== pkg.args && isArray(proxy.args)) {
         pkg.args = proxy.args;
       }
@@ -2019,6 +2018,8 @@
             if (pkg.paused || pkg.pending || pkg.targets.length) {
               return;
             }
+            // otherwise, reset the lastPingId
+            pkg.lastPing = '';
           }
 
           // reset sequence trackers
