@@ -1120,7 +1120,7 @@
         typeofOption === 'object' ||
         typeofOption === 'boolean'
       ) {
-        perms = mix({}, lastPerms);
+        perms = merge(lastPerms);
         if (typeofOption === 'string' && option) {
           deny = option.charAt(0) === '!';
           if (deny) {
@@ -1772,7 +1772,7 @@
           owner = pkg.owner
         ;
         if (owner) {
-          owner.proxy.target(stateQuery, proxy, proxy.status(), mix({}, proxy.state));
+          owner.proxy.target(stateQuery, proxy, proxy.status(), merge(proxy.state));
         }
       },
 
