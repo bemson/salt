@@ -2,12 +2,26 @@ describe( 'Flow#perms()', function () {
 
   var flow;
 
-  it( 'should return permissions object, if called without arguments', function () {
+  it( 'should return false, when caller has no permission', function () {
     flow = new Flow();
-    flow.perms().should.be.an('object');
+    flow.perms().should.equal(false);
+    flow.perms('world').should.equal(false);
+    flow.perms(true).should.equal(false);
   });
 
-  it( 'should prevent changing settings outside the instance\'s program or owner', function () {
+  it( 'should return true, when caller has permission', function () {
+    var spy = sinon.spy();
+    flow = new Flow(function () {
+      flow.perms().should.equal(true);
+      flow.perms('world').should.equal(true);
+      flow.perms(true).should.equal(true);
+      spy();
+    });
+    flow.go(1);
+    spy.should.have.been.calledOnce;
+  });
+
+  it( 'should allow permitted access groups to set permission', function () {
     var
       setting = '!world',
       spy = sinon.spy(),

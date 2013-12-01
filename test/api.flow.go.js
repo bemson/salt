@@ -131,9 +131,9 @@ describe( 'Flow#go()', function () {
     flow = new Flow({
       _perms: '!world'
     });
-    flow.perms().world.should.be.ok;
+    flow.state.perms.world.should.be.ok;
     flow.go(1);
-    flow.perms().world.should.not.be.ok;
+    flow.state.perms.world.should.not.be.ok;
     flow.go(0).should.equal(false);
   });
 

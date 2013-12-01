@@ -8,11 +8,11 @@ describe( 'Permission', function () {
         _perms: '!world'
       }
     });
-    flow.perms().world.should.be.ok;
+    flow.state.perms.world.should.be.ok;
     flow.go(1).should.be.ok;
     flow.target(0).should.be.ok;
     flow.go('//deny');
-    flow.perms().world.should.not.be.ok;
+    flow.state.perms.world.should.not.be.ok;
     flow.go(1).should.not.be.ok;
     flow.target(0).should.not.be.ok;
   });
@@ -24,35 +24,35 @@ describe( 'Permission', function () {
       callback = this.callbacks(0, 0, 1);
     });
     flow.go(1);
-    flow.perms().world.should.not.be.ok;
+    flow.state.perms.world.should.not.be.ok;
     flow.go(0).should.not.be.ok;
     flow.state.index.should.equal(1);
     callback();
     flow.state.index.should.equal(0);
   });
 
-  it( 'should allow "owner", "sub", and "world" by default', function () {
+  it( 'should list "owner", "sub", and "world" access groups', function () {
     flow = new Flow();
-    flow.perms().should.eql({owner:true, world: true, sub: true});
+    flow.state.perms.should.eql({owner:true, world: true, sub: true});
   });
 
   describe( 'format', function () {
 
-    it( 'should be read as an object via `.perms()`', function () {
+    it( 'should be read from the object `state.perms`', function () {
       flow = new Flow();
-      flow.perms().should.be.a('object');
+      flow.state.perms.should.be.a('object');
     });
 
     describe ( 'string', function () {
 
-      it( 'should permit the named group', function () {
+      it( 'should permit a named group', function () {
         var spy = sinon.spy();
         flow = new Flow({
           _perms: false,
           _on: function () {
-            this.perms().world.should.not.be.ok;
-            this.perms('world');
-            this.perms().world.should.be.ok;
+            this.state.perms.world.should.not.be.ok;
+            this.perms('world').should.be.ok;
+            this.state.perms.world.should.be.ok;
             spy();
           }
         });
@@ -60,14 +60,14 @@ describe( 'Permission', function () {
         spy.should.have.been.calledOnce;
       });
 
-      it( 'should deny the named group if prefixed by an exclamation', function () {
+      it( 'should deny a named group when prefixed with an exclamation', function () {
         var spy = sinon.spy();
         flow = new Flow({
           _perms: true,
           _on: function () {
-            this.perms().world.should.be.ok;
-            this.perms('!world');
-            this.perms().world.should.not.be.ok;
+            this.state.perms.world.should.be.ok;
+            this.perms('!world').should.be.ok;
+            this.state.perms.world.should.not.be.ok;
             spy();
           }
         });
@@ -84,11 +84,9 @@ describe( 'Permission', function () {
         flow = new Flow({
           _perms: false,
           _on: function () {
-            this.perms().world.should.not.be.ok;
-            this.perms({
-              world: 1
-            });
-            this.perms().world.should.be.ok;
+            this.state.perms.world.should.not.be.ok;
+            this.perms({ world: 1 }).should.be.ok;
+            this.state.perms.world.should.be.ok;
             spy();
           }
         });
@@ -101,11 +99,9 @@ describe( 'Permission', function () {
         flow = new Flow({
           _perms: true,
           _on: function () {
-            this.perms().world.should.be.ok;
-            this.perms({
-              world: 0
-            });
-            this.perms().world.should.not.be.ok;
+            this.state.perms.world.should.be.ok;
+            this.perms({ world: 0 }).should.be.ok;
+            this.state.perms.world.should.not.be.ok;
             spy();
           }
         });
@@ -122,9 +118,9 @@ describe( 'Permission', function () {
         flow = new Flow({
           _perms: false,
           _on: function () {
-            this.perms().should.eql({world:false, owner: false, sub: false});
-            this.perms(true);
-            this.perms().should.eql({world:true, owner: true, sub: true});
+            this.state.perms.should.eql({world:false, owner: false, sub: false});
+            this.perms(true).should.be.ok;
+            this.state.perms.should.eql({world:true, owner: true, sub: true});
             spy();
           }
         });
@@ -137,9 +133,9 @@ describe( 'Permission', function () {
         flow = new Flow({
           _perms: true,
           _on: function () {
-            this.perms().should.eql({world:true, owner: true, sub: true});
+            this.state.perms.should.eql({world:true, owner: true, sub: true});
             this.perms(false);
-            this.perms().should.eql({world:false, owner: false, sub: false});
+            this.state.perms.should.eql({world:false, owner: false, sub: false});
             spy();
           }
         });
@@ -157,12 +153,12 @@ describe( 'Permission', function () {
       flow = new Flow({
         _perms: '!owner',
         _on: function () {
-          this.perms().owner.should.not.be.ok;
+          this.state.perms.owner.should.not.be.ok;
           this.perms('!world');
         }
       });
       flow.go(1);
-      flow.perms().world.should.not.be.ok;
+      flow.state.perms.world.should.not.be.ok;
     });
 
     it( 'should impact nearest `_perms` ancestor branch', function () {
@@ -173,13 +169,13 @@ describe( 'Permission', function () {
         }
       });
       flow.go(1);
-      flow.perms().owner.should.be.ok;
+      flow.state.perms.owner.should.be.ok;
       flow.go('//a');
-      flow.perms().owner.should.not.be.ok;
+      flow.state.perms.owner.should.not.be.ok;
       flow.go(1);
-      flow.perms().owner.should.not.be.ok;
+      flow.state.perms.owner.should.not.be.ok;
       flow.go(0);
-      flow.perms().owner.should.be.ok;
+      flow.state.perms.owner.should.be.ok;
     });
 
   });

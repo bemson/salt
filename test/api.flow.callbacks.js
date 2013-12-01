@@ -57,10 +57,10 @@ describe( 'Flow#callbacks()', function () {
       spyTarget = sinon.spy(flow, 'target'),
       callback
     ;
-    flow.perms().world.should.be.ok;
+    flow.state.perms.world.should.be.ok;
     flow.go(1);
     flow.state.index.should.equal(1);
-    flow.perms().world.should.not.be.ok;
+    flow.state.perms.world.should.not.be.ok;
     flow.go(0).should.not.be.ok;
     callback();
     flow.state.index.should.equal(0);
@@ -76,10 +76,10 @@ describe( 'Flow#callbacks()', function () {
       spyTarget = sinon.spy(flow, 'target'),
       callback = flow.callbacks(0, false, true)
     ;
-    flow.perms().world.should.be.ok;
+    flow.state.perms.world.should.be.ok;
     flow.go(1);
     flow.state.index.should.equal(1);
-    flow.perms().world.should.not.be.ok;
+    flow.state.perms.world.should.not.be.ok;
     flow.go(0).should.not.be.ok;
     callback();
     flow.state.index.should.not.equal(0);
