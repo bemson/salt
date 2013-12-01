@@ -165,4 +165,27 @@ describe( '_owner tag', function () {
     owner.target.restore();
   });
 
+  it( 'should not double ping the owner when there is a delay', function (done) {
+    var callCount = 0;
+    owner = new Flow({
+      _on: function () {
+        owned = new Flow({
+          _owner: '//update'
+        });
+        owned.owner().should.equal(this);
+      },
+      update: function () {
+        if (callCount++ < 3) {
+          this.wait(10);
+        }
+      }
+    });
+    owner.go(1);
+    owned.go(1);
+    setTimeout(function () {
+      callCount.should.equal(2);
+      done();
+    }, 50);
+  });
+
 });
