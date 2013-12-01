@@ -1075,6 +1075,30 @@
       return base;
     }
 
+    // deep object copy
+    function merge() {
+      var
+        argumentIdx = 0,
+        obj = {},
+        source,
+        member,
+        value
+      ;
+      for (; source = arguments[argumentIdx]; argumentIdx++) {
+        for (member in source) {
+          if (source.hasOwnProperty(member)) {
+            value = source[member];
+            if (value !== null && typeof value === 'object') {
+              obj[member] = merge(value);
+            } else {
+              obj[member] = value;
+            }
+          }
+        }
+      }
+      return obj;
+    }
+
     function perms_parse(option, lastPerms) {
       var
         perms,
