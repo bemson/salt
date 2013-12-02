@@ -1415,8 +1415,6 @@
       pkg.args = [];
       // collection of node calls made while traversing
       pkg.calls = [];
-      // collection of lock states - begin with unlocked
-      pkg.locks = [0];
       // collection of nodes targeted and reached while traversing
       pkg.trail = [];
       // state index to add to trail at end of traversal/resume
