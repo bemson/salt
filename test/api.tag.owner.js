@@ -107,6 +107,105 @@ describe( '_owner tag', function () {
     ownerSpyCall2.should.have.been.calledAfter(ownedSpy);
   });
 
+  it( 'should not apply the given query when pausing', function (done) {
+    var callCount = 0;
+    owner = new Flow({
+      _in: function () {
+        owned = new Flow({
+          _owner: '//update',
+          goal: {
+            _in: function () {
+              this.wait(1);
+            },
+            _on: function () {
+              callCount.should.equal(1);
+              done();
+            }
+          }
+        });
+      },
+      update: function () {
+        callCount++;
+      }
+    });
+    owner.go(1);
+    owned.go('//goal');
+  });
+
+  it( 'should apply the given query without pending', function (done) {
+    var callCount = 0;
+    owner = new Flow({
+      _in: function () {
+        owned = new Flow({
+          _owner: '//update',
+          _pendable: true,
+          goal: {
+            _in: function () {
+              this.wait(1);
+            },
+            _on: function () {
+              callCount.should.equal(1);
+              done();
+            }
+          }
+        });
+      },
+      update: function () {
+        callCount++;
+      }
+    });
+    owner.go(1);
+    owned.go('//goal');
+  });
+
+  it( 'should pend an active owning flow when the owned flow is delayed and nested', function (done) {
+    var callCount = 0;
+    owner = new Flow({
+      _in: function () {
+        owned = new Flow({
+          _owner: '//update',
+          goal: function () {
+            callCount.should.equal(0);
+            done();
+          }
+        });
+        owned.go('//goal');
+      },
+      update: function () {
+        callCount++;
+      }
+    });
+    owner.go(1);
+  });
+
+  it( 'should pend an active owning flow when the owned flow is delayed and nested', function (done) {
+    var callCount = 0;
+    owner = new Flow({
+      _in: function () {
+        owned = new Flow({
+          _owner: '//update',
+          goal: {
+            _in: function () {
+              this.wait(1);
+            },
+            _on: function () {
+              callCount.should.equal(0);
+              setTimeout(function () {
+                callCount.should.equal(1);
+                done();
+              }, 0);
+            }
+          }
+        });
+        owned.go('//goal');
+      },
+      update: function () {
+        callCount++;
+      }
+    });
+    owner.go(1);
+  });
+
   it( 'should apply the given query to the owner after exiting a tagged state', function () {
     var
       ownerSpyCall1 = sinon.spy(),

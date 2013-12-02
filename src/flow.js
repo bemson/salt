@@ -1982,6 +1982,7 @@
         pkg = this,
         tank = pkg.tank,
         parentFlow = activeFlows[1],
+        parentTank,
         blocked = pkg.pause || pkg.pending || pkg.phase,
         hasTargets = pkg.targets.length,
         node = pkg.nodes[tank.currentIndex]
@@ -2000,14 +2001,15 @@
           // link pendable parents with this pendable state
           if (
             parentFlow &&
-            parentFlow.nodes[parentFlow.tank.currentIndex].pendable &&
+            parentFlow.nodes[(parentTank = parentFlow.tank).currentIndex].pendable &&
             node.pendable &&
-            !pkg.pendees[parentFlow.tank.id]
+            !pkg.pendees[parentTank.id] &&
+            !parentFlow.pendees[tank.id]
           ) {
             // bind parent and this flow
             parentFlow.pending++;
-            pkg.pendees[parentFlow.tank.id] = parentFlow;
-            parentFlow.tank.stop();
+            pkg.pendees[parentTank.id] = parentFlow;
+            parentTank.stop();
           }
         } else {
 
