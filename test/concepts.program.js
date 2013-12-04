@@ -133,6 +133,7 @@ describe( 'Program', function () {
 
       it( 'should begin with a letter', function () {
         flow = new Flow({
+          '2fail': 1,
           '*fail': 1,
           ' fail': 1,
           '@fail': 1,
@@ -140,6 +141,7 @@ describe( 'Program', function () {
           '/fail': 1,
           'success* 2': 1
         });
+        flow.query('//2fail').should.not.be.ok;
         flow.query('//*fail').should.not.be.ok;
         flow.query('// fail').should.not.be.ok;
         flow.query('//@fail').should.not.be.ok;
