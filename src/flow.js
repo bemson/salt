@@ -2203,11 +2203,11 @@
     // add method to program api
     corePkgDef.proxy.target = function (qry) {
       var
-       // alias this package
+        // alias this package
         pkg = corePkgDef(this),
         // resolve a node index from qry, or nothing if allowed or unlocked
-        tgtIdx = (pkg.is('world', 'sub', 'owner', 'self')) ? pkg.vetIndexOf(qry) : -1;
-
+        tgtIdx = (pkg.is('world', 'sub', 'owner', 'self')) ? pkg.vetIndexOf(qry) : -1
+      ;
       // if the destination node is valid, and the flow can move...
       if (~tgtIdx) {
         // capture arguments after the tgt
