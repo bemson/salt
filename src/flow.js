@@ -42,11 +42,11 @@
         _out: 2,
         _over: 3,
         _bover: 4,
-        '0': '_on',
-        '1': '_in',
-        '2': '_out',
-        '3': '_over',
-        '4': '_bover'
+        '0': 'on',
+        '1': 'in',
+        '2': 'out',
+        '3': 'over',
+        '4': 'bover'
       },
       activeFlows = [],
       reservedQueryTokens = {
@@ -2520,7 +2520,7 @@
       }
 
       if (all || metric === 'phase') {
-        obj.phase = pkg.active ? traversalCallbackOrder[pkg.phase].substr(1) : '';
+        obj.phase = pkg.active ? traversalCallbackOrder[pkg.phase] : '';
       }
 
       if (all || metric === 'pending') {
