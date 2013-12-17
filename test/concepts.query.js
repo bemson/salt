@@ -347,19 +347,19 @@ describe( 'Query', function () {
 
     });
 
-    describe( 'defined by the _name tag', function () {
+    describe( 'defined by the _alias tag', function () {
 
       before(function () {
         flow = new Flow({
           deep: {
             deep: {
               alias: {
-                _name: 'custom'
+                _alias: 'custom'
               }
             }
           },
           fake: {
-            _name: 'program'
+            _alias: 'program'
           }
         })
       });

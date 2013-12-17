@@ -160,16 +160,16 @@
           }
         },
         // Define alias for this state, to use in queries.
-        _name: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        _alias: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           if (
-            exists && tags._name && typeof tags._name === 'string' &&
-            !r_queryIsTokenized.test(tags._name) && r_hasAlphanumericCharacter.test(tags._name)
+            exists && tags._alias && typeof tags._alias === 'string' &&
+            !r_queryIsTokenized.test(tags._alias) && r_hasAlphanumericCharacter.test(tags._alias)
           ) {
-            pkg.tokens[tags._name] = {
+            pkg.tokens[tags._alias] = {
               i: idx,
               f: 0
             };
-            node.alias = tags._name;
+            node.alias = tags._alias;
           } else {
             node.alias = '';
           }
@@ -375,7 +375,7 @@
           }
         },
         // ensure node alias was not overridden
-        _name: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+        _alias: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           var alias = node.alias;
           if (idx === 0) {
             node.alias = 'null';

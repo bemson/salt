@@ -60,7 +60,7 @@ describe( '_owner tag', function () {
             ownerSpyCall2();
           }
         },
-        _name: 'customTarget'
+        _alias: 'customTarget'
       }
     });
     owner.go(1).should.be.ok;
@@ -96,7 +96,7 @@ describe( '_owner tag', function () {
             ownerSpyCall2();
           }
         },
-        _name: 'customTarget'
+        _alias: 'customTarget'
       }
     });
     owner.go(1).should.be.ok;
@@ -235,7 +235,7 @@ describe( '_owner tag', function () {
             ownerSpyCall3();
           }
         },
-        _name: 'customTarget'
+        _alias: 'customTarget'
       }
     });
     owner.go(1).should.be.ok;

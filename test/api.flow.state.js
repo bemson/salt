@@ -15,7 +15,7 @@ describe( 'Flow#state', function () {
       c: {
         _perms: '!owner',
         _pendable: false,
-        _name: stateAlias,
+        _alias: stateAlias,
         _in: function () {
           this.wait();
         }
