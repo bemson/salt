@@ -9,9 +9,11 @@ describe( 'Flow#state', function () {
   before(function () {
     flow = new Flow({
       a: {
+        _perms: '!sub',
         b: {}
       },
       c: {
+        _perms: '!owner',
         _pendable: false,
         _name: stateAlias,
         _in: function () {
@@ -61,6 +63,11 @@ describe( 'Flow#state', function () {
     state.pendable.should.be.a('boolean');
   });
 
+  it( 'should have a object "perms" member', function () {
+    state.should.haveOwnProperty('perms');
+    state.perms.should.be.an('object');
+  });
+
   it( 'should reflect the "null" state by default', function () {
     state.name.should.equal('_null');
     state.index.should.equal(0);
@@ -68,6 +75,7 @@ describe( 'Flow#state', function () {
     state.alias.should.equal('null');
     state.path.should.equal('..//');
     state.pendable.should.equal(true);
+    state.perms.should.deep.equal({world: true, owner: true, sub: true});
   });
 
   it( 'should reflect the "program" state as expected', function () {
@@ -78,6 +86,7 @@ describe( 'Flow#state', function () {
     state.alias.should.equal('program');
     state.path.should.equal('//');
     state.pendable.should.equal(true);
+    state.perms.should.deep.equal({world: true, owner: true, sub: true});
   });
 
   it( 'should reflect the current state', function () {
@@ -88,6 +97,7 @@ describe( 'Flow#state', function () {
     state.alias.should.equal('');
     state.path.should.equal('//a/');
     state.pendable.should.equal(true);
+    state.perms.sub.should.not.be.ok;
 
     flow.go('//c/');
     state.name.should.equal('c');
@@ -96,6 +106,7 @@ describe( 'Flow#state', function () {
     state.alias.should.equal(stateAlias);
     state.path.should.equal('//c/');
     state.pendable.should.equal(false);
+    state.perms.owner.should.not.be.ok;
   });
 
 });
