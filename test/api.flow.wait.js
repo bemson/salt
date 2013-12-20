@@ -101,22 +101,22 @@ describe( 'Flow#wait()', function () {
   it( 'should prevent parent Flow from completing', function () {
     var
       spy = sinon.spy(),
-      pender = new Flow(function () {
+      pinner = new Flow(function () {
         this.wait();
       })
     ;
     flow = new Flow({
       _in: function () {
-        pender.go(1);
+        pinner.go(1);
       },
       _on: spy
     });
     flow.go(1);
     spy.should.not.have.been.called;
-    flow.status().pending.should.equal(true);
-    pender.status().paused.should.equal(true);
-    pender.go();
-    flow.status().pending.should.equal(false);
+    flow.status().pinned.should.equal(true);
+    pinner.status().paused.should.equal(true);
+    pinner.go();
+    flow.status().pinned.should.equal(false);
     spy.should.have.been.calledOnce;
   });
 

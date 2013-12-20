@@ -89,24 +89,24 @@ describe( 'Flow#vars', function () {
     spy.should.have.been.calledOnce;
   });
 
-  it( 'should not be available when paused or pending', function (done) {
+  it( 'should not be available when paused or pinned', function (done) {
     flow = new Flow({
       pause: function () {
         this.wait();
       },
-      pend: function () {
-        var pender = new Flow(function () {
+      pin: function () {
+        var pinner = new Flow(function () {
           this.wait(done, 0);
         });
-        pender.go(1);
+        pinner.go(1);
       }
     });
     flow.go('//pause');
     flow.status().paused.should.be.ok;
     flow.should.not.haveOwnProperty('vars');
-    flow.go('//pend');
+    flow.go('//pin');
     flow.status().paused.should.not.be.ok;
-    flow.status().pending.should.equal(true);
+    flow.status().pinned.should.equal(true);
     flow.should.not.haveOwnProperty('vars');
   });
 

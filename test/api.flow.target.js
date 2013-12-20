@@ -150,19 +150,19 @@ describe( 'Flow#target()', function () {
     delaySpy.should.have.returned(undefined);
   });
 
-  it( 'should return false if the navigation sequence is pended', function () {
-    var pender = new Flow(function () {
+  it( 'should return false if the navigation sequence is pinned', function () {
+    var pinner = new Flow(function () {
       this.wait();
     });
     flow = new Flow(function () {
-      pender.go(1);
+      pinner.go(1);
     });
 
     flow.target(1).should.equal(false);
     flow.status().paused.should.not.be.ok;
-    flow.status().pending.should.equal(true);
-    pender.go();
-    flow.status().pending.should.equal(false);
+    flow.status().pinned.should.equal(true);
+    pinner.go();
+    flow.status().pinned.should.equal(false);
   });
 
   it( 'should return false when called externally on a locked instance', function () {

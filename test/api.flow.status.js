@@ -9,12 +9,12 @@ describe( 'Flow#status()', function () {
     status.should.haveOwnProperty('targets');
     status.should.haveOwnProperty('trail');
     status.should.haveOwnProperty('paused');
-    status.should.haveOwnProperty('pending');
+    status.should.haveOwnProperty('pinned');
     status.should.haveOwnProperty('loops');
     status.targets.should.be.an.instanceOf(Array);
     status.trail.should.be.an.instanceOf(Array);
     status.paused.should.be.a('boolean');
-    status.pending.should.be.a('boolean');
+    status.pinned.should.be.a('boolean');
     status.loops.should.be.a('number');
   });
 
@@ -114,7 +114,7 @@ describe( 'Flow#status()', function () {
     flow.status().paused.should.be.ok;
   });
 
-  it( 'should preserve sequence data while paused or pending', function () {
+  it( 'should preserve sequence data while paused or pinned', function () {
     flow = new Flow({
       pause: function () {
         this.wait();

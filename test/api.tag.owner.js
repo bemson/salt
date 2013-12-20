@@ -132,13 +132,13 @@ describe( '_owner tag', function () {
     owned.go('//goal');
   });
 
-  it( 'should apply the given query without pending', function (done) {
+  it( 'should apply the given query without pinned', function (done) {
     var callCount = 0;
     owner = new Flow({
       _in: function () {
         owned = new Flow({
           _owner: '//update',
-          _pendable: true,
+          _pins: true,
           goal: {
             _in: function () {
               this.wait(1);
@@ -158,7 +158,7 @@ describe( '_owner tag', function () {
     owned.go('//goal');
   });
 
-  it( 'should pend an active owning flow when the owned flow is delayed and nested', function (done) {
+  it( 'should pin an active owning flow when the owned flow is delayed and nested', function (done) {
     var callCount = 0;
     owner = new Flow({
       _in: function () {
@@ -178,7 +178,7 @@ describe( '_owner tag', function () {
     owner.go(1);
   });
 
-  it( 'should pend an active owning flow when the owned flow is delayed and nested', function (done) {
+  it( 'should pin an active owning flow when the owned flow is delayed and nested', function (done) {
     var callCount = 0;
     owner = new Flow({
       _in: function () {

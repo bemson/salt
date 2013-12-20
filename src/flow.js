@@ -256,13 +256,13 @@
           }
         },
         // Specifies when a paused state will prevent parent flow's from completing their navigation.
-        _pendable: function (tagName, exists, tags, node, parentNode) {
+        _pins: function (tagName, exists, tags, node, parentNode) {
           if (exists) {
-            node.pendable = !!tags._pendable;
+            node.pins = !!tags._pins;
           } else if (parentNode) {
-            node.pendable = parentNode.pendable;
+            node.pins = parentNode.pins;
           } else {
-            node.pendable = true;
+            node.pins = true;
           }
         },
         /*
@@ -1384,7 +1384,7 @@
           path: '..//',
           depth: 0,
           index: 0,
-          pendable: true,
+          pins: true,
           alias: 'null',
           perms: merge(defaultPermissions)
         },
@@ -1440,9 +1440,9 @@
       // init index of node paths
       pkg.nids = {};
       // the number of child flows fired by this flow's program functions
-      pkg.pending = 0;
+      pkg.pinned = 0;
       // collection of parent flow references
-      pkg.pendees = [];
+      pkg.pinning = [];
       // collection of targeted nodes
       pkg.targets = [];
       // identify the initial phase for this flow, 0 by default
@@ -1714,7 +1714,7 @@
       go: function () {
         var pkg = this;
         pkg.preMove();
-        // exit when pending, or direct tank to the first target - returns the number of steps completed (or false when there is no target)
+        // exit when pinned, or direct tank to the first target - returns the number of steps completed (or false when there is no target)
         return pkg.tank.go(pkg.targets[0]);
       },
 
@@ -1848,8 +1848,8 @@
       pkg.active = 1;
 
       pkg.preMove();
-      // prevent going forward when pended by another flow
-      if (pkg.pending) {
+      // prevent going forward when pinned by another flow
+      if (pkg.pinned) {
         pkg.tank.stop();
       }
     };
@@ -1866,7 +1866,7 @@
       state.index = currentNode.index;
       state.depth = currentNode.depth;
       state.path = currentNode.path;
-      state.pendable = currentNode.pendable;
+      state.pins = currentNode.pins;
       state.alias = currentNode.alias;
 
     };
@@ -1925,7 +1925,7 @@
         // include arguments for the "on" function
         pkg.result = node.fncs[phase].apply(pkg.proxy, (pkg.targets.length ? [] : pkg.args));
 
-        if (pkg.paused || pkg.pending) {
+        if (pkg.paused || pkg.pinned) {
           pkg.result = undefined;
         }
       }
@@ -1981,7 +1981,7 @@
         tank = pkg.tank,
         parentFlow = activeFlows[1],
         parentTank,
-        blocked = pkg.pause || pkg.pending || pkg.phase,
+        blocked = pkg.pause || pkg.pinned || pkg.phase,
         hasTargets = pkg.targets.length,
         node = pkg.nodes[tank.currentIndex]
       ;
@@ -1996,17 +1996,17 @@
         }
       } else {
         if (blocked) {
-          // link pendable parents with this pendable state
+          // link pinnable parents with this pinnable state
           if (
             parentFlow &&
-            parentFlow.nodes[(parentTank = parentFlow.tank).currentIndex].pendable &&
-            node.pendable &&
-            !pkg.pendees[parentTank.id] &&
-            !parentFlow.pendees[tank.id]
+            parentFlow.nodes[(parentTank = parentFlow.tank).currentIndex].pins &&
+            node.pins &&
+            !pkg.pinning[parentTank.id] &&
+            !parentFlow.pinning[tank.id]
           ) {
             // bind parent and this flow
-            parentFlow.pending++;
-            pkg.pendees[parentTank.id] = parentFlow;
+            parentFlow.pinned++;
+            pkg.pinning[parentTank.id] = parentFlow;
             parentTank.stop();
           }
         } else {
@@ -2015,7 +2015,7 @@
           if (~node.ping) {
             pkg.pingOwner(node.ping);
             // exit if owners end up directing this flow
-            if (pkg.paused || pkg.pending || pkg.targets.length) {
+            if (pkg.paused || pkg.pinned || pkg.targets.length) {
               return;
             }
             // otherwise, reset the lastPingId
@@ -2032,17 +2032,17 @@
             pkg.vars = {};
           }
 
-          // update pending flows
-          if (pkg.pendees.length) {
-            // first, reduce pending count of each pended flow
-            pkg.pendees.forEach(function (pendedFlow) {
-              pendedFlow.pending--;
+          // update pinned flows
+          if (pkg.pinning.length) {
+            // first, reduce pinned count of each pinned flow
+            pkg.pinning.forEach(function (pinnedFlow) {
+              pinnedFlow.pinned--;
             });
             tank.post(function () {
-              // then, resume each pended flow (once this flow is complete)
-              pkg.pendees.splice(0).forEach(function (pendedFlow) {
-                if (!(pendedFlow.pending || pendedFlow.pause)) {
-                  pendedFlow.go();
+              // then, resume each pinned flow (once this flow is complete)
+              pkg.pinning.splice(0).forEach(function (pinnedFlow) {
+                if (!(pinnedFlow.pinned || pinnedFlow.pause)) {
+                  pinnedFlow.go();
                 }
               });
             });
@@ -2222,15 +2222,15 @@
       }
       // return based on call path
         // when internal (via a program-function)
-          // false when pending
-          // true when paused or not pending
+          // false when pinned
+          // true when paused or not pinned
         // when external (outside a program-function)
-          // false when pending
+          // false when pinned
           // false when paused
           // false when exiting outside of phase 0 (_on)
           // true when the traversal result is undefined
           // the traversal result otherwise the traversal result is returned
-      if (pkg.pending || pkg.pause || pkg.phase) {
+      if (pkg.pinned || pkg.pause || pkg.phase) {
         return false;
       } else if (pkg.active || pkg.result === undefined) {
         return true;
@@ -2241,7 +2241,7 @@
 
     /**
     Target, add, or insert nodes to traverse, or resume towards the last target node.
-    Returns false when there is no new destination, a waypoint was invalid, or the flow was locked or pending.
+    Returns false when there is no new destination, a waypoint was invalid, or the flow was locked or pinned.
 
     Forms:
       go() - resume traversal
@@ -2523,8 +2523,8 @@
         obj.phase = pkg.active ? traversalCallbackOrder[pkg.phase] : '';
       }
 
-      if (all || metric === 'pending') {
-        obj.pending = !!pkg.pending;
+      if (all || metric === 'pinned') {
+        obj.pinned = !!pkg.pinned;
       }
 
       if (all || metric === 'targets') {

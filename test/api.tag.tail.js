@@ -160,23 +160,23 @@ describe( '_tail tag', function () {
     flow.go('//a/');
   });
 
-  it( 'should work when navigation is pended', function (done) {
-    var pender = new Flow(function () {
+  it( 'should work when navigation is pinned', function (done) {
+    var pinner = new Flow(function () {
       this.wait(0);
     });
     flow = new Flow({
       a: {
         _tail: '//b/',
         _on: function () {
-          pender.go(1);
+          pinner.go(1);
         }
       },
       b: done
     });
     flow.go('//a/');
-    flow.status().pending.should.equal(true);
+    flow.status().pinned.should.equal(true);
     flow.state.path.should.equal('//a/');
-    pender.go();
+    pinner.go();
   });
 
 });

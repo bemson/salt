@@ -14,7 +14,7 @@ describe( 'Flow#state', function () {
       },
       c: {
         _perms: '!owner',
-        _pendable: false,
+        _pins: false,
         _alias: stateAlias,
         _in: function () {
           this.wait();
@@ -58,9 +58,9 @@ describe( 'Flow#state', function () {
     state.path.should.be.a('string');
   });
 
-  it( 'should have a boolean "pendable" member', function () {
-    state.should.haveOwnProperty('pendable');
-    state.pendable.should.be.a('boolean');
+  it( 'should have a boolean "pins" member', function () {
+    state.should.haveOwnProperty('pins');
+    state.pins.should.be.a('boolean');
   });
 
   it( 'should have a object "perms" member', function () {
@@ -74,7 +74,7 @@ describe( 'Flow#state', function () {
     state.depth.should.equal(0);
     state.alias.should.equal('null');
     state.path.should.equal('..//');
-    state.pendable.should.equal(true);
+    state.pins.should.equal(true);
     state.perms.should.deep.equal({world: true, owner: true, sub: true});
   });
 
@@ -85,7 +85,7 @@ describe( 'Flow#state', function () {
     state.depth.should.equal(1);
     state.alias.should.equal('program');
     state.path.should.equal('//');
-    state.pendable.should.equal(true);
+    state.pins.should.equal(true);
     state.perms.should.deep.equal({world: true, owner: true, sub: true});
   });
 
@@ -96,7 +96,7 @@ describe( 'Flow#state', function () {
     state.depth.should.equal(2);
     state.alias.should.equal('');
     state.path.should.equal('//a/');
-    state.pendable.should.equal(true);
+    state.pins.should.equal(true);
     state.perms.sub.should.not.be.ok;
 
     flow.go('//c/');
@@ -105,7 +105,7 @@ describe( 'Flow#state', function () {
     state.depth.should.equal(2);
     state.alias.should.equal(stateAlias);
     state.path.should.equal('//c/');
-    state.pendable.should.equal(false);
+    state.pins.should.equal(false);
     state.perms.owner.should.not.be.ok;
   });
 

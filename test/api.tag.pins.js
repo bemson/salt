@@ -1,81 +1,81 @@
-describe( '_pendable tag', function () {
+describe( '_pins tag', function () {
 
   var flow;
 
-  it( 'should be reflected as a boolean in the `.state.pendable`', function () {
+  it( 'should be reflected as a boolean in the `.state.pins`', function () {
     flow = new Flow();
-    flow.state.should.haveOwnProperty('pendable');
-    flow.state.pendable.should.be.a('boolean');
+    flow.state.should.haveOwnProperty('pins');
+    flow.state.pins.should.be.a('boolean');
   });
 
   it( 'should be `true` by default', function () {
     flow = new Flow();
-    flow.state.pendable.should.equal(true);
+    flow.state.pins.should.equal(true);
   });
 
   it( 'should halt navigation of a waiting instance, when the active state pauses', function () {
     var
-      penderSpy = sinon.spy(),
-      pendableSpy = sinon.spy(),
-      pender = new Flow({
+      pinnerSpy = sinon.spy(),
+      pinsSpy = sinon.spy(),
+      pinner = new Flow({
         _in: function () {
           this.wait();
         },
-        _on: penderSpy
+        _on: pinnerSpy
       }),
-      pendable = new Flow({
+      pins = new Flow({
         _in: function () {
-          pender.go(1);
+          pinner.go(1);
         },
-        _on: pendableSpy
+        _on: pinsSpy
       })
     ;
-    pendable.go(1);
+    pins.go(1);
 
-    pender.status('paused').should.equal(true);
-    pender.status('pending').should.equal(false);
+    pinner.status('paused').should.equal(true);
+    pinner.status('pinned').should.equal(false);
 
-    pendable.status('paused').should.equal(false);
-    pendable.status('pending').should.equal(true);
+    pins.status('paused').should.equal(false);
+    pins.status('pinned').should.equal(true);
 
-    pender.go();
+    pinner.go();
 
-    pendableSpy.should.have.been.calledOnce;
-    penderSpy.should.have.been.calledOnce;
-    pendableSpy.should.have.been.calledAfter(penderSpy);
+    pinsSpy.should.have.been.calledOnce;
+    pinnerSpy.should.have.been.calledOnce;
+    pinsSpy.should.have.been.calledAfter(pinnerSpy);
   });
 
   it( 'should not halt navigation when either the parent or active state are false', function () {
     var
-      penderSpy = sinon.spy(),
-      unpendableSpy = sinon.spy(),
-      pender = new Flow({
+      pinnerSpy = sinon.spy(),
+      unpinsSpy = sinon.spy(),
+      pinner = new Flow({
         _in: function () {
           this.wait();
         },
-        _on: penderSpy
+        _on: pinnerSpy
       }),
-      unpendable = new Flow({
-        _pendable: 0,
+      unpins = new Flow({
+        _pins: 0,
         _in: function () {
-          pender.go(1);
+          pinner.go(1);
         },
-        _on: unpendableSpy
+        _on: unpinsSpy
       })
     ;
-    unpendable.go(1);
+    unpins.go(1);
 
-    pender.status('paused').should.equal(true);
-    pender.status('pending').should.equal(false);
+    pinner.status('paused').should.equal(true);
+    pinner.status('pinned').should.equal(false);
 
-    unpendable.status('paused').should.equal(false);
-    unpendable.status('pending').should.equal(false);
+    unpins.status('paused').should.equal(false);
+    unpins.status('pinned').should.equal(false);
 
-    pender.go();
+    pinner.go();
 
-    unpendableSpy.should.have.been.calledOnce;
-    penderSpy.should.have.been.calledOnce;
-    unpendableSpy.should.have.been.calledBefore(penderSpy);
+    unpinsSpy.should.have.been.calledOnce;
+    pinnerSpy.should.have.been.calledOnce;
+    unpinsSpy.should.have.been.calledBefore(pinnerSpy);
   });
 
 
