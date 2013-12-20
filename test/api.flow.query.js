@@ -63,4 +63,13 @@ describe( 'Flow#query()', function () {
     flow.query('//a', '//b').should.not.be.ok;
   });
 
+  it( 'should return false when querying without permission', function () {
+    flow = new Flow({
+      _perms: '!world'
+    });
+    flow.go(1).should.be.ok;
+    flow.go(0).should.not.be.ok;
+    flow.query(0).should.not.be.ok;
+  });
+
 });
