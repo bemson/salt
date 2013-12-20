@@ -2082,8 +2082,9 @@
       ;
 
       // return true if this node is within it's restrictions (if any), or when we're within, targeting, or on the target's ingress node (if any)
-      return pkg.is('sub', 'owner', 'self') ||
+      return pkg.is('self') ||
         (
+          pkg.is('sub', 'owner', 'world') &&
           (
             // check if the target is within the restricting node - if any
             !restrictingNode ||
