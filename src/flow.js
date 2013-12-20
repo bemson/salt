@@ -1754,7 +1754,7 @@
               }
             break;
             case 'world':
-              if (pkg.perms[0].world && !pkg.is('sub', 'owner', 'self')) {
+              if (pkg.perms[0].world && (!activeFlow || !pkg.is('sub', 'owner', 'self'))) {
                 return 1;
               }
             break;
