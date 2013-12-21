@@ -149,7 +149,7 @@ describe( 'Permission', function () {
 
   describe( 'setting', function () {
 
-    it( 'should be done via `_capture` and `.perms()`', function () {
+    it( 'should be done via `_perms` and `.perms()`', function () {
       flow = new Flow({
         _perms: '!owner',
         _on: function () {
