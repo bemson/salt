@@ -1340,190 +1340,419 @@
       flow.go(pkg.nodes[pkg.tank.currentIndex].reds[pkg.phase]);
     }
 
-    // collection of active package-trees - exposed to support package integration
-    corePkgDef.actives = [];
+    // define package statics
+    mix(corePkgDef, {
 
-    // pattern for identifying tag keys
-    corePkgDef.attrKey = /^_/;
+      // collection of active package-trees - exposed to support package integration
+      actives: [],
 
-    // pattern for identifying invalid state names
-    corePkgDef.badKey = /^\d|^\W|[^a-zA-Z\d\-_\+=\(\)\*\&\^\%\$\#\!\~\`\{\}\"\'\:\;\?\, ]+|^toString$/;
+      // configure panzer parsing and initialization
 
-    corePkgDef.prepTree = function (orig) {
-      import_cacheTagKeyTests();
+      // pattern for identifying tag keys
+      attrKey: /^_/,
 
-      if (isFlow(orig)) {
-        // when given a Flow instance, return the original instance's program
-        return corePkgDef(orig).nodes[1].value;
+      // pattern for identifying invalid state names
+      badKey: /^\d|^\W|[^a-zA-Z\d\-_\+=\(\)\*\&\^\%\$\#\!\~\`\{\}\"\'\:\;\?\, ]+|^toString$/,
+
+      // tree preprocessor
+      prepTree: function (orig) {
+        import_cacheTagKeyTests();
+
+        if (isFlow(orig)) {
+          // when given a Flow instance, return the original instance's program
+          return corePkgDef(orig).nodes[1].value;
+        }
+      },
+
+      // node preprocessor
+      prepNode: function ( state, program ) {
+        var
+          finalState,
+          tmpState = state
+        ;
+        // resolve all top-level imports for this state - avoid shallow-recursion
+        // this is similar to sub-classing
+        while (tmpState = import_resolveBase(tmpState, program, {})) {
+          finalState = tmpState;
+        }
+
+        return finalState;
+      },
+
+      // initialize the package instance with custom properties
+      // only argument is the object passed after the program when calling "new Flow(program, extraArg)"
+      init: function () {
+        var
+          pkg = this,
+          activeFlow = activeFlows[0],
+          sharedProxyDataMember = {},
+          sharedProxyStateMember = {
+            name: '_null',
+            path: '..//',
+            depth: 0,
+            index: 0,
+            pins: true,
+            alias: 'null',
+            perms: merge(defaultPermissions)
+          },
+          nodes = pkg.nodes,
+          nodeCount = nodes.length,
+          i, j,
+          node, parentNode, tagName,
+          pkgId
+        ;
+
+        // init sub-instances hashes
+        pkg.bin = {};
+        pkg.tin = {};
+        // sub-instance "has" criteria search helpers
+        pkg.nStr =
+        pkg.pStr =
+        pkg.lastPing = // use same value for lastPingId
+          '|';
+        pkg.sAry = [];
+        pkg.pAry = [];
+        // define initial vars member
+        pkg.vars = {};
+        // collection of custom query tokens
+        pkg.tokens = {};
+        // collection of custom callback queries
+        pkg.cq = {};
+        // collection of arguments for traversal functions
+        pkg.args = [];
+        // collection of node calls made while traversing
+        pkg.calls = [];
+        // collection of nodes targeted and reached while traversing
+        pkg.trail = [];
+        // state index to add to trail at end of traversal/resume
+        pkg.tgtTrail = -1;
+        // collection of declared variable tracking objects
+        pkg.dtos = {};
+        // init delay timer, function, and args
+        pkg.waitTimer =
+        pkg.waitFnc =
+        pkg.waitArgs =
+          0;
+        // collection of cached values
+        pkg.cache = {
+          // token query cache
+          indexOf: {},
+          // store cache
+          store: {}
+        };
+        // indicates when this flow is in the stack of navigating flows
+        pkg.active = 0;
+        // flag when being invoked by a blessed function
+        pkg.blessed = 0;
+        // init index of node paths
+        pkg.nids = {};
+        // the number of child flows fired by this flow's program functions
+        pkg.pinned = 0;
+        // collection of parent flow references
+        pkg.pinning = [];
+        // collection of targeted nodes
+        pkg.targets = [];
+        // identify the initial phase for this flow, 0 by default
+        pkg.phase = 0;
+        // set owner permission and assignment defaults
+        pkg.owner = pkg.ownable = 0;
+        // set name of first node
+        pkg.nodes[0].name = '_null';
+        // set name of second node
+        pkg.nodes[1].name = '_program';
+        // initialize nodes...
+        for (i = 0; i < nodeCount; i++) {
+          node = nodes[i];
+          parentNode = nodes[node.parentIndex];
+
+          // index this node path
+          pkg.nids[node.path] = i;
+
+          if (i > 1) {
+            // add to delimited string of names (for sub-instances "has" matching)
+            pkg.nStr += node.name + '|';
+            pkg.sAry[pkg.sAry.length] = node.name;
+          }
+          // add to delimited string of paths (for sub-instances "has" matching)
+          pkg.pStr += node.path + '|';
+          pkg.pAry[pkg.pAry.length] = node.path;
+
+          // prep for tag compilation
+          node.pkg = pkg;
+          node.fncs = [0,0,0,0,0];
+          node.reds = [];
+
+          // run core tags
+          for (j = 0; j < coreTagKeyCount; j++) {
+            tagName = coreTagKeys[j];
+            coreTags[tagName](tagName, node.attrs.hasOwnProperty(tagName), node.attrs, node, parentNode, pkg, i);
+          }
+
+          // if there is no _on[0] function and this node's value is a function...
+          if (!node.fncs[0] && typeof node.value === 'function') {
+            // use as the _on[0] traversal function
+            node.fncs[0] = node.value;
+          }
+        }
+
+        // run post core tags for each node
+        for (i = 0; i < nodeCount; i++) {
+          node = nodes[i];
+          for (j = 0; j < corePostTagKeyCount; j++) {
+            tagName = corePostTagKeys[j];
+            corePostTags[tagName](tagName, node.attrs.hasOwnProperty(tagName), node.attrs, node, parentNode, pkg, i);
+          }
+        }
+
+        for (pkgId in pkg.pkgs) {
+          if (pkg.pkgs.hasOwnProperty(pkgId)) {
+            // reference data object in all proxy objects
+            pkg.pkgs[pkgId].proxy.data = sharedProxyDataMember;
+            // reference data object in all proxy objects
+            pkg.pkgs[pkgId].proxy.state = sharedProxyStateMember;
+          }
+        }
+
+        if (activeFlow) {
+
+          // use active flow as the owner
+          if (pkg.ownable) {
+            pkg.owner = activeFlow;
+          }
+
+          // auto capture to the active flow's temporary store
+          if (activeFlow.caps[0]) {
+            subs_addInsts(activeFlow.tin, [pkg], activeFlow);
+          }
+        }
+
+      },
+
+      // bind to priviledged package events
+
+      // do something when the tank starts moving
+      onBegin: function () {
+        var
+          pkg = this
+        ;
+
+        // add to the private and public flow stack
+        activeFlows.unshift(pkg);
+        corePkgDef.actives.unshift(pkg.proxy);
+        pkg.active = 1;
+
+        pkg.preMove();
+        // prevent going forward when pinned by another flow
+        if (pkg.pinned) {
+          pkg.tank.stop();
+        }
+      },
+
+      onNode: function (evtName, currentNodeIndex) {
+        var
+          pkg = this,
+          state = pkg.proxy.state,
+          currentNode = pkg.nodes[currentNodeIndex]
+        ;
+
+        // set nodal info
+        state.name = currentNode.name;
+        state.index = currentNode.index;
+        state.depth = currentNode.depth;
+        state.path = currentNode.path;
+        state.pins = currentNode.pins;
+        state.alias = currentNode.alias;
+
+      },
+
+      onScope: function (evtName, entering) {
+        var
+          pkg = this,
+          node = pkg.nodes[pkg.tank.currentIndex]
+        ;
+        if (entering) {
+          // set phase to "in"
+          pkg.phase = 1;
+        } else {
+          // set phase to "out"
+          pkg.phase = 2;
+        }
+
+        node.scope(entering);
+      },
+
+      onEngage: function () {
+        var pkg = this;
+
+        pkg.setPrivs();
+      },
+
+      onRelease: function () {
+        var pkg = this;
+
+        pkg.delPrivs();
+      },
+
+      // do something when the tank traverses a node
+      onTraverse: function (evtName, phase) {
+        var
+          pkg = this,
+          tank = pkg.tank,
+          node = pkg.nodes[tank.currentIndex]
+        ;
+
+        pkg.phase = phase;
+
+        // capture when this node was a tank target
+        if (!~tank.targetIndex) {
+          pkg.tgtTrail = pkg.targets.shift();
+        }
+
+        // prepend sequence node targets
+        if (node.seq && !phase) {
+          pkg.proxy.go.apply(pkg.proxy, node.seq);
+        }
+
+        // invoke and track phase function
+        if (node.fncs[phase]) {
+          pkg.calls.push(node.index + '.' + phase);
+          // include arguments for the "on" function
+          pkg.result = node.fncs[phase].apply(pkg.proxy, (pkg.targets.length ? [] : pkg.args));
+
+          if (pkg.paused || pkg.pinned) {
+            pkg.result = undefined;
+          }
+        }
+      },
+
+      // execute delayed functions
+      onTraversing: function () {
+        var pkg = this;
+
+        // execute any delay function
+        if (pkg.waitFnc) {
+          pkg.waitFnc.apply(pkg.proxy, pkg.waitArgs);
+          // clear delay components
+          pkg.waitFnc =
+          pkg.waitArgs =
+            0;
+        }
+      },
+
+      // complete traversing a node facet
+      onTraversed: function () {
+        var
+          pkg = this,
+          proxy = pkg.proxy,
+          node = pkg.nodes[pkg.tank.currentIndex]
+        ;
+
+        // capture qualifying instances and empty the tin
+        if (node.caps) {
+          subs_addInsts(pkg.bin, subs_getInsts(pkg.tin, node.caps), pkg);
+        }
+        pkg.tin = {};
+
+        // track completed target, when completing the "on" phase
+        if (!pkg.phase && ~pkg.tgtTrail) {
+          pkg.trail[pkg.trail.length] = pkg.tgtTrail;
+          pkg.tgtTrail = -1;
+        }
+        // consume altered args if present
+        if (proxy.args !== pkg.args && isArray(proxy.args)) {
+          pkg.args = proxy.args;
+        }
+        if (typeof proxy.vars === 'object') {
+          pkg.vars = proxy.vars;
+        }
+        proxy.vars = pkg.vars;
+      },
+
+      // do something when the tank stops
+      onEnd: function () {
+        var
+          pkg = this,
+          tank = pkg.tank,
+          parentFlow = activeFlows[1],
+          parentTank,
+          blocked = pkg.pause || pkg.pinned || pkg.phase,
+          hasTargets = pkg.targets.length,
+          node = pkg.nodes[tank.currentIndex]
+        ;
+
+        if (!blocked && (hasTargets || ~node.tail)) {
+          if (hasTargets) {
+            // direct tank to the next state
+            tank.go(pkg.targets[0]);
+          } else {
+            // instruct flow to tail state
+            pkg.proxy.go(node.tail);
+          }
+        } else {
+          if (blocked) {
+            // link pinnable parents with this pinnable state
+            if (
+              parentFlow &&
+              parentFlow.nodes[(parentTank = parentFlow.tank).currentIndex].pins &&
+              node.pins &&
+              !pkg.pinning[parentTank.id] &&
+              !parentFlow.pinning[tank.id]
+            ) {
+              // bind parent and this flow
+              parentFlow.pinned++;
+              pkg.pinning[parentTank.id] = parentFlow;
+              parentTank.stop();
+            }
+          } else {
+
+            // inform owner that we've stopped
+            if (~node.ping) {
+              pkg.pingOwner(node.ping);
+              // exit if owners end up directing this flow
+              if (pkg.paused || pkg.pinned || pkg.targets.length) {
+                return;
+              }
+              // otherwise, reset the lastPingId
+              pkg.lastPing = '';
+            }
+
+            // reset sequence trackers
+            pkg.args = [];
+            pkg.calls = [];
+            pkg.trail = [];
+
+            if (!node.index) {
+              // reset vars when ending on the null node
+              pkg.vars = {};
+            }
+
+            // update pinned flows
+            if (pkg.pinning.length) {
+              // first, reduce pinned count of each pinned flow
+              pkg.pinning.forEach(function (pinnedFlow) {
+                pinnedFlow.pinned--;
+              });
+              tank.post(function () {
+                // then, resume each pinned flow (once this flow is complete)
+                pkg.pinning.splice(0).forEach(function (pinnedFlow) {
+                  if (!(pinnedFlow.pinned || pinnedFlow.pause)) {
+                    pinnedFlow.go();
+                  }
+                });
+              });
+            }
+          }
+          // remove private and public activeflow status
+          activeFlows.shift();
+          corePkgDef.actives.shift();
+          pkg.active = 0;
+        }
       }
-    };
 
-    corePkgDef.prepNode = function ( state, program ) {
-      var
-        finalState,
-        tmpState = state
-      ;
-      // resolve all top-level imports for this state - avoid shallow-recursion
-      // this is similar to sub-classing
-      while (tmpState = import_resolveBase(tmpState, program, {})) {
-        finalState = tmpState;
-      }
+    });
 
-      return finalState;
-    };
-
-    // initialize the package instance with custom properties
-    // only argument is the object passed after the program when calling "new Flow(program, extraArg)"
-    corePkgDef.init = function () {
-      var
-        pkg = this,
-        activeFlow = activeFlows[0],
-        sharedProxyDataMember = {},
-        sharedProxyStateMember = {
-          name: '_null',
-          path: '..//',
-          depth: 0,
-          index: 0,
-          pins: true,
-          alias: 'null',
-          perms: merge(defaultPermissions)
-        },
-        nodes = pkg.nodes,
-        nodeCount = nodes.length,
-        i, j,
-        node, parentNode, tagName,
-        pkgId
-      ;
-
-      // init sub-instances hashes
-      pkg.bin = {};
-      pkg.tin = {};
-      // sub-instance "has" criteria search helpers
-      pkg.nStr =
-      pkg.pStr =
-      pkg.lastPing = // use same value for lastPingId
-        '|';
-      pkg.sAry = [];
-      pkg.pAry = [];
-      // define initial vars member
-      pkg.vars = {};
-      // collection of custom query tokens
-      pkg.tokens = {};
-      // collection of custom callback queries
-      pkg.cq = {};
-      // collection of arguments for traversal functions
-      pkg.args = [];
-      // collection of node calls made while traversing
-      pkg.calls = [];
-      // collection of nodes targeted and reached while traversing
-      pkg.trail = [];
-      // state index to add to trail at end of traversal/resume
-      pkg.tgtTrail = -1;
-      // collection of declared variable tracking objects
-      pkg.dtos = {};
-      // init delay timer, function, and args
-      pkg.waitTimer =
-      pkg.waitFnc =
-      pkg.waitArgs =
-        0;
-      // collection of cached values
-      pkg.cache = {
-        // token query cache
-        indexOf: {},
-        // store cache
-        store: {}
-      };
-      // indicates when this flow is in the stack of navigating flows
-      pkg.active = 0;
-      // flag when being invoked by a blessed function
-      pkg.blessed = 0;
-      // init index of node paths
-      pkg.nids = {};
-      // the number of child flows fired by this flow's program functions
-      pkg.pinned = 0;
-      // collection of parent flow references
-      pkg.pinning = [];
-      // collection of targeted nodes
-      pkg.targets = [];
-      // identify the initial phase for this flow, 0 by default
-      pkg.phase = 0;
-      // set owner permission and assignment defaults
-      pkg.owner = pkg.ownable = 0;
-      // set name of first node
-      pkg.nodes[0].name = '_null';
-      // set name of second node
-      pkg.nodes[1].name = '_program';
-      // initialize nodes...
-      for (i = 0; i < nodeCount; i++) {
-        node = nodes[i];
-        parentNode = nodes[node.parentIndex];
-
-        // index this node path
-        pkg.nids[node.path] = i;
-
-        if (i > 1) {
-          // add to delimited string of names (for sub-instances "has" matching)
-          pkg.nStr += node.name + '|';
-          pkg.sAry[pkg.sAry.length] = node.name;
-        }
-        // add to delimited string of paths (for sub-instances "has" matching)
-        pkg.pStr += node.path + '|';
-        pkg.pAry[pkg.pAry.length] = node.path;
-
-        // prep for tag compilation
-        node.pkg = pkg;
-        node.fncs = [0,0,0,0,0];
-        node.reds = [];
-
-        // run core tags
-        for (j = 0; j < coreTagKeyCount; j++) {
-          tagName = coreTagKeys[j];
-          coreTags[tagName](tagName, node.attrs.hasOwnProperty(tagName), node.attrs, node, parentNode, pkg, i);
-        }
-
-        // if there is no _on[0] function and this node's value is a function...
-        if (!node.fncs[0] && typeof node.value === 'function') {
-          // use as the _on[0] traversal function
-          node.fncs[0] = node.value;
-        }
-      }
-
-      // run post core tags for each node
-      for (i = 0; i < nodeCount; i++) {
-        node = nodes[i];
-        for (j = 0; j < corePostTagKeyCount; j++) {
-          tagName = corePostTagKeys[j];
-          corePostTags[tagName](tagName, node.attrs.hasOwnProperty(tagName), node.attrs, node, parentNode, pkg, i);
-        }
-      }
-
-      for (pkgId in pkg.pkgs) {
-        if (pkg.pkgs.hasOwnProperty(pkgId)) {
-          // reference data object in all proxy objects
-          pkg.pkgs[pkgId].proxy.data = sharedProxyDataMember;
-          // reference data object in all proxy objects
-          pkg.pkgs[pkgId].proxy.state = sharedProxyStateMember;
-        }
-      }
-
-      if (activeFlow) {
-
-        // use active flow as the owner
-        if (pkg.ownable) {
-          pkg.owner = activeFlow;
-        }
-
-        // auto capture to the active flow's temporary store
-        if (activeFlow.caps[0]) {
-          subs_addInsts(activeFlow.tin, [pkg], activeFlow);
-        }
-      }
-
-    };
-
-    // define prototype of any package instances
-    corePkgDef.prototype = {
-
+    // define package prototype
+    mix(corePkgDef.prototype, {
       // return index of the node resolved from a node reference
       /*
       qry - (string|function.toString()|number|object.index) which points to a node
@@ -1834,714 +2063,491 @@
         }
       }
 
-    };
-
-    // do something when the tank starts moving
-    corePkgDef.onBegin = function () {
-      var
-        pkg = this
-      ;
-
-      // add to the private and public flow stack
-      activeFlows.unshift(pkg);
-      corePkgDef.actives.unshift(pkg.proxy);
-      pkg.active = 1;
-
-      pkg.preMove();
-      // prevent going forward when pinned by another flow
-      if (pkg.pinned) {
-        pkg.tank.stop();
-      }
-    };
-
-    corePkgDef.onNode = function (evtName, currentNodeIndex) {
-      var
-        pkg = this,
-        state = pkg.proxy.state,
-        currentNode = pkg.nodes[currentNodeIndex]
-      ;
-
-      // set nodal info
-      state.name = currentNode.name;
-      state.index = currentNode.index;
-      state.depth = currentNode.depth;
-      state.path = currentNode.path;
-      state.pins = currentNode.pins;
-      state.alias = currentNode.alias;
-
-    };
-
-    corePkgDef.onScope = function (evtName, entering) {
-      var
-        pkg = this,
-        node = pkg.nodes[pkg.tank.currentIndex]
-      ;
-      if (entering) {
-        // set phase to "in"
-        pkg.phase = 1;
-      } else {
-        // set phase to "out"
-        pkg.phase = 2;
-      }
-
-      node.scope(entering);
-    };
-
-    corePkgDef.onEngage = function () {
-      var pkg = this;
-
-      pkg.setPrivs();
-    };
-
-    corePkgDef.onRelease = function () {
-      var pkg = this;
-
-      pkg.delPrivs();
-    };
-
-    // do something when the tank traverses a node
-    corePkgDef.onTraverse = function (evtName, phase) {
-      var
-        pkg = this,
-        tank = pkg.tank,
-        node = pkg.nodes[tank.currentIndex]
-      ;
-
-      pkg.phase = phase;
-
-      // capture when this node was a tank target
-      if (!~tank.targetIndex) {
-        pkg.tgtTrail = pkg.targets.shift();
-      }
-
-      // prepend sequence node targets
-      if (node.seq && !phase) {
-        pkg.proxy.go.apply(pkg.proxy, node.seq);
-      }
-
-      // invoke and track phase function
-      if (node.fncs[phase]) {
-        pkg.calls.push(node.index + '.' + phase);
-        // include arguments for the "on" function
-        pkg.result = node.fncs[phase].apply(pkg.proxy, (pkg.targets.length ? [] : pkg.args));
-
-        if (pkg.paused || pkg.pinned) {
-          pkg.result = undefined;
-        }
-      }
-    };
-
-    // execute delayed functions
-    corePkgDef.onTraversing = function () {
-      var pkg = this;
-
-      // execute any delay function
-      if (pkg.waitFnc) {
-        pkg.waitFnc.apply(pkg.proxy, pkg.waitArgs);
-        // clear delay components
-        pkg.waitFnc =
-        pkg.waitArgs =
-          0;
-      }
-    };
-
-    // complete traversing a node facet
-    corePkgDef.onTraversed = function () {
-      var
-        pkg = this,
-        proxy = pkg.proxy,
-        node = pkg.nodes[pkg.tank.currentIndex]
-      ;
-
-      // capture qualifying instances and empty the tin
-      if (node.caps) {
-        subs_addInsts(pkg.bin, subs_getInsts(pkg.tin, node.caps), pkg);
-      }
-      pkg.tin = {};
-
-      // track completed target, when completing the "on" phase
-      if (!pkg.phase && ~pkg.tgtTrail) {
-        pkg.trail[pkg.trail.length] = pkg.tgtTrail;
-        pkg.tgtTrail = -1;
-      }
-      // consume altered args if present
-      if (proxy.args !== pkg.args && isArray(proxy.args)) {
-        pkg.args = proxy.args;
-      }
-      if (typeof proxy.vars === 'object') {
-        pkg.vars = proxy.vars;
-      }
-      proxy.vars = pkg.vars;
-    };
-
-    // do something when the tank stops
-    corePkgDef.onEnd = function () {
-      var
-        pkg = this,
-        tank = pkg.tank,
-        parentFlow = activeFlows[1],
-        parentTank,
-        blocked = pkg.pause || pkg.pinned || pkg.phase,
-        hasTargets = pkg.targets.length,
-        node = pkg.nodes[tank.currentIndex]
-      ;
-
-      if (!blocked && (hasTargets || ~node.tail)) {
-        if (hasTargets) {
-          // direct tank to the next state
-          tank.go(pkg.targets[0]);
-        } else {
-          // instruct flow to tail state
-          pkg.proxy.go(node.tail);
-        }
-      } else {
-        if (blocked) {
-          // link pinnable parents with this pinnable state
-          if (
-            parentFlow &&
-            parentFlow.nodes[(parentTank = parentFlow.tank).currentIndex].pins &&
-            node.pins &&
-            !pkg.pinning[parentTank.id] &&
-            !parentFlow.pinning[tank.id]
-          ) {
-            // bind parent and this flow
-            parentFlow.pinned++;
-            pkg.pinning[parentTank.id] = parentFlow;
-            parentTank.stop();
-          }
-        } else {
-
-          // inform owner that we've stopped
-          if (~node.ping) {
-            pkg.pingOwner(node.ping);
-            // exit if owners end up directing this flow
-            if (pkg.paused || pkg.pinned || pkg.targets.length) {
-              return;
-            }
-            // otherwise, reset the lastPingId
-            pkg.lastPing = '';
-          }
-
-          // reset sequence trackers
-          pkg.args = [];
-          pkg.calls = [];
-          pkg.trail = [];
-
-          if (!node.index) {
-            // reset vars when ending on the null node
-            pkg.vars = {};
-          }
-
-          // update pinned flows
-          if (pkg.pinning.length) {
-            // first, reduce pinned count of each pinned flow
-            pkg.pinning.forEach(function (pinnedFlow) {
-              pinnedFlow.pinned--;
-            });
-            tank.post(function () {
-              // then, resume each pinned flow (once this flow is complete)
-              pkg.pinning.splice(0).forEach(function (pinnedFlow) {
-                if (!(pinnedFlow.pinned || pinnedFlow.pause)) {
-                  pinnedFlow.go();
-                }
-              });
-            });
-          }
-        }
-        // remove private and public activeflow status
-        activeFlows.shift();
-        corePkgDef.actives.shift();
-        pkg.active = 0;
-      }
-    };
+    });
 
     // Node prototype methods
-
-    // handle various asepcts of entering and exiting a node
-    corePkgDef.node.scope = function (entering) {
-      var
-        node = this,
-        pkg = node.pkg,
-        actionIdx = nodeScopeActionsLength
-      ;
-
-      while (actionIdx--) {
-        nodeScopeActions[actionIdx](node, pkg, entering);
-      }
-    };
-
-    // add method to determine if another node can be targeted from this node
-    corePkgDef.node.canTgt = function (targetNode) {
-      var
-        node = this,
-        pkg = node.pkg,
-        // alias the restrict node (if any)
-        restrictingNode = node.pkg.nodes[this.restrict],
-        // alias the ingress node of the target
-        targetIngressNode = node.pkg.nodes[targetNode.ingress]
-      ;
-
-      // return true if this node is within it's restrictions (if any), or when we're within, targeting, or on the target's ingress node (if any)
-      return pkg.is('self') ||
-        (
-          pkg.is('sub', 'owner', 'world') &&
-          (
-            // check if the target is within the restricting node - if any
-            !restrictingNode ||
-            targetNode.within(restrictingNode)
-          ) &&
-          (
-            // check if the target is within (or is) an ingress node
-            !targetIngressNode ||
-            node === targetIngressNode ||
-            targetNode === targetIngressNode ||
-            this.within(targetIngressNode)
-          ) &&
-          // deny when the target node is hidden
-          !~targetNode.conceal
-        )
-      ;
-    };
-
-    // add method to determine when this node is a descendant of the given/current node
-    corePkgDef.node.within = function (nodeRef) {
-      var
-        // resolve the parent node to check
-        parentNode = arguments.length ? (typeof nodeRef === 'object' ? nodeRef : this.pkg.nodes[nodeRef]) : this.pkg.nodes[this.pkg.tank.currentIndex];
-
-      // return whether the current node is within the parent node - auto-pass when parentNode is the flow state
-      return parentNode ? parentNode !== this && (!parentNode.index || !this.path.indexOf(parentNode.path)) : false;
-    };
-
-    // Flow prototype methods
-
-    // add method to return callbacks to this flow's states
-    corePkgDef.proxy.callbacks = function (qry, waypoint, bless) {
-      var
-        pkg = corePkgDef(this),
-        customCallback,
-        cacheId
-      ;
-
-      if (qry === true) {
-        qry = pkg.tank.currentIndex;
-      }
-
-      waypoint = +!!waypoint;
-      bless = +!!bless && pkg.is('self');
-
-      cacheId = '' + qry + waypoint + bless;
-
-      if (pkg.cq.hasOwnProperty(cacheId)) {
-        return pkg.cq[cacheId];
-      }
-
-      customCallback = function () {
+    mix(corePkgDef.node, {
+      // handle various asepcts of entering and exiting a node
+      scope: function (entering) {
         var
-          rslt,
-          setBlessed
+          node = this,
+          pkg = node.pkg,
+          actionIdx = nodeScopeActionsLength
         ;
-        if (bless && !pkg.blessed) {
-          setBlessed = 1;
-          pkg.blessed = 1;
-        }
-        if (waypoint) {
-          rslt = pkg.proxy.go(qry);
-        } else {
-          rslt = pkg.proxy.target.apply(pkg.proxy, [qry].concat(protoSlice.call(arguments)));
-        }
-        if (setBlessed) {
-          pkg.blessed = 0;
-        }
-        return rslt;
-      };
 
-      // return cached custom callback
-      return pkg.cq[cacheId] = customCallback;
-    };
-
-    corePkgDef.proxy.query = function () {
-      var
-        pkg = corePkgDef(this),
-        nodes = [],
-        nodeRef,
-        argumentIdx = arguments.length,
-        resolvedIndex
-      ;
-      if (argumentIdx) {
-        while (argumentIdx--) {
-          nodeRef = arguments[argumentIdx];
-          resolvedIndex = pkg.vetIndexOf(nodeRef);
-          if (~resolvedIndex) {
-            nodes.push(pkg.nodes[resolvedIndex].path);
-          } else {
-            return false;
-          }
+        while (actionIdx--) {
+          nodeScopeActions[actionIdx](node, pkg, entering);
         }
-        return nodes.length === 1 ? nodes[0] : nodes.reverse();
+      },
+      // add method to determine if another node can be targeted from this node
+      canTgt: function (targetNode) {
+        var
+          node = this,
+          pkg = node.pkg,
+          // alias the restrict node (if any)
+          restrictingNode = node.pkg.nodes[this.restrict],
+          // alias the ingress node of the target
+          targetIngressNode = node.pkg.nodes[targetNode.ingress]
+        ;
+
+        // return true if this node is within it's restrictions (if any), or when we're within, targeting, or on the target's ingress node (if any)
+        return pkg.is('self') ||
+          (
+            pkg.is('sub', 'owner', 'world') &&
+            (
+              // check if the target is within the restricting node - if any
+              !restrictingNode ||
+              targetNode.within(restrictingNode)
+            ) &&
+            (
+              // check if the target is within (or is) an ingress node
+              !targetIngressNode ||
+              node === targetIngressNode ||
+              targetNode === targetIngressNode ||
+              this.within(targetIngressNode)
+            ) &&
+            // deny when the target node is hidden
+            !~targetNode.conceal
+          )
+        ;
+      },
+      // add method to determine when this node is a descendant of the given/current node
+      within: function (nodeRef) {
+        var
+          // resolve the parent node to check
+          parentNode = arguments.length ? (typeof nodeRef === 'object' ? nodeRef : this.pkg.nodes[nodeRef]) : this.pkg.nodes[this.pkg.tank.currentIndex];
+
+        // return whether the current node is within the parent node - auto-pass when parentNode is the flow state
+        return parentNode ? parentNode !== this && (!parentNode.index || !this.path.indexOf(parentNode.path)) : false;
       }
-      return false;
-    };
 
-    // access and edit the locked status of a flow
-    corePkgDef.proxy.perms = function (options) {
-      var
-        pkg = corePkgDef(this),
-        argumentsLength = arguments.length
-      ;
-      if (pkg.is('sub', 'owner', 'self')) {
-        if (argumentsLength) {
-          if (argumentsLength > 1) {
-            options = protoSlice.call(arguments);
-          }
-          this.state.perms = merge(pkg.perms[0] = perms_parse(options, pkg.perms[0]));
+    });
+
+    // instance prototype methods
+    mix(corePkgDef.proxy, {
+      // add method to return callbacks to this flow's states
+      callbacks: function (qry, waypoint, bless) {
+        var
+          pkg = corePkgDef(this),
+          customCallback,
+          cacheId
+        ;
+
+        if (qry === true) {
+          qry = pkg.tank.currentIndex;
         }
-        return true;
-      }
-      return false;
-    };
 
-    // add method to program api
-    corePkgDef.proxy.target = function (qry) {
-      var
-        // alias this package
-        pkg = corePkgDef(this),
-        // resolve a node index from qry, or nothing if allowed or unlocked
-        tgtIdx = (pkg.is('world', 'sub', 'owner', 'self')) ? pkg.vetIndexOf(qry) : -1
-      ;
-      // if the destination node is valid, and the flow can move...
-      if (~tgtIdx) {
-        // capture arguments after the tgt
-        pkg.args = protoSlice.call(arguments).slice(1);
-        // reset targets array
-        pkg.targets = [tgtIdx];
-        // navigate towards the targets (unpauses the flow)
-        pkg.go();
-      } else { // otherwise, when the target node is invalid...
-        // return false
-        return false;
-      }
-      // return based on call path
-        // when internal (via a program-function)
-          // false when pinned
-          // true when paused or not pinned
-        // when external (outside a program-function)
-          // false when pinned
-          // false when paused
-          // false when exiting outside of phase 0 (_on)
-          // true when the traversal result is undefined
-          // the traversal result otherwise the traversal result is returned
-      if (pkg.pinned || pkg.pause || pkg.phase) {
-        return false;
-      } else if (pkg.active || pkg.result === undefined) {
-        return true;
-      } else {
-        return pkg.result;
-      } 
-    };
+        waypoint = +!!waypoint;
+        bless = +!!bless && pkg.is('self');
 
-    /**
-    Target, add, or insert nodes to traverse, or resume towards the last target node.
-    Returns false when there is no new destination, a waypoint was invalid, or the flow was locked or pinned.
+        cacheId = '' + qry + waypoint + bless;
 
-    Forms:
-      go() - resume traversal
-      go(waypoints) - add or insert waypoints
-    **/
-    corePkgDef.proxy.go = function () {
-      var
-        // alias self
-        pkg = corePkgDef(this),
-        // capture current paused status
-        wasPaused = pkg.pause,
-        // collection of targets to add to targets
-        waypoints = [],
-        // success status for this call
-        result = 0;
+        if (pkg.cq.hasOwnProperty(cacheId)) {
+          return pkg.cq[cacheId];
+        }
 
-      // if...
-      if (
-        // allowed or unlocked and ...
-        pkg.is('world', 'sub', 'owner', 'self') &&
-        // any and all node references are valid...
-        protoSlice.call(arguments).every(function (nodeRef) {
+        customCallback = function () {
           var
-            // resolve index of this reference
-            idx = pkg.vetIndexOf(nodeRef);
-
-          // add to waypoints
-          waypoints.push(idx);
-          // return true when the resolved index is not -1
-          return ~idx;
-        })
-      ) {
-        // if there are waypoints...
-        if (waypoints.length) {
-          // if the last waypoint matches the first target...
-          while (waypoints[waypoints.length - 1] === pkg.targets[0]) {
-            // remove the last waypoint
-            waypoints.pop();
+            rslt,
+            setBlessed
+          ;
+          if (bless && !pkg.blessed) {
+            setBlessed = 1;
+            pkg.blessed = 1;
           }
-          // prepend (remaining) waypoints to targets
-          pkg.targets = waypoints.concat(pkg.targets);
-        }
-        // capture result of move attempt or true when paused
-        result = pkg.go() || wasPaused;
-      }
-      // return result as boolean
-      return !!result;
-    };
-
-    // delay traversing
-    corePkgDef.proxy.wait = function () {
-      var
-        proxy = this,
-        pkg = corePkgDef(proxy),
-        args = arguments,
-        argLn = args.length,
-        hasArgs = argLn > 2,
-        noAction = argLn < 2,
-        callback,
-        delayNodeIdx,
-        delay
-      ;
-      if (pkg.is('sub', 'owner', 'self')) {
-        if (argLn) {
-          if (noAction) {
-            delay = args[0];
+          if (waypoint) {
+            rslt = pkg.proxy.go(qry);
           } else {
-            delay = args[1];
-            callback = args[0];
-            // assume action is a query, if not a function
-            if (typeof callback !== 'function') {
-              delayNodeIdx = pkg.indexOf(callback);
-              if (~delayNodeIdx) {
-                callback = function () {
-                  if (hasArgs) {
-                    proxy.target.apply(proxy, [delayNodeIdx].concat(protoSlice.call(args, 2)));
-                  } else {
-                    proxy.target.call(proxy, delayNodeIdx);
-                  }
-                };
+            rslt = pkg.proxy.target.apply(pkg.proxy, [qry].concat(protoSlice.call(arguments)));
+          }
+          if (setBlessed) {
+            pkg.blessed = 0;
+          }
+          return rslt;
+        };
+
+        // return cached custom callback
+        return pkg.cq[cacheId] = customCallback;
+      },
+      // resolve program queries
+      query: function () {
+        var
+          pkg = corePkgDef(this),
+          nodes = [],
+          nodeRef,
+          argumentIdx = arguments.length,
+          resolvedIndex
+        ;
+        if (argumentIdx) {
+          while (argumentIdx--) {
+            nodeRef = arguments[argumentIdx];
+            resolvedIndex = pkg.vetIndexOf(nodeRef);
+            if (~resolvedIndex) {
+              nodes.push(pkg.nodes[resolvedIndex].path);
+            } else {
+              return false;
+            }
+          }
+          return nodes.length === 1 ? nodes[0] : nodes.reverse();
+        }
+        return false;
+      },
+      // access and edit the locked status of a flow
+      perms: function (options) {
+        var
+          pkg = corePkgDef(this),
+          argumentsLength = arguments.length
+        ;
+        if (pkg.is('sub', 'owner', 'self')) {
+          if (argumentsLength) {
+            if (argumentsLength > 1) {
+              options = protoSlice.call(arguments);
+            }
+            this.state.perms = merge(pkg.perms[0] = perms_parse(options, pkg.perms[0]));
+          }
+          return true;
+        }
+        return false;
+      },
+      // add method to program api
+      target: function (qry) {
+        var
+          // alias this package
+          pkg = corePkgDef(this),
+          // resolve a node index from qry, or nothing if allowed or unlocked
+          tgtIdx = (pkg.is('world', 'sub', 'owner', 'self')) ? pkg.vetIndexOf(qry) : -1
+        ;
+        // if the destination node is valid, and the flow can move...
+        if (~tgtIdx) {
+          // capture arguments after the tgt
+          pkg.args = protoSlice.call(arguments).slice(1);
+          // reset targets array
+          pkg.targets = [tgtIdx];
+          // navigate towards the targets (unpauses the flow)
+          pkg.go();
+        } else { // otherwise, when the target node is invalid...
+          // return false
+          return false;
+        }
+        // return based on call path
+          // when internal (via a program-function)
+            // false when pinned
+            // true when paused or not pinned
+          // when external (outside a program-function)
+            // false when pinned
+            // false when paused
+            // false when exiting outside of phase 0 (_on)
+            // true when the traversal result is undefined
+            // the traversal result otherwise the traversal result is returned
+        if (pkg.pinned || pkg.pause || pkg.phase) {
+          return false;
+        } else if (pkg.active || pkg.result === undefined) {
+          return true;
+        } else {
+          return pkg.result;
+        } 
+      },
+      /**
+      Target, add, or insert nodes to traverse, or resume towards the last target node.
+      Returns false when there is no new destination, a waypoint was invalid, or the flow was locked or pinned.
+
+      Forms:
+        go() - resume traversal
+        go(waypoints) - add or insert waypoints
+      **/
+      go: function () {
+        var
+          // alias self
+          pkg = corePkgDef(this),
+          // capture current paused status
+          wasPaused = pkg.pause,
+          // collection of targets to add to targets
+          waypoints = [],
+          // success status for this call
+          result = 0;
+
+        // if...
+        if (
+          // allowed or unlocked and ...
+          pkg.is('world', 'sub', 'owner', 'self') &&
+          // any and all node references are valid...
+          protoSlice.call(arguments).every(function (nodeRef) {
+            var
+              // resolve index of this reference
+              idx = pkg.vetIndexOf(nodeRef);
+
+            // add to waypoints
+            waypoints.push(idx);
+            // return true when the resolved index is not -1
+            return ~idx;
+          })
+        ) {
+          // if there are waypoints...
+          if (waypoints.length) {
+            // if the last waypoint matches the first target...
+            while (waypoints[waypoints.length - 1] === pkg.targets[0]) {
+              // remove the last waypoint
+              waypoints.pop();
+            }
+            // prepend (remaining) waypoints to targets
+            pkg.targets = waypoints.concat(pkg.targets);
+          }
+          // capture result of move attempt or true when paused
+          result = pkg.go() || wasPaused;
+        }
+        // return result as boolean
+        return !!result;
+      },
+      // delay traversing
+      wait: function () {
+        var
+          proxy = this,
+          pkg = corePkgDef(proxy),
+          args = arguments,
+          argLn = args.length,
+          hasArgs = argLn > 2,
+          noAction = argLn < 2,
+          callback,
+          delayNodeIdx,
+          delay
+        ;
+        if (pkg.is('sub', 'owner', 'self')) {
+          if (argLn) {
+            if (noAction) {
+              delay = args[0];
+            } else {
+              delay = args[1];
+              callback = args[0];
+              // assume action is a query, if not a function
+              if (typeof callback !== 'function') {
+                delayNodeIdx = pkg.indexOf(callback);
+                if (~delayNodeIdx) {
+                  callback = function () {
+                    if (hasArgs) {
+                      proxy.target.apply(proxy, [delayNodeIdx].concat(protoSlice.call(args, 2)));
+                    } else {
+                      proxy.target.call(proxy, delayNodeIdx);
+                    }
+                  };
+                }
               }
             }
           }
-        }
-        // pause when called with no args, a delay, or a delay and action
-        if (!argLn || (typeof delay === 'number' && (noAction || typeof callback === 'function'))) {
-          pkg.pause = 1;
-          pkg.tank.stop();
-          // clear any existing delay
-          clearTimeout(pkg.waitTimer);
-          // set timeout when given a delay
-          if (argLn) {
-            pkg.waitTimer = setTimeout(
-              function () {
-                // set delay callback (fired during subsequent "begin" event)
-                if (typeof callback === 'function') {
-                  pkg.waitFnc = callback;
-                  // only pass for function-actions
-                  pkg.waitArgs = (hasArgs && delayNodeIdx === undefined) ? protoSlice.call(args, 2) : [];
-                }
-                // traverse towards the current target
-                pkg.go();
-              },
-              ~~delay // number of milliseconds to wait (converted to an integer)
-            );
-          }
-          // indicate success with pausing flow
-          return true;
-        }
-      }
-      // indicate failure to pause flow
-      return false;
-    };
-
-    // retrieve the flow that owns this one, if any
-    // owner may be set by the owner or child
-    // owner may be removed by the owner or child
-    corePkgDef.proxy.owner = function (owner) {
-      var
-        argumentsLength = arguments.length,
-        pkg = corePkgDef(this),
-        readAccess = pkg.is('owner', 'self'),
-        writeAccess = readAccess || !pkg.owner
-      ;
-
-      if (argumentsLength) {
-        if (writeAccess) {
-          // change owner to something other than itself
-          if (isFlow(owner) && owner !== pkg.proxy) {
-            pkg.owner = corePkgDef(owner);
-            return owner;
-          }
-          // remove this flow's owner
-          if (owner === false) {
-            pkg.owner = 0;
+          // pause when called with no args, a delay, or a delay and action
+          if (!argLn || (typeof delay === 'number' && (noAction || typeof callback === 'function'))) {
+            pkg.pause = 1;
+            pkg.tank.stop();
+            // clear any existing delay
+            clearTimeout(pkg.waitTimer);
+            // set timeout when given a delay
+            if (argLn) {
+              pkg.waitTimer = setTimeout(
+                function () {
+                  // set delay callback (fired during subsequent "begin" event)
+                  if (typeof callback === 'function') {
+                    pkg.waitFnc = callback;
+                    // only pass for function-actions
+                    pkg.waitArgs = (hasArgs && delayNodeIdx === undefined) ? protoSlice.call(args, 2) : [];
+                  }
+                  // traverse towards the current target
+                  pkg.go();
+                },
+                ~~delay // number of milliseconds to wait (converted to an integer)
+              );
+            }
+            // indicate success with pausing flow
             return true;
           }
         }
+        // indicate failure to pause flow
         return false;
-      } else if (readAccess) {
-        return pkg.owner.proxy;
-      } else {
-        return !!pkg.owner;
-      }
-    };
+      },
+      // retrieve the flow that owns this one, if any
+      // owner may be set by the owner or child
+      // owner may be removed by the owner or child
+      owner: function (owner) {
+        var
+          argumentsLength = arguments.length,
+          pkg = corePkgDef(this),
+          readAccess = pkg.is('owner', 'self'),
+          writeAccess = readAccess || !pkg.owner
+        ;
 
-    corePkgDef.proxy.subs = function (rawCriteria) {
-      var
-        pkg = corePkgDef(this),
-        args = protoSlice.call(arguments),
-        argLn = args.length,
-        allowed = pkg.is('sub', 'owner','self'),
-        tin = pkg.tin,
-        bin = pkg.bin,
-        criteria,
-        results,
-        i
-      ;
+        if (argumentsLength) {
+          if (writeAccess) {
+            // change owner to something other than itself
+            if (isFlow(owner) && owner !== pkg.proxy) {
+              pkg.owner = corePkgDef(owner);
+              return owner;
+            }
+            // remove this flow's owner
+            if (owner === false) {
+              pkg.owner = 0;
+              return true;
+            }
+          }
+          return false;
+        } else if (readAccess) {
+          return pkg.owner.proxy;
+        } else {
+          return !!pkg.owner;
+        }
+      },
+      // manage collected instances
+      subs: function (rawCriteria) {
+        var
+          pkg = corePkgDef(this),
+          args = protoSlice.call(arguments),
+          argLn = args.length,
+          allowed = pkg.is('sub', 'owner','self'),
+          tin = pkg.tin,
+          bin = pkg.bin,
+          criteria,
+          results,
+          i
+        ;
 
-      // remove sub-instances
+        // remove sub-instances
 
-      if (argLn > 1 && rawCriteria === 'remove') {
-        if (!allowed) {
-          // deny unauthorized removal attempts
+        if (argLn > 1 && rawCriteria === 'remove') {
+          if (!allowed) {
+            // deny unauthorized removal attempts
+            return 0;
+          }
+          // focus on remaining arguments
+          args.shift();
+          if (isFlow(args[0])) {
+            i = args.length;
+            // get core package instances
+            while (i--) {
+              if (!(args[i] = corePkgDef(args[i]))) {
+                // fail when not a flow instance
+                return 0;
+              }
+            }
+            // remove these sub-instances from the bin and tin
+            return subs_removeInsts(bin, args) + subs_removeInsts(tin, args);
+          } else if (argLn > 1) {
+            if (argLn === 2 && args[0] === null && pkg.caps[0]) {
+              // use branch criteria
+              criteria = pkg.caps[0];
+            } else {
+              // sanitize criteria
+              criteria = subs_sanitizeCriteria(args[0]);
+            }
+            // remove from the targeted collections
+            if (!~criteria.buffer) {
+              return subs_removeInsts(tin, subs_getInsts(tin, criteria)) + subs_removeInsts(bin, subs_getInsts(bin, criteria));
+            } else if (criteria.buffer) {
+              return subs_removeInsts(tin, subs_getInsts(tin, criteria));
+            } else {
+              return subs_removeInsts(bin, subs_getInsts(bin, criteria));
+            }
+          }
           return 0;
         }
-        // focus on remaining arguments
-        args.shift();
-        if (isFlow(args[0])) {
-          i = args.length;
+
+        // add sub-instances
+
+        if (isFlow(rawCriteria)) {
+          if (!allowed) {
+            // deny unauthorized additions
+            return 0;
+          }
+          i = argLn;
           // get core package instances
           while (i--) {
             if (!(args[i] = corePkgDef(args[i]))) {
-              // fail when not a flow instance
+              // fail when not adding a flow instance or adding self
               return 0;
             }
           }
-          // remove these sub-instances from the bin and tin
-          return subs_removeInsts(bin, args) + subs_removeInsts(tin, args);
-        } else if (argLn > 1) {
-          if (argLn === 2 && args[0] === null && pkg.caps[0]) {
-            // use branch criteria
-            criteria = pkg.caps[0];
-          } else {
-            // sanitize criteria
-            criteria = subs_sanitizeCriteria(args[0]);
+          // remove from tin and add to bin
+          subs_removeInsts(tin, args);
+          return subs_addInsts(bin, args, pkg);
+        }
+
+        // retrieve sub-instances
+
+        if (rawCriteria === null && pkg.caps[0]) {
+          // use branch criteria
+          criteria = pkg.caps[0];
+        } else if (argLn) {
+          // retrieve subs with the given criteria
+          criteria = subs_sanitizeCriteria(rawCriteria);
+        } else {
+          // retrieve all sub-instances using precompiled default
+          criteria = criteriaCache.ctrue;
+        }
+        // search the collections identified by the criteria
+        if (!~criteria.buffer) {
+          results = subs_getInsts(tin, criteria).concat(subs_getInsts(bin, criteria));
+        } else if (criteria.buffer) {
+          results = subs_getInsts(tin, criteria);
+        } else {
+          results = subs_getInsts(bin, criteria);
+        }
+        i = results.length;
+        if (allowed) {
+          // return matching proxies
+          while (i--) {
+            results[i] = results[i].proxy;
           }
-          // remove from the targeted collections
-          if (!~criteria.buffer) {
-            return subs_removeInsts(tin, subs_getInsts(tin, criteria)) + subs_removeInsts(bin, subs_getInsts(bin, criteria));
-          } else if (criteria.buffer) {
-            return subs_removeInsts(tin, subs_getInsts(tin, criteria));
-          } else {
-            return subs_removeInsts(bin, subs_getInsts(bin, criteria));
-          }
+          return results;
         }
-        return 0;
-      }
+        // return number of results
+        return i;
+      },
+      // return an object with status information about the flow and it's current state
+      status: function (metric) {
+        var
+          // get the package instance
+          pkg = corePkgDef(this),
+          obj = {},
+          all = !arguments.length
+        ;
 
-      // add sub-instances
-
-      if (isFlow(rawCriteria)) {
-        if (!allowed) {
-          // deny unauthorized additions
-          return 0;
+        // callback-function for retrieving the node index
+        function getPathFromIndex(idx) {
+          return pkg.nodes[idx].path;
         }
-        i = argLn;
-        // get core package instances
-        while (i--) {
-          if (!(args[i] = corePkgDef(args[i]))) {
-            // fail when not adding a flow instance or adding self
-            return 0;
-          }
+
+        if (all || metric === 'active') {
+          obj.active = !!pkg.active;
         }
-        // remove from tin and add to bin
-        subs_removeInsts(tin, args);
-        return subs_addInsts(bin, args, pkg);
-      }
 
-      // retrieve sub-instances
-
-      if (rawCriteria === null && pkg.caps[0]) {
-        // use branch criteria
-        criteria = pkg.caps[0];
-      } else if (argLn) {
-        // retrieve subs with the given criteria
-        criteria = subs_sanitizeCriteria(rawCriteria);
-      } else {
-        // retrieve all sub-instances using precompiled default
-        criteria = criteriaCache.ctrue;
-      }
-      // search the collections identified by the criteria
-      if (!~criteria.buffer) {
-        results = subs_getInsts(tin, criteria).concat(subs_getInsts(bin, criteria));
-      } else if (criteria.buffer) {
-        results = subs_getInsts(tin, criteria);
-      } else {
-        results = subs_getInsts(bin, criteria);
-      }
-      i = results.length;
-      if (allowed) {
-        // return matching proxies
-        while (i--) {
-          results[i] = results[i].proxy;
+        if (all || metric === 'loops') {
+          obj.loops = Math.max((pkg.calls.join().match(new RegExp('\\b' + pkg.tank.currentIndex + '.' + pkg.phase, 'g')) || []).length - 1, 0);
         }
-        return results;
-      }
-      // return number of results
-      return i;
-    };
 
-    // return an object with status information about the flow and it's current state
-    corePkgDef.proxy.status = function (metric) {
-      var
-        // get the package instance
-        pkg = corePkgDef(this),
-        obj = {},
-        all = !arguments.length
-      ;
+        if (all || metric === 'paused') {
+          obj.paused = !!pkg.pause;
+        }
 
-      // callback-function for retrieving the node index
-      function getPathFromIndex(idx) {
-        return pkg.nodes[idx].path;
-      }
+        if (all || metric === 'phase') {
+          obj.phase = pkg.active ? traversalCallbackOrder[pkg.phase] : '';
+        }
 
-      if (all || metric === 'active') {
-        obj.active = !!pkg.active;
-      }
+        if (all || metric === 'pinned') {
+          obj.pinned = !!pkg.pinned;
+        }
 
-      if (all || metric === 'loops') {
-        obj.loops = Math.max((pkg.calls.join().match(new RegExp('\\b' + pkg.tank.currentIndex + '.' + pkg.phase, 'g')) || []).length - 1, 0);
-      }
+        if (all || metric === 'targets') {
+          obj.targets = pkg.targets.map(getPathFromIndex);
+        }
 
-      if (all || metric === 'paused') {
-        obj.paused = !!pkg.pause;
+        if (all || metric === 'trail') {
+          obj.trail = pkg.trail.map(getPathFromIndex);
+        }
+
+        if (all) {
+          return obj;
+        } else {
+          return obj[metric];
+        }
       }
 
-      if (all || metric === 'phase') {
-        obj.phase = pkg.active ? traversalCallbackOrder[pkg.phase] : '';
-      }
-
-      if (all || metric === 'pinned') {
-        obj.pinned = !!pkg.pinned;
-      }
-
-      if (all || metric === 'targets') {
-        obj.targets = pkg.targets.map(getPathFromIndex);
-      }
-
-      if (all || metric === 'trail') {
-        obj.trail = pkg.trail.map(getPathFromIndex);
-      }
-
-      if (all) {
-        return obj;
-      } else {
-        return obj[metric];
-      }
-    };
+    });
 
     return Flow;
   }
