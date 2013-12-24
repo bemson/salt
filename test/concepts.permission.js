@@ -308,6 +308,48 @@ describe( 'Permission', function () {
         flow.groupIs('world').should.be.ok;
       });
 
+      describe( 'denial', function () {
+
+        it( 'should work via _perms', function () {
+          flow = new Flow({
+            denied: {
+              _perms: '!world'
+            }
+          });
+          flow.go(1).should.be.ok;
+          flow.go('denied').should.be.ok;
+          flow.go(1).should.not.be.ok;
+          flow.state.perms.world.should.not.be.ok;
+        });
+
+        it( 'should work via .perms()', function () {
+          flow = new Flow();
+          flow = new Flow({
+            denied: function () {
+              this.perms('!world');
+            }
+          });
+          flow.go(1).should.be.ok;
+          flow.go('denied').should.be.ok;
+          flow.go(1).should.not.be.ok;
+          flow.state.perms.world.should.not.be.ok;
+        });
+
+        it( 'should be reversible via .perms()', function () {
+          flow = new Flow({
+            denied: {
+              _perms: '!world',
+              _on: function () {
+                this.perms('world');
+              }
+            }
+          });
+          flow.go(1).should.be.ok;
+          flow.go('//denied').should.be.ok;
+          flow.go(1).should.be.ok;
+          flow.state.perms.world.should.be.ok;
+        });
+      });
 
     });
 
