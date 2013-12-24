@@ -244,6 +244,58 @@ describe( 'Permission', function () {
         flow.go(1);
       });
 
+      describe( 'denial', function () {
+
+        it( 'should work via `_perms`', function () {
+          flow = new Flow({
+            _capture: true,
+            _perms: '!sub',
+            _on: function () {
+              new Flow(function () {
+                flow.perms().should.not.be.ok;
+              });
+              this.subs()[0].go(1).should.be.ok;
+            }
+          });
+          flow.go(1);
+        });
+
+        it( 'should work via `.perms()`', function () {
+          flow = new Flow({
+            _capture: true,
+            _on: function () {
+              this.perms('!sub');
+              new Flow(function () {
+                flow.perms().should.not.be.ok;
+              });
+              this.subs()[0].go(1).should.be.ok;
+
+              this.perms('sub');
+              new Flow(function () {
+                flow.perms().should.be.ok;
+              });
+              this.subs()[1].go(1).should.be.ok;
+            }
+          });
+          flow.go(1);
+        });
+
+        it( 'should be reversible via .perms()', function () {
+          flow = new Flow({
+            _capture: true,
+            _perms: '!sub',
+            _on: function () {
+              new Flow(function () {
+                flow.perms().should.be.ok;
+              });
+              this.perms('sub');
+              this.subs()[0].go(1).should.be.ok;
+            }
+          });
+          flow.go(1);
+        });
+      });
+
     });
 
     describe( 'world', function () {
