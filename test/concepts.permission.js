@@ -207,6 +207,24 @@ describe( 'Permission', function () {
         flow.go(1);
       });
 
+      describe( 'denial', function () {
+
+        it( 'should not be possible via .perms() or _perms', function () {
+          flow = new Flow({
+            _perms: '!self',
+            _on: function () {
+              this.state.perms.self.should.be.ok;
+              this.perms('!self');
+              this.state.perms.self.should.be.ok;
+              this.go(0);
+            }
+          });
+          flow.go(1);
+          flow.state.index.should.equal(0);
+        });
+
+      });
+
     });
 
     describe( 'owner', function () {
