@@ -224,6 +224,57 @@ describe( 'Permission', function () {
         flow.go(1);
       });
 
+      describe( 'denial', function () {
+
+        it( 'should work via _perms', function () {
+          flow = new Flow(function () {
+            var owned = new Flow({
+              _owner: -1,
+              _perms: '!owner'
+            });
+            owned.state.perms.owner.should.be.ok;
+            owned.go(1).should.be.ok;
+            owned.state.perms.owner.should.not.be.ok;
+            owned.perms().should.not.be.ok;
+            owned.go(0).should.not.be.ok;
+          });
+        });
+
+        it( 'should work via .perms()', function () {
+          flow = new Flow(function () {
+            var owned = new Flow({
+              _owner: -1,
+              _on: function () {
+                this.perms('!owner');
+              }
+            });
+            owned.state.perms.owner.should.be.ok;
+            owned.go(1).should.be.ok;
+            owned.state.perms.owner.should.not.be.ok;
+            owned.perms().should.not.be.ok;
+            owned.go(0).should.not.be.ok;
+          });
+        });
+
+        it( 'should be reversible via .perms()', function () {
+          flow = new Flow(function () {
+            var owned = new Flow({
+              _owner: -1,
+              _perms: '!owner',
+              _on: function () {
+                this.perms('owner');
+              }
+            });
+            owned.state.perms.owner.should.be.ok;
+            owned.go(1).should.be.ok;
+            owned.state.perms.owner.should.be.ok;
+            owned.perms().should.be.ok;
+            owned.go(0).should.be.ok;
+          });
+        });
+
+      });
+
     });
 
     describe( 'sub', function () {
