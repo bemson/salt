@@ -1136,6 +1136,8 @@
         } else {
           mix(perms, option);
         }
+        // ensure self is always true
+        mix(perms, {self: true});
         return perms;
       }
       // return new or old lastPerms
