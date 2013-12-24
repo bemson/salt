@@ -28,7 +28,7 @@
           return obj instanceof Array;
         },
       tokenPrefix = '@',
-      defaultPermissions = {world: true, owner: true, sub: true},
+      defaultPermissions = {world: true, owner: true, sub: true, self: true},
       // regexps
       r_queryIsTokenized = new RegExp('[\\.\\|' + tokenPrefix + ']'),
       r_validAbsolutePath = /^\/\/(?:\w+\/)+/,
@@ -1108,7 +1108,8 @@
         typeofOption = typeof option,
         optionIdx,
         optionLength,
-        key
+        key,
+        self_perm = 'self'
       ;
       if (typeofOption === 'object' && isArray(option)) {
         optionLength = option.length;
@@ -1122,22 +1123,31 @@
       ) {
         perms = merge(lastPerms);
         if (typeofOption === 'string' && option) {
+          option = option.toLowerCase();
           deny = option.charAt(0) === '!';
           if (deny) {
             option = option.substr(1);
           }
-          perms[option] = !deny;
+          if (option !== self_perm) {
+            perms[option] = !deny;
+          }
         } else if (typeofOption === 'boolean') {
           for (key in perms) {
-            if (perms.hasOwnProperty(key)) {
+            if (key !== self_perm && perms.hasOwnProperty(key)) {
               perms[key] = option;
             }
           }
         } else {
-          mix(perms, option);
+          // lowercase all options
+          lastPerms = {};
+          for (key in option) {
+            if (option.hasOwnProperty(key)) {
+              lastPerms[key.toLowerCase()] = option[key];
+            }
+          }
+          // ensure self is true
+          mix(perms, lastPerms, {self: true});
         }
-        // ensure self is always true
-        mix(perms, {self: true});
         return perms;
       }
       // return new or old lastPerms

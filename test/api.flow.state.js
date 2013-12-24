@@ -75,7 +75,7 @@ describe( 'Flow#state', function () {
     state.alias.should.equal('null');
     state.path.should.equal('..//');
     state.pins.should.equal(true);
-    state.perms.should.deep.equal({world: true, owner: true, sub: true});
+    state.perms.should.deep.equal({world: true, owner: true, sub: true, self: true});
   });
 
   it( 'should reflect the "program" state as expected', function () {
@@ -86,7 +86,7 @@ describe( 'Flow#state', function () {
     state.alias.should.equal('program');
     state.path.should.equal('//');
     state.pins.should.equal(true);
-    state.perms.should.deep.equal({world: true, owner: true, sub: true});
+    state.perms.should.deep.equal({world: true, owner: true, sub: true, self: true});
   });
 
   it( 'should reflect the current state', function () {

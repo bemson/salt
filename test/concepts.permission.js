@@ -33,7 +33,7 @@ describe( 'Permission', function () {
 
   it( 'should list "owner", "sub", and "world" access groups', function () {
     flow = new Flow();
-    flow.state.perms.should.eql({owner:true, world: true, sub: true});
+    flow.state.perms.should.eql({owner:true, world: true, sub: true, self: true});
   });
 
   describe( 'format', function () {
@@ -118,9 +118,9 @@ describe( 'Permission', function () {
         flow = new Flow({
           _perms: false,
           _on: function () {
-            this.state.perms.should.eql({world:false, owner: false, sub: false});
+            this.state.perms.should.eql({world:false, owner: false, sub: false, self: true});
             this.perms(true).should.be.ok;
-            this.state.perms.should.eql({world:true, owner: true, sub: true});
+            this.state.perms.should.eql({world:true, owner: true, sub: true, self: true});
             spy();
           }
         });
@@ -133,9 +133,9 @@ describe( 'Permission', function () {
         flow = new Flow({
           _perms: true,
           _on: function () {
-            this.state.perms.should.eql({world:true, owner: true, sub: true});
+            this.state.perms.should.eql({world:true, owner: true, sub: true, self: true});
             this.perms(false);
-            this.state.perms.should.eql({world:false, owner: false, sub: false});
+            this.state.perms.should.eql({world:false, owner: false, sub: false, self: true});
             spy();
           }
         });
@@ -193,6 +193,29 @@ describe( 'Permission', function () {
 
     after(function () {
       delete corePkgDef.proxy.groupIs;
+    });
+
+    it( 'should ignore lettercase', function () {
+      flow = new Flow({
+        _perms: '!OWNEr',
+        _on: function () {
+          this.perms('!SUB');
+          this.perms({WORLD: false});
+        }
+      });
+      flow.go(1);
+      flow.state.perms.world.should.not.be.ok;
+      flow.state.perms.owner.should.not.be.ok;
+      flow.state.perms.sub.should.not.be.ok;
+    });
+
+    it( 'should ignore object keys when prefixed with an exclamation', function () {
+      flow = new Flow({
+        _perms: {'!world': false}
+      });
+      flow.state.perms.world.should.be.ok;
+      flow.go(1);
+      flow.state.perms.world.should.be.ok;
     });
 
     describe( 'self', function () {
