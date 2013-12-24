@@ -19,6 +19,7 @@
       rand_string = (Math.ceil(Math.random() * 5000) + 3000).toString(18),
       corePkgDef = Flow.pkg('core'),
       staticUnusedArray = [],
+      sharedProxyStateGroupsMember = [],
       protoSlice = Array.prototype.slice,
       RxpProto = RegExp.prototype,
       i, // loop vars
@@ -29,6 +30,7 @@
         },
       tokenPrefix = '@',
       defaultPermissions = {world: true, owner: true, sub: true, self: true},
+      copyOfDefaultPermissions = merge(defaultPermissions),
       // regexps
       r_queryIsTokenized = new RegExp('[\\.\\|' + tokenPrefix + ']'),
       r_validAbsolutePath = /^\/\/(?:\w+\/)+/,
@@ -126,6 +128,38 @@
             node[prop] = parentNode[prop];
           } else {
             node[prop] = -1;
+          }
+        },
+        // Specify cascading group identifiers
+        _group: function (tagName, exists, tags, node, parentNode) {
+          var
+            tagValue,
+            groups,
+            groupIdx,
+            groupName
+          ;
+          if (parentNode) {
+            node.groups = parentNode.groups;
+            node.cGrps = parentNode.cGrps;
+          }
+          if (exists) {
+            groups = merge(node.groups);
+            tagValue = tags[tagName];
+            if (!isArray(tagValue)) {
+              tagValue = [tagValue];
+            }
+            groupIdx = tagValue.length;
+            while (groupIdx--) {
+              groupName = tagValue[groupIdx];
+              if (groupName &&
+                typeof groupName === 'string' &&
+                !defaultPermissions.hasOwnProperty((groupName = groupName.toLowerCase()))
+              ) {
+                groups[groupName.toLowerCase()] = true;
+              }
+            }
+            node.groups = groups;
+            node.cGrps = Object.keys(groups);
           }
         },
         // Specify cascading permissions when a state is entered and exited
@@ -482,9 +516,17 @@
         // capture criteria stack
         3: function (node, pkg, add) {
           shared_nodeStackHandler(pkg.caps, node.caps, add);
+        },
+        // list groups
+        4: function (node, pkg, add) {
+          if (add) {
+            pkg.proxy.state.groups = node.cGrps;
+          } else {
+            pkg.proxy.state.groups = pkg.nodes[node.parentIndex].cGrps;
+          }
         }
       },
-      nodeScopeActionsLength = 4,
+      nodeScopeActionsLength = 5,
       // import resolution helpers
       import_pkgCnt,
       import_tagKeyTests,
@@ -1405,7 +1447,8 @@
             index: 0,
             pins: true,
             alias: 'null',
-            perms: merge(defaultPermissions)
+            perms: copyOfDefaultPermissions,
+            groups: sharedProxyStateGroupsMember
           },
           nodes = pkg.nodes,
           nodeCount = nodes.length,
@@ -2080,6 +2123,9 @@
 
     // Node prototype methods
     mix(corePkgDef.node, {
+      // set initial group - shared across all instances
+      groups: {},
+      cGrps: sharedProxyStateGroupsMember,
       // handle various asepcts of entering and exiting a node
       scope: function (entering) {
         var

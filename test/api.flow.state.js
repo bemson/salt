@@ -8,9 +8,12 @@ describe( 'Flow#state', function () {
 
   before(function () {
     flow = new Flow({
+      _group: 'pop',
       a: {
         _perms: '!sub',
-        b: {}
+        b: {
+          _group: 'zee'
+        }
       },
       c: {
         _perms: '!owner',
@@ -68,6 +71,11 @@ describe( 'Flow#state', function () {
     state.perms.should.be.an('object');
   });
 
+  it( 'should have an array "groups" member', function () {
+    state.should.haveOwnProperty('groups');
+    state.perms.should.be.a.instanceOf(Array);
+  });
+
   it( 'should reflect the "null" state by default', function () {
     state.name.should.equal('_null');
     state.index.should.equal(0);
@@ -76,6 +84,7 @@ describe( 'Flow#state', function () {
     state.path.should.equal('..//');
     state.pins.should.equal(true);
     state.perms.should.deep.equal({world: true, owner: true, sub: true, self: true});
+    state.groups.should.have.lengthOf(0);
   });
 
   it( 'should reflect the "program" state as expected', function () {
@@ -87,6 +96,8 @@ describe( 'Flow#state', function () {
     state.path.should.equal('//');
     state.pins.should.equal(true);
     state.perms.should.deep.equal({world: true, owner: true, sub: true, self: true});
+    state.groups.should.have.lengthOf(1);
+    state.groups.should.include('pop');
   });
 
   it( 'should reflect the current state', function () {
@@ -98,6 +109,9 @@ describe( 'Flow#state', function () {
     state.path.should.equal('//a/');
     state.pins.should.equal(true);
     state.perms.sub.should.not.be.ok;
+    state.groups.should.have.lengthOf(2);
+    state.groups.should.include('zee');
+    state.groups.should.include('pop');
 
     flow.go('//c/');
     state.name.should.equal('c');
@@ -107,6 +121,7 @@ describe( 'Flow#state', function () {
     state.path.should.equal('//c/');
     state.pins.should.equal(false);
     state.perms.owner.should.not.be.ok;
+    state.groups.should.have.lengthOf(0);
   });
 
 });
