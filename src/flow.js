@@ -1961,6 +1961,7 @@
         var
           pkg = this,
           activeId,
+          perms = pkg.perms[0],
           activeFlow = activeFlows[0],
           argumentIdx = arguments.length
         ;
@@ -1973,17 +1974,17 @@
               }
             break;
             case 'owner':
-              if (pkg.perms[0].owner && pkg.owner === activeFlow) {
+              if (perms.owner && pkg.owner === activeFlow) {
                 return 1;
               }
             break;
             case 'sub':
-              if (activeFlow && (pkg.bin.hasOwnProperty((activeId = activeFlow.tank.id)) || pkg.tin.hasOwnProperty(activeId))) {
+              if (perms.sub && activeFlow && (pkg.bin.hasOwnProperty((activeId = activeFlow.tank.id)) || pkg.tin.hasOwnProperty(activeId))) {
                 return 1;
               }
             break;
             case 'world':
-              if (pkg.perms[0].world && (!activeFlow || !pkg.is('sub', 'owner', 'self'))) {
+              if (perms.world && (!activeFlow || !pkg.is('sub', 'owner', 'self'))) {
                 return 1;
               }
             break;
@@ -2195,7 +2196,8 @@
       // access and edit the locked status of a flow
       perms: function (options) {
         var
-          pkg = corePkgDef(this),
+          flow = this,
+          pkg = corePkgDef(flow),
           argumentsLength = arguments.length
         ;
         if (pkg.is('sub', 'owner', 'self')) {
@@ -2203,7 +2205,7 @@
             if (argumentsLength > 1) {
               options = protoSlice.call(arguments);
             }
-            this.state.perms = merge(pkg.perms[0] = perms_parse(options, pkg.perms[0]));
+            flow.state.perms = merge(pkg.perms[0] = perms_parse(options, pkg.perms[0]));
           }
           return true;
         }
