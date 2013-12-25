@@ -77,4 +77,42 @@ describe( '_group tag', function () {
     flow.state.groups.should.include('pop');
   });
 
+  it( 'should allow access to self-identifying flows', function () {
+    var control = new Flow({
+      _group: 'foo',
+      _on: function () {
+        flow.go(0).should.be.ok;
+      }
+    });
+    flow = new Flow({
+      _perms: false,
+      _on: function () {
+        this.perms('foo');
+      }
+    });
+    flow.go(1);
+    flow.state.perms.world.should.not.be.ok;
+    flow.go(0).should.not.be.ok;
+    control.go(1);
+    control.state.groups.should.include('foo');
+    flow.state.index.should.equal(0);
+  });
+
+  it( 'should deny access to self-identifying flows', function () {
+    var control = new Flow({
+      _group: 'foo',
+      _on: function () {
+        flow.go(0).should.not.be.ok;
+      }
+    });
+    flow = new Flow({
+      _perms: '!foo'
+    });
+    flow.go(1);
+    flow.state.perms.foo.should.not.be.ok;
+    control.go(1);
+    control.state.groups.should.include('foo');
+    flow.state.index.should.equal(1);
+  });
+
 });
