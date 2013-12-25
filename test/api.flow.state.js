@@ -73,7 +73,7 @@ describe( 'Flow#state', function () {
 
   it( 'should have an array "groups" member', function () {
     state.should.haveOwnProperty('groups');
-    state.perms.should.be.a.instanceOf(Array);
+    state.groups.should.be.a.instanceOf(Array);
   });
 
   it( 'should reflect the "null" state by default', function () {
@@ -109,8 +109,7 @@ describe( 'Flow#state', function () {
     state.path.should.equal('//a/');
     state.pins.should.equal(true);
     state.perms.sub.should.not.be.ok;
-    state.groups.should.have.lengthOf(2);
-    state.groups.should.include('zee');
+    state.groups.should.have.lengthOf(1);
     state.groups.should.include('pop');
 
     flow.go('//c/');
@@ -121,7 +120,8 @@ describe( 'Flow#state', function () {
     state.path.should.equal('//c/');
     state.pins.should.equal(false);
     state.perms.owner.should.not.be.ok;
-    state.groups.should.have.lengthOf(0);
+    state.groups.should.have.lengthOf(1);
+    state.groups.should.include('pop');
   });
 
 });
