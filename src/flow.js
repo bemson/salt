@@ -519,10 +519,13 @@
         },
         // list groups
         4: function (node, pkg, add) {
+          var parentNode = pkg.nodes[node.parentIndex];
           if (add) {
-            pkg.proxy.state.groups = node.cGrps;
+            pkg.groups = node.groups;
+            pkg.proxy.state.groups = node.cGrps.concat();
           } else {
-            pkg.proxy.state.groups = pkg.nodes[node.parentIndex].cGrps;
+            pkg.groups = parentNode.groups;
+            pkg.proxy.state.groups = parentNode.cGrps.concat();
           }
         }
       },
