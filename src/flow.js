@@ -19,6 +19,7 @@
       rand_string = (Math.ceil(Math.random() * 5000) + 3000).toString(18),
       corePkgDef = Flow.pkg('core'),
       staticUnusedArray = [],
+      staticUnusedObject = {},
       sharedProxyStateGroupsMember = [],
       protoSlice = Array.prototype.slice,
       RxpProto = RegExp.prototype,
@@ -1463,6 +1464,8 @@
         // init sub-instances hashes
         pkg.bin = {};
         pkg.tin = {};
+        // init groups
+        pkg.groups = staticUnusedObject;
         // sub-instance "has" criteria search helpers
         pkg.nStr =
         pkg.pStr =
@@ -2021,13 +2024,31 @@
           activeId,
           perms = pkg.perms[0],
           activeFlow = activeFlows[0],
-          argumentIdx = arguments.length
+          betweenFlows = activeFlow && pkg !== activeFlow,
+          argumentIdx = arguments.length,
+          perm
         ;
+        // prioritize group permissions
+        if (betweenFlows) {
+          for (perm in perms) {
+            if (
+              // when local
+              perms.hasOwnProperty(perm) &&
+              // when not a relationship permission
+              !defaultPermissions.hasOwnProperty(perm) &&
+              // when the calling flow identifies as the allowed group
+              activeFlow.groups.hasOwnProperty(perm)
+            ) {
+              // allow/deny based on group assignment
+              return perms[perm];
+            }
+          }
+        }
         // short-circuit permissions when caller is SELF
         while (argumentIdx--) {
           switch (arguments[argumentIdx]) {
             case 'self':
-              if (pkg.blessed || pkg === activeFlow) {
+              if (pkg === activeFlow || pkg.blessed) {
                 return 1;
               }
             break;
@@ -2037,7 +2058,7 @@
               }
             break;
             case 'sub':
-              if (perms.sub && activeFlow && (pkg.bin.hasOwnProperty((activeId = activeFlow.tank.id)) || pkg.tin.hasOwnProperty(activeId))) {
+              if (perms.sub && betweenFlows && (pkg.bin.hasOwnProperty((activeId = activeFlow.tank.id)) || pkg.tin.hasOwnProperty(activeId))) {
                 return 1;
               }
             break;
