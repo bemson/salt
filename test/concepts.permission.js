@@ -178,23 +178,6 @@ describe( 'Permission', function () {
       flow.state.perms.owner.should.be.ok;
     });
 
-  });
-
-  describe( 'group', function () {
-
-    var corePkgDef;
-
-    before(function () {
-      corePkgDef = Flow.pkg('core');
-      corePkgDef.proxy.groupIs = function (group) {
-        return corePkgDef(this).is(group);
-      };
-    });
-
-    after(function () {
-      delete corePkgDef.proxy.groupIs;
-    });
-
     it( 'should ignore lettercase', function () {
       flow = new Flow({
         _perms: '!OWNEr',
@@ -216,6 +199,60 @@ describe( 'Permission', function () {
       flow.state.perms.world.should.be.ok;
       flow.go(1);
       flow.state.perms.world.should.be.ok;
+    });
+
+    it( 'should sequentially process an array', function () {
+      flow = new Flow({
+        _sequence: 1,
+        simple: {
+          _perms: ['!world', true, '!sub'],
+          _on: function () {
+            flow.state.perms.owner.should.be.ok;
+            flow.state.perms.world.should.be.ok;
+            flow.state.perms.sub.should.not.be.ok;
+          }
+        },
+        complex: {
+          _perms: [false, {world: false}, 'sub'],
+          _on: function () {
+            flow.state.perms.owner.should.not.be.ok;
+            flow.state.perms.world.should.not.be.ok;
+            flow.state.perms.sub.should.be.ok;
+          }
+        },
+        'left-to-right': {
+          _perms: [false, true, false],
+          _on: function () {
+            flow.state.perms.owner.should.not.be.ok;
+            flow.state.perms.world.should.not.be.ok;
+            flow.state.perms.sub.should.not.be.ok;
+          }
+        }
+      });
+
+      flow.go(1);
+      flow.state.name.should.equal('left-to-right');
+    });
+
+  });
+
+  describe( 'group', function () {
+
+    var corePkgDef;
+
+    before(function () {
+      corePkgDef = Flow.pkg('core');
+      corePkgDef.proxy.groupIs = function (group) {
+        return corePkgDef(this).is(group);
+      };
+    });
+
+    after(function () {
+      delete corePkgDef.proxy.groupIs;
+    });
+
+    it( '', function () {
+
     });
 
     describe( 'self', function () {
