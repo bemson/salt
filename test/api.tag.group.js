@@ -115,4 +115,42 @@ describe( '_group tag', function () {
     flow.state.index.should.equal(1);
   });
 
+  it( 'should add the group identity during any traversal', function () {
+    var tally = 0;
+    flow = new Flow({
+      a: {
+        _on: '//test',
+      },
+      test: {
+        _group: 'foo',
+        _in: function () {
+          this.state.groups.should.include('foo');
+          tally++;
+        },
+        _on: function () {
+          this.state.groups.should.include('foo');
+          tally++;
+          this.go(0);
+        },
+        _out: function () {
+          this.state.groups.should.include('foo');
+          tally++;
+        },
+        _over: function () {
+          this.state.groups.should.include('foo');
+          tally++;
+        },
+        _bover: function () {
+          this.state.groups.should.include('foo');
+          tally++;
+        },
+      },
+      b: {
+        _on: '//a'
+      }
+    });
+    flow.go('//b');
+    tally.should.equal(5);
+  });
+
 });

@@ -517,20 +517,9 @@
         // capture criteria stack
         3: function (node, pkg, add) {
           shared_nodeStackHandler(pkg.caps, node.caps, add);
-        },
-        // list groups
-        4: function (node, pkg, add) {
-          var parentNode = pkg.nodes[node.parentIndex];
-          if (add) {
-            pkg.groups = node.groups;
-            pkg.proxy.state.groups = node.cGrps.concat();
-          } else {
-            pkg.groups = parentNode.groups;
-            pkg.proxy.state.groups = parentNode.cGrps.concat();
-          }
         }
       },
-      nodeScopeActionsLength = 5,
+      nodeScopeActionsLength = 4,
       // import resolution helpers
       import_pkgCnt,
       import_tagKeyTests,
@@ -1623,7 +1612,10 @@
         state.path = currentNode.path;
         state.pins = currentNode.pins;
         state.alias = currentNode.alias;
+        state.groups = currentNode.cGrps.concat();
 
+        // set pkg info
+        pkg.groups = currentNode.groups;
       },
 
       onScope: function (evtName, entering) {
