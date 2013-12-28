@@ -48,4 +48,23 @@ describe( '_perms tag', function () {
     flow.state.perms.owner.should.be.ok;
   });
 
+  it( 'should allow/deny arbitrary groups', function () {
+    flow = new Flow({
+      _perms: 'foo',
+      a: {
+        _perms: '!foo'
+      }
+    });
+    flow.go(1);
+    flow.state.perms.should.haveOwnProperty('foo');
+    flow.state.perms.foo.should.be.ok;
+
+    flow.go('//a');
+    flow.state.perms.should.haveOwnProperty('foo');
+    flow.state.perms.foo.should.not.be.ok;
+
+    flow.go(0);
+    flow.state.perms.should.not.haveOwnProperty('foo');
+  });
+
 });
