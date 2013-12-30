@@ -152,9 +152,9 @@
             groupIdx = tagValue.length;
             while (groupIdx--) {
               groupName = tagValue[groupIdx];
-              if (groupName &&
-                typeof groupName === 'string' &&
-                !defaultPermissions.hasOwnProperty((groupName = groupName.toLowerCase()))
+              if (typeof groupName === 'string' &&
+                (groupName = groupName.trim().toLowerCase()) &&
+                !defaultPermissions.hasOwnProperty(groupName)
               ) {
                 groups[groupName.toLowerCase()] = true;
               }

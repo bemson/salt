@@ -153,4 +153,15 @@ describe( '_group tag', function () {
     tally.should.equal(5);
   });
 
+  it( 'should left & right trim group identities', function () {
+    var flow = new Flow({
+      _group: '  foo  '
+    });
+    flow.state.groups.should.have.lengthOf(0);
+    flow.go(1);
+    flow.state.groups.should
+      .eql(['foo'])
+      .and.have.lengthOf(1);
+  });
+
 });
