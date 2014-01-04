@@ -32,6 +32,20 @@ describe( 'Flow#target()', function () {
     onSpy.should.have.been.calledWithExactly(arg1, arg2);
   });
 
+  it( 'should update `.args`', function () {
+    var
+      fooArg = 'foo',
+      barArg = 'bar'
+    ;
+
+    flow = new Flow(function () {
+      this.args.should.eql([fooArg]);
+      this.target(0, barArg);
+      this.args.should.eql([barArg]);
+    });
+    flow.target(1, fooArg).should.equal(true);
+  });
+
   it( 'should define a new destination state', function () {
     var inSpy = sinon.spy();
     flow = new Flow({
