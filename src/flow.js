@@ -2288,15 +2288,17 @@
       // add method to program api
       target: function (qry) {
         var
-          // alias this package
-          pkg = corePkgDef(this),
+          // alias proxy
+          proxy = this,
+          // alias package
+          pkg = corePkgDef(proxy),
           // resolve a node index from qry, or nothing if allowed or unlocked
           tgtIdx = (pkg.is('world', 'sub', 'owner', 'self')) ? pkg.vetIndexOf(qry) : -1
         ;
         // if the destination node is valid, and the flow can move...
         if (~tgtIdx) {
-          // capture arguments after the tgt
-          pkg.args = protoSlice.call(arguments).slice(1);
+          // capture (new) arguments after the tgt
+          pkg.args = proxy.args = protoSlice.call(arguments).slice(1);
           // reset targets array
           pkg.targets = [tgtIdx];
           // navigate towards the targets (unpauses the flow)
