@@ -180,7 +180,7 @@ describe( '_over tag', function () {
 
         Bspy.should.not.have.been.called;
         Cspy.should.have.been.calledOnce;
-        Cspy.should.not.have.been.calledWith(arg1, arg2);
+        Cspy.should.have.been.calledWith(arg1, arg2);
         flow.state.path.should.equal('//c/');
       });
 

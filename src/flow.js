@@ -426,17 +426,22 @@
             tgtIdx = -1,
             phase,
             typeofTagValue,
-            tagValue
+            tagValue,
+            useTarget = 0
           ;
           if (exists && (typeofTagValue = typeof (tagValue = tags[tagName])) !== 'function') {
             if (typeofTagValue === 'string' && tagValue.length) {
+              if (tagValue.charAt(0) === '>') {
+                tagValue = tagValue.substr(1);
+                useTarget = 1;
+              }
               tgtIdx = pkg.indexOf(tagValue, node);
             } else if (typeofTagValue === 'number' && pkg.nodes[tagValue]) {
               tgtIdx = tagValue;
             }
             if (~tgtIdx && (tagName !== '_on' || tgtIdx !== idx)) {
               phase = traversalCallbackOrder[tagName];
-              node.reds[phase] = tgtIdx;
+              node.reds[phase] = [useTarget, tgtIdx];
               node.fncs[phase] = sharedRedirectEventHandler;
             }
           }
@@ -1382,9 +1387,15 @@
     function sharedRedirectEventHandler() {
       var
         flow = this,
-        pkg = corePkgDef(flow)
+        pkg = corePkgDef(flow),
+        tgtConfig = pkg.nodes[pkg.tank.currentIndex].reds[pkg.phase],
+        tgtIndex = tgtConfig[1]
       ;
-      flow.go(pkg.nodes[pkg.tank.currentIndex].reds[pkg.phase]);
+      if (tgtConfig[0]) {
+        flow.target.apply(flow, [tgtIndex].concat(pkg.args));
+      } else {
+        flow.go(tgtIndex);
+      }
     }
 
     // define package statics

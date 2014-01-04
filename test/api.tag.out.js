@@ -119,7 +119,7 @@ describe( '_out tag', function () {
         flow.go(1);
 
         Bspy.should.have.been.calledOnce;
-        Bspy.should.not.have.been.calledWith(arg1, arg2);
+        Bspy.should.have.been.calledWith(arg1, arg2);
         flow.state.path.should.equal('//a/b/');
       });
 
