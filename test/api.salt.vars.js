@@ -1,13 +1,13 @@
-describe( 'Flow#vars', function () {
+describe( 'Salt#vars', function () {
 
-  var flow;
+  var salt;
 
   it( 'should be a navigation-only member', function () {
     var
       spy = sinon.spy(),
       varsRef
     ;
-    flow = new Flow({
+    salt = new Salt({
       _in: function () {
         this.should.haveOwnProperty('vars');
         this.should.be.an('object');
@@ -18,18 +18,18 @@ describe( 'Flow#vars', function () {
         spy();
       }
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
-    flow.should.not.haveOwnProperty('vars');
+    salt.should.not.haveOwnProperty('vars');
   });
 
   it( 'should be an object', function () {
     var spy = sinon.spy();
-    flow = new Flow(function () {
+    salt = new Salt(function () {
       this.vars.should.be.an('object');
       spy();
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
@@ -38,7 +38,7 @@ describe( 'Flow#vars', function () {
       replacementObj = {},
       spy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       _in: function () {
         this.vars = replacementObj;
       },
@@ -47,7 +47,7 @@ describe( 'Flow#vars', function () {
         spy();
       }
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
@@ -56,7 +56,7 @@ describe( 'Flow#vars', function () {
       value = {},
       spy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       _in: function () {
         this.vars.foo = value;
         this.vars = 'scalar value';
@@ -68,13 +68,13 @@ describe( 'Flow#vars', function () {
         spy();
       }
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
   it( 'should discard members after ending on the `null` state', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       _on: function () {
         this.vars.foo = 'bar';
       },
@@ -83,31 +83,31 @@ describe( 'Flow#vars', function () {
         spy();
       }
     });
-    flow.go(1, 0);
-    flow.state.name.should.equal('_null');
-    flow.go('//check');
+    salt.go(1, 0);
+    salt.state.name.should.equal('_null');
+    salt.go('//check');
     spy.should.have.been.calledOnce;
   });
 
   it( 'should not be available when paused or pinned', function (done) {
-    flow = new Flow({
+    salt = new Salt({
       pause: function () {
         this.wait();
       },
       pin: function () {
-        var pinner = new Flow(function () {
+        var pinner = new Salt(function () {
           this.wait(done, 0);
         });
         pinner.go(1);
       }
     });
-    flow.go('//pause');
-    flow.status().paused.should.be.ok;
-    flow.should.not.haveOwnProperty('vars');
-    flow.go('//pin');
-    flow.status().paused.should.not.be.ok;
-    flow.status().pinned.should.equal(true);
-    flow.should.not.haveOwnProperty('vars');
+    salt.go('//pause');
+    salt.status().paused.should.be.ok;
+    salt.should.not.haveOwnProperty('vars');
+    salt.go('//pin');
+    salt.status().paused.should.not.be.ok;
+    salt.status().pinned.should.equal(true);
+    salt.should.not.haveOwnProperty('vars');
   });
 
   it( 'should preserve pre-existing `.vars`', function () {
@@ -115,16 +115,16 @@ describe( 'Flow#vars', function () {
       externalValue = {},
       spy = sinon.spy()
     ;
-    flow = new Flow(function () {
+    salt = new Salt(function () {
       this.vars.should.be.empty;
       this.vars.should.be.an('object');
       this.vars.should.not.equal(externalValue);
       spy();
     });
-    flow.vars = externalValue;
-    flow.go(1);
+    salt.vars = externalValue;
+    salt.go(1);
     spy.should.have.been.calledOnce;
-    flow.vars.should.equal(externalValue);
+    salt.vars.should.equal(externalValue);
   });
 
 });

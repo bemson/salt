@@ -1,14 +1,14 @@
 describe( '_data tag', function () {
 
-  var flow;
+  var salt;
 
   it( 'should set members to `.data` when entering a tagged state', function () {
-    flow = new Flow({
+    salt = new Salt({
       _data: ['foo']
     });
-    flow.data.should.not.haveOwnProperty('foo');
-    flow.go(1);
-    flow.data.should.haveOwnProperty('foo');
+    salt.data.should.not.haveOwnProperty('foo');
+    salt.go(1);
+    salt.data.should.haveOwnProperty('foo');
   });
 
   it( 'should restore the previous member value when exiting a tagged state', function () {
@@ -16,26 +16,26 @@ describe( '_data tag', function () {
       val1 = {},
       val2 = {}
     ;
-    flow = new Flow({
+    salt = new Salt({
       _data: {foo: val1},
       a: {
         _data: 'foo'
       }
     });
 
-    flow.go(1);
-    flow.data.foo.should.equal(val1);
+    salt.go(1);
+    salt.data.foo.should.equal(val1);
 
-    flow.go('//a/');
-    flow.data.foo.should.equal(val1);
-    flow.data.foo = val2;
+    salt.go('//a/');
+    salt.data.foo.should.equal(val1);
+    salt.data.foo = val2;
 
-    flow.go(1);
-    flow.data.foo.should.equal(val1);
+    salt.go(1);
+    salt.data.foo.should.equal(val1);
   });
 
   it( 'should use (arrays of) strings as member names', function () {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _data: 'foo'
       },
@@ -43,20 +43,20 @@ describe( '_data tag', function () {
         _data: ['bar', 'zee']
       }
     });
-    flow.data.should.not.haveOwnProperty('foo');
-    flow.data.should.not.haveOwnProperty('bar');
-    flow.data.should.not.haveOwnProperty('zee');
-    flow.go('//a');
-    flow.data.should.haveOwnProperty('foo');
-    flow.data.should.not.haveOwnProperty('bar');
-    flow.data.should.not.haveOwnProperty('zee');
-    flow.go('//b');
-    flow.data.should.haveOwnProperty('bar');
-    flow.data.should.haveOwnProperty('zee');
+    salt.data.should.not.haveOwnProperty('foo');
+    salt.data.should.not.haveOwnProperty('bar');
+    salt.data.should.not.haveOwnProperty('zee');
+    salt.go('//a');
+    salt.data.should.haveOwnProperty('foo');
+    salt.data.should.not.haveOwnProperty('bar');
+    salt.data.should.not.haveOwnProperty('zee');
+    salt.go('//b');
+    salt.data.should.haveOwnProperty('bar');
+    salt.data.should.haveOwnProperty('zee');
   });
 
   it( 'should use object keys as member names', function () {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _data: {foo: 1}
       },
@@ -64,20 +64,20 @@ describe( '_data tag', function () {
         _data: {bar: 1, zee: 1}
       }
     });
-    flow.data.should.not.haveOwnProperty('foo');
-    flow.data.should.not.haveOwnProperty('bar');
-    flow.data.should.not.haveOwnProperty('zee');
-    flow.go('//a');
-    flow.data.should.haveOwnProperty('foo');
-    flow.data.should.not.haveOwnProperty('bar');
-    flow.data.should.not.haveOwnProperty('zee');
-    flow.go('//b');
-    flow.data.should.haveOwnProperty('bar');
-    flow.data.should.haveOwnProperty('zee');
+    salt.data.should.not.haveOwnProperty('foo');
+    salt.data.should.not.haveOwnProperty('bar');
+    salt.data.should.not.haveOwnProperty('zee');
+    salt.go('//a');
+    salt.data.should.haveOwnProperty('foo');
+    salt.data.should.not.haveOwnProperty('bar');
+    salt.data.should.not.haveOwnProperty('zee');
+    salt.go('//b');
+    salt.data.should.haveOwnProperty('bar');
+    salt.data.should.haveOwnProperty('zee');
   });
 
   it( 'should use strings and object-keys, in an array, as member names', function () {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _data: ['foo']
       },
@@ -85,43 +85,43 @@ describe( '_data tag', function () {
         _data: ['bar', {zee: 1}]
       }
     });
-    flow.data.should.not.haveOwnProperty('foo');
-    flow.data.should.not.haveOwnProperty('bar');
-    flow.data.should.not.haveOwnProperty('zee');
-    flow.go('//a');
-    flow.data.should.haveOwnProperty('foo');
-    flow.data.should.not.haveOwnProperty('bar');
-    flow.data.should.not.haveOwnProperty('zee');
-    flow.go('//b');
-    flow.data.should.haveOwnProperty('bar');
-    flow.data.should.haveOwnProperty('zee');
+    salt.data.should.not.haveOwnProperty('foo');
+    salt.data.should.not.haveOwnProperty('bar');
+    salt.data.should.not.haveOwnProperty('zee');
+    salt.go('//a');
+    salt.data.should.haveOwnProperty('foo');
+    salt.data.should.not.haveOwnProperty('bar');
+    salt.data.should.not.haveOwnProperty('zee');
+    salt.go('//b');
+    salt.data.should.haveOwnProperty('bar');
+    salt.data.should.haveOwnProperty('zee');
   });
 
   it( 'should use the previous value or `undefined` for strings', function () {
     var num = 10;
-    flow = new Flow({
+    salt = new Salt({
       _data: {foo: num},
       a: {
         _data: ['foo', 'bar']
       }
     });
-    flow.go('//');
-    flow.data.foo.should.equal(num);
+    salt.go('//');
+    salt.data.foo.should.equal(num);
 
-    flow.go('//a/');
-    flow.data.foo.should.equal(num);
-    expect(flow.data.bar).to.equal(undefined);
+    salt.go('//a/');
+    salt.data.foo.should.equal(num);
+    expect(salt.data.bar).to.equal(undefined);
   });
 
   it( 'should use the paired value for object-keys', function () {
     var val = {};
-    flow = new Flow({
+    salt = new Salt({
       _data: {foo: val}
     });
-    flow.data.should.not.haveOwnProperty('foo');
-    flow.go('//');
-    flow.data.should.haveOwnProperty('foo');
-    flow.data.foo.should.equal(val);
+    salt.data.should.not.haveOwnProperty('foo');
+    salt.go('//');
+    salt.data.should.haveOwnProperty('foo');
+    salt.data.foo.should.equal(val);
   });
 
 

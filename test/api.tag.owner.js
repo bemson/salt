@@ -1,21 +1,21 @@
 describe( '_owner tag', function () {
 
   var
-    flow,
+    salt,
     owner,
     owned
   ;
 
   beforeEach(function () {
-    flow =
+    salt =
     owner =
     owned =
       null;
   });
 
-  it( 'should allow Flow\'s to have owners when created by another Flow', function () {
-    owner = new Flow(function () {
-      owned = new Flow({
+  it( 'should allow Salt\'s to have owners when created by another Salt', function () {
+    owner = new Salt(function () {
+      owned = new Salt({
         _owner: 1
       });
       owned.owner().should.equal(this);
@@ -25,8 +25,8 @@ describe( '_owner tag', function () {
   });
 
   it( 'should auto-link an owner regardless of the query', function () {
-    owner = new Flow(function () {
-      owned = new Flow({
+    owner = new Salt(function () {
+      owned = new Salt({
         _owner: -1
       });
       owned.owner().should.equal(this);
@@ -42,9 +42,9 @@ describe( '_owner tag', function () {
       ownedSpy = sinon.spy(),
       callCount = 0
     ;
-    owner = new Flow({
+    owner = new Salt({
       _on: function () {
-        owned = new Flow({
+        owned = new Salt({
           _owner: '@customTarget',
           a: ownedSpy
         });
@@ -78,9 +78,9 @@ describe( '_owner tag', function () {
       ownedSpy = sinon.spy(),
       callCount = 0
     ;
-    owner = new Flow({
+    owner = new Salt({
       _on: function () {
-        owned = new Flow({
+        owned = new Salt({
           _owner: '@customTarget',
           a: ownedSpy
         });
@@ -109,9 +109,9 @@ describe( '_owner tag', function () {
 
   it( 'should not apply the given query when pausing', function (done) {
     var callCount = 0;
-    owner = new Flow({
+    owner = new Salt({
       _in: function () {
-        owned = new Flow({
+        owned = new Salt({
           _owner: '//update',
           goal: {
             _in: function () {
@@ -134,9 +134,9 @@ describe( '_owner tag', function () {
 
   it( 'should apply the given query without pinned', function (done) {
     var callCount = 0;
-    owner = new Flow({
+    owner = new Salt({
       _in: function () {
-        owned = new Flow({
+        owned = new Salt({
           _owner: '//update',
           _pins: true,
           goal: {
@@ -158,11 +158,11 @@ describe( '_owner tag', function () {
     owned.go('//goal');
   });
 
-  it( 'should pin an active owning flow when the owned flow is delayed and nested', function (done) {
+  it( 'should pin an active owning salt when the owned salt is delayed and nested', function (done) {
     var callCount = 0;
-    owner = new Flow({
+    owner = new Salt({
       _in: function () {
-        owned = new Flow({
+        owned = new Salt({
           _owner: '//update',
           goal: function () {
             callCount.should.equal(0);
@@ -178,11 +178,11 @@ describe( '_owner tag', function () {
     owner.go(1);
   });
 
-  it( 'should pin an active owning flow when the owned flow is delayed and nested', function (done) {
+  it( 'should pin an active owning salt when the owned salt is delayed and nested', function (done) {
     var callCount = 0;
-    owner = new Flow({
+    owner = new Salt({
       _in: function () {
-        owned = new Flow({
+        owned = new Salt({
           _owner: '//update',
           goal: {
             _in: function () {
@@ -214,9 +214,9 @@ describe( '_owner tag', function () {
       ownedSpy = sinon.spy(),
       callCount = 0
     ;
-    owner = new Flow({
+    owner = new Salt({
       _on: function () {
-        owned = new Flow({
+        owned = new Salt({
           _owner: '@customTarget',
           _out: ownedSpy
         });
@@ -248,10 +248,10 @@ describe( '_owner tag', function () {
     ownerSpyCall3.should.have.been.calledAfter(ownedSpy);
   });
 
-  it( 'should apply a query with `.target()`, passing the owned flow, it\'s then status, and then state as arguments', function () {
-    owner = new Flow({
+  it( 'should apply a query with `.target()`, passing the owned salt, it\'s then status, and then state as arguments', function () {
+    owner = new Salt({
       _on: function () {
-        owned = new Flow({
+        owned = new Salt({
           _owner: 0
         });
         owned.owner().should.equal(this);
@@ -263,7 +263,7 @@ describe( '_owner tag', function () {
     targetSpy.should.have.been.called;
     targetSpy.getCall(0).args.should.have.lengthOf(4);
     targetSpy.getCall(0).args[0].should.equal(0);
-    targetSpy.getCall(0).args[1].should.be.an.instanceOf(Flow);
+    targetSpy.getCall(0).args[1].should.be.an.instanceOf(Salt);
     targetSpy.getCall(0).args[2].should.be.an('object');
     targetSpy.getCall(0).args[3].should.be.an('object');
     owner.target.restore();
@@ -271,9 +271,9 @@ describe( '_owner tag', function () {
 
   it( 'should not double ping the owner when there is a delay', function (done) {
     var callCount = 0;
-    owner = new Flow({
+    owner = new Salt({
       _on: function () {
-        owned = new Flow({
+        owned = new Salt({
           _owner: '//update'
         });
         owned.owner().should.equal(this);

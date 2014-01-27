@@ -1,15 +1,15 @@
-describe( 'Flow#target()', function () {
+describe( 'Salt#target()', function () {
 
-  var flow;
+  var salt;
 
   it( 'should navigate towards a given query', function () {
     var inSpy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       _in: inSpy
     });
-    flow.state.path.should.equal('..//');
-    flow.target(1);
-    flow.state.path.should.equal('//');
+    salt.state.path.should.equal('..//');
+    salt.target(1);
+    salt.state.path.should.equal('//');
     inSpy.should.have.been.calledOnce;
   });
 
@@ -20,14 +20,14 @@ describe( 'Flow#target()', function () {
       inSpy = sinon.spy(),
       onSpy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       _in: function () {
         this.args.should.eql([arg1, arg2]);
         inSpy();
       },
       _on: onSpy
     });
-    flow.target(1, arg1, arg2);
+    salt.target(1, arg1, arg2);
     inSpy.should.have.been.calledWithExactly();
     onSpy.should.have.been.calledWithExactly(arg1, arg2);
   });
@@ -38,17 +38,17 @@ describe( 'Flow#target()', function () {
       barArg = 'bar'
     ;
 
-    flow = new Flow(function () {
+    salt = new Salt(function () {
       this.args.should.eql([fooArg]);
       this.target(0, barArg);
       this.args.should.eql([barArg]);
     });
-    flow.target(1, fooArg).should.equal(true);
+    salt.target(1, fooArg).should.equal(true);
   });
 
   it( 'should define a new destination state', function () {
     var inSpy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       _in: function () {
         var originalDestination = this.status().targets.slice(-1)[0];
         this.target('@self');
@@ -58,14 +58,14 @@ describe( 'Flow#target()', function () {
       a: {},
       b: {}
     });
-    flow.go('//a', '//b');
-    flow.state.path.should.equal('//');
+    salt.go('//a', '//b');
+    salt.state.path.should.equal('//');
     inSpy.should.have.been.called;
   });
 
   it( 'should clear all waypoints', function () {
     var inSpy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       _in: function () {
         this.status().targets.should.have.length.above(1);
         this.target('@self');
@@ -76,8 +76,8 @@ describe( 'Flow#target()', function () {
       b: {},
       c: {}
     });
-    flow.go('//a', '//b', '//c');
-    flow.state.path.should.equal('//');
+    salt.go('//a', '//b', '//c');
+    salt.state.path.should.equal('//');
     inSpy.should.have.been.called;
   });
 
@@ -86,7 +86,7 @@ describe( 'Flow#target()', function () {
       navSpy = sinon.spy(),
       fncSpy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       pause: {
         _in: function () {
           this.wait();
@@ -105,36 +105,36 @@ describe( 'Flow#target()', function () {
       }
     });
 
-    flow.go('//pause');
-    flow.status().paused.should.be.ok;
-    flow.target(1);
-    flow.status().paused.should.not.be.ok;
+    salt.go('//pause');
+    salt.status().paused.should.be.ok;
+    salt.target(1);
+    salt.status().paused.should.not.be.ok;
 
-    flow.go('//delay/nav');
-    flow.status().paused.should.be.ok;
-    flow.target(1);
-    flow.status().paused.should.not.be.ok;
+    salt.go('//delay/nav');
+    salt.status().paused.should.be.ok;
+    salt.target(1);
+    salt.status().paused.should.not.be.ok;
     navSpy.should.not.have.been.called;
 
-    flow.go('//delay/fnc');
-    flow.status().paused.should.be.ok;
-    flow.target(1);
-    flow.status().paused.should.not.be.ok;
+    salt.go('//delay/fnc');
+    salt.status().paused.should.be.ok;
+    salt.target(1);
+    salt.status().paused.should.not.be.ok;
     fncSpy.should.not.have.been.called;
   });
 
   it( 'should return the destination state\'s _on callback result', function () {
     var val = {};
-    flow = new Flow(function () {
+    salt = new Salt(function () {
       return val;
     });
-    flow.target(1).should.equal(val);
+    salt.target(1).should.equal(val);
   });
 
   it( 'should return true if the destination\'s has no _on callback or it returns `undefined`', function () {
     var spy = sinon.spy();
-    flow = new Flow(spy);
-    flow.target(1).should.equal(true);
+    salt = new Salt(spy);
+    salt.target(1).should.equal(true);
     spy.should.have.been.calledOnce;
     spy.should.have.returned(undefined);
   });
@@ -144,7 +144,7 @@ describe( 'Flow#target()', function () {
       pauseSpy = sinon.spy(),
       delaySpy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       pause: function () {
         this.wait();
         pauseSpy();
@@ -155,38 +155,38 @@ describe( 'Flow#target()', function () {
       }
     });
 
-    flow.target('//pause').should.equal(false);
-    flow.status().paused.should.be.ok;
+    salt.target('//pause').should.equal(false);
+    salt.status().paused.should.be.ok;
     pauseSpy.should.have.returned(undefined);
 
-    flow.target('//delay').should.equal(false);
-    flow.status().paused.should.be.ok;
+    salt.target('//delay').should.equal(false);
+    salt.status().paused.should.be.ok;
     delaySpy.should.have.returned(undefined);
   });
 
   it( 'should return false if the navigation sequence is pinned', function () {
-    var pinner = new Flow(function () {
+    var pinner = new Salt(function () {
       this.wait();
     });
-    flow = new Flow(function () {
+    salt = new Salt(function () {
       pinner.go(1);
     });
 
-    flow.target(1).should.equal(false);
-    flow.status().paused.should.not.be.ok;
-    flow.status().pinned.should.equal(true);
+    salt.target(1).should.equal(false);
+    salt.status().paused.should.not.be.ok;
+    salt.status().pinned.should.equal(true);
     pinner.go();
-    flow.status().pinned.should.equal(false);
+    salt.status().pinned.should.equal(false);
   });
 
   it( 'should return false when called externally on a locked instance', function () {
-    flow = new Flow({
+    salt = new Salt({
       _perms: '!world'
     });
-    flow.state.perms.world.should.be.ok;
-    flow.go(1);
-    flow.state.perms.world.should.not.be.ok;
-    flow.target(0).should.equal(false);
+    salt.state.perms.world.should.be.ok;
+    salt.go(1);
+    salt.state.perms.world.should.not.be.ok;
+    salt.target(0).should.equal(false);
   });
 
 });

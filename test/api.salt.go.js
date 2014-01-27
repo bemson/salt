@@ -1,23 +1,23 @@
-describe( 'Flow#go()', function () {
+describe( 'Salt#go()', function () {
 
-  var flow;
+  var salt;
 
   it( 'should navigate towards the given queries', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       _in: spy,
       _on: spy,
       a: spy
     });
-    flow.state.path.should.equal('..//');
-    flow.go(1, '//a/');
-    flow.state.path.should.equal('//a/');
+    salt.state.path.should.equal('..//');
+    salt.go(1, '//a/');
+    salt.state.path.should.equal('//a/');
     spy.should.have.been.calledThrice;
   });
 
   it( 'should add a waypoint for each query', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       _on: function () {
         this.status().targets.should.have.lengthOf(2);
         spy();
@@ -25,7 +25,7 @@ describe( 'Flow#go()', function () {
       a: {},
       b: {}
     });
-    flow.go(1, '//a', '//b');
+    salt.go(1, '//a', '//b');
     spy.should.have.been.calledOnce;
   });
 
@@ -34,7 +34,7 @@ describe( 'Flow#go()', function () {
       sameQuery = '//a/',
       inSpy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       _in: function () {
         var targetCnt = this.status().targets.length;
         this.go(sameQuery);
@@ -46,13 +46,13 @@ describe( 'Flow#go()', function () {
       a: {},
       b: {}
     });
-    flow.go(sameQuery, '//b/');
+    salt.go(sameQuery, '//b/');
     inSpy.should.have.been.calledOnce;
   });
 
   it( 'should set a new destination when at the `_on` phase of the current one', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       a: function () {
         this.status().targets.should.have.lengthOf(0);
         this.go('//b/');
@@ -61,8 +61,8 @@ describe( 'Flow#go()', function () {
       },
       b: {}
     });
-    flow.go('//a');
-    flow.state.path.should.equal('//b/');
+    salt.go('//a');
+    salt.state.path.should.equal('//b/');
     spy.should.have.been.calledOnce;
   });
 
@@ -71,16 +71,16 @@ describe( 'Flow#go()', function () {
       fncSpy = sinon.spy(),
       delaySpy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       delay: function () {
         this.wait(fncSpy, 0);
         delaySpy();
       }
     });
 
-    flow.go('//delay');
-    flow.status().paused.should.be.ok;
-    flow.go(1);
+    salt.go('//delay');
+    salt.status().paused.should.be.ok;
+    salt.go(1);
     fncSpy.should.not.have.been.called;
     delaySpy.should.have.been.called;
   });
@@ -90,7 +90,7 @@ describe( 'Flow#go()', function () {
       pauseSpy = sinon.spy(),
       delaySpy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       pause: {
         _in: function () {
           this.wait();
@@ -105,36 +105,36 @@ describe( 'Flow#go()', function () {
       }
     });
 
-    flow.go('//pause');
+    salt.go('//pause');
     pauseSpy.should.not.have.been.called;
-    flow.status().paused.should.be.ok;
-    flow.go();
+    salt.status().paused.should.be.ok;
+    salt.go();
     pauseSpy.should.have.been.calledOnce;
 
-    flow.go('//delay');
+    salt.go('//delay');
     delaySpy.should.not.have.been.called;
-    flow.status().paused.should.be.ok;
-    flow.go();
+    salt.status().paused.should.be.ok;
+    salt.go();
     delaySpy.should.have.been.calledOnce;
   });
 
   it( 'should return true if one or more states get traversed', function () {
     var inSpy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       _in: inSpy
     });
-    flow.go(1).should.equal(true);
+    salt.go(1).should.equal(true);
     inSpy.should.have.been.calledOnce;
   });
 
   it( 'should return false when called externally on a locked instance', function () {
-    flow = new Flow({
+    salt = new Salt({
       _perms: '!world'
     });
-    flow.state.perms.world.should.be.ok;
-    flow.go(1);
-    flow.state.perms.world.should.not.be.ok;
-    flow.go(0).should.equal(false);
+    salt.state.perms.world.should.be.ok;
+    salt.go(1);
+    salt.state.perms.world.should.not.be.ok;
+    salt.go(0).should.equal(false);
   });
 
 });

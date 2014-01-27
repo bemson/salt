@@ -1,4 +1,4 @@
-describe( 'Flow#owner()', function () {
+describe( 'Salt#owner()', function () {
 
   var
     unownedInst,
@@ -7,19 +7,19 @@ describe( 'Flow#owner()', function () {
   ;
 
   beforeEach(function () {
-    unownedInst = new Flow();
-    ownerInst = new Flow(function () {
-      ownedInst = new Flow({
+    unownedInst = new Salt();
+    ownerInst = new Salt(function () {
+      ownedInst = new Salt({
         _owner: -1
       });
     });
     ownerInst.go(1);
   });
 
-  it( 'should return the (owning) Flow if called by the owner or self', function () {
+  it( 'should return the (owning) Salt if called by the owner or self', function () {
     var spy = sinon.spy();
-    ownerInst = new Flow(function () {
-      ownedInst = new Flow({
+    ownerInst = new Salt(function () {
+      ownedInst = new Salt({
         _owner: -1,
         _on: function () {
           this.owner().should.equal(ownerInst);
@@ -37,14 +37,14 @@ describe( 'Flow#owner()', function () {
     unownedInst.owner().should.equal(false);
   });
 
-  it( 'should allow external and non-owning flows to see an owner exists', function () {
+  it( 'should allow external and non-owning salts to see an owner exists', function () {
     ownedInst.owner().should.equal(true);
   });
 
   it( 'should allow owner or self to set the owner instance', function () {
     var spy = sinon.spy();
-    ownerInst = new Flow(function () {
-      ownedInst = new Flow({
+    ownerInst = new Salt(function () {
+      ownedInst = new Salt({
         _owner: -1
       });
       ownedInst.owner().should.equal(ownerInst);
@@ -58,8 +58,8 @@ describe( 'Flow#owner()', function () {
   
   it( 'should allow owner or self to remove the owner', function () {
     var spy = sinon.spy();
-    ownerInst = new Flow(function () {
-      ownedInst = new Flow({
+    ownerInst = new Salt(function () {
+      ownedInst = new Salt({
         _owner: -1
       });
       ownedInst.owner().should.equal(ownerInst);
@@ -71,14 +71,14 @@ describe( 'Flow#owner()', function () {
     spy.should.have.been.called;
   });
 
-  it( 'should deny external or non-owning flows to change the owner', function () {
+  it( 'should deny external or non-owning salts to change the owner', function () {
     var
       spy = sinon.spy(),
       sub,
-      flow = new Flow(function () {
+      salt = new Salt(function () {
         var that = this;
         that.owner(ownerInst);
-        sub = new Flow(function () {
+        sub = new Salt(function () {
           that.owner(unownedInst).should.equal(false);
           spy();
         });
@@ -88,8 +88,8 @@ describe( 'Flow#owner()', function () {
       })
     ;
     ownedInst.owner(unownedInst).should.equal(false);
-    flow.go(1);
-    flow.subs().should.equal(1);
+    salt.go(1);
+    salt.subs().should.equal(1);
     sub.go(1);
     spy.should.have.been.calledTwice;
   });

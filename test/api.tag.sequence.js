@@ -1,6 +1,6 @@
 describe( '_sequence tag', function () {
 
-  var flow;
+  var salt;
 
   it( 'should navigate descendants of a state', function () {
     var
@@ -8,7 +8,7 @@ describe( '_sequence tag', function () {
       aSpy = sinon.spy(),
       bSpy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       seq: {
         _sequence: true,
         _on: seqSpy,
@@ -16,11 +16,11 @@ describe( '_sequence tag', function () {
         b: bSpy
       }
     });
-    flow.go('//seq');
+    salt.go('//seq');
     seqSpy.should.have.been.calledOnce;
     aSpy.should.have.been.calledOnce;
     bSpy.should.have.been.calledOnce;
-    flow.state.path.should.equal('//seq/b/');
+    salt.state.path.should.equal('//seq/b/');
   });
 
   it( 'should not work targeting a descendant of the tagged state', function () {
@@ -28,21 +28,21 @@ describe( '_sequence tag', function () {
       aSpy = sinon.spy(),
       bSpy = sinon.spy()
     ''
-    flow = new Flow({
+    salt = new Salt({
       seq: {
         a: aSpy,
         b: bSpy
       }
     });
-    flow.go('//seq/a/');
+    salt.go('//seq/a/');
     aSpy.should.have.been.calledOnce;
     bSpy.should.not.have.been.called;
-    flow.state.path.should.equal('//seq/a/');
+    salt.state.path.should.equal('//seq/a/');
   });
 
   it( 'should add descendants as waypoints', function () {
     var aSpy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       seq: {
         _sequence: 1,
         a: {
@@ -54,9 +54,9 @@ describe( '_sequence tag', function () {
       },
       end: {}
     });
-    flow.go('//seq/', '//end/');
+    salt.go('//seq/', '//end/');
     aSpy.should.have.been.calledOnce;
-    flow.state.path.should.equal('//end/');
+    salt.state.path.should.equal('//end/');
   });
 
 

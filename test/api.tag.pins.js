@@ -1,29 +1,29 @@
 describe( '_pins tag', function () {
 
-  var flow;
+  var salt;
 
   it( 'should be reflected as a boolean in the `.state.pins`', function () {
-    flow = new Flow();
-    flow.state.should.haveOwnProperty('pins');
-    flow.state.pins.should.be.a('boolean');
+    salt = new Salt();
+    salt.state.should.haveOwnProperty('pins');
+    salt.state.pins.should.be.a('boolean');
   });
 
   it( 'should be `true` by default', function () {
-    flow = new Flow();
-    flow.state.pins.should.equal(true);
+    salt = new Salt();
+    salt.state.pins.should.equal(true);
   });
 
   it( 'should halt navigation of a waiting instance, when the active state pauses', function () {
     var
       pinnerSpy = sinon.spy(),
       pinsSpy = sinon.spy(),
-      pinner = new Flow({
+      pinner = new Salt({
         _in: function () {
           this.wait();
         },
         _on: pinnerSpy
       }),
-      pins = new Flow({
+      pins = new Salt({
         _in: function () {
           pinner.go(1);
         },
@@ -49,13 +49,13 @@ describe( '_pins tag', function () {
     var
       pinnerSpy = sinon.spy(),
       unpinsSpy = sinon.spy(),
-      pinner = new Flow({
+      pinner = new Salt({
         _in: function () {
           this.wait();
         },
         _on: pinnerSpy
       }),
-      unpins = new Flow({
+      unpins = new Salt({
         _pins: 0,
         _in: function () {
           pinner.go(1);

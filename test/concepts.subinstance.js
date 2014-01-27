@@ -1,16 +1,16 @@
 describe( 'Sub-instance', function () {
 
   var
-    flow,
+    salt,
     subInst
   ;
 
-  it( 'should be an instance created and captured by another Flow\'s callback', function () {
+  it( 'should be an instance created and captured by another Salt\'s callback', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       _capture: true,
       _in: function () {
-        subInst = new Flow();
+        subInst = new Salt();
       },
       _on: function () {
         this.subs()
@@ -19,14 +19,14 @@ describe( 'Sub-instance', function () {
         spy();
       }
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.called;
   });
 
-  it( 'should be an instance added to another Flow', function () {
+  it( 'should be an instance added to another Salt', function () {
     var spy = sinon.spy();
-    subInst = new Flow();
-    flow = new Flow(function () {
+    subInst = new Salt();
+    salt = new Salt(function () {
       this.subs().should.have.lengthOf(0);
       this.subs(subInst).should.equal(1);
       this.subs()
@@ -34,53 +34,53 @@ describe( 'Sub-instance', function () {
         .and.contain(subInst);
       spy();
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.called;
   });
 
   describe( 'capturing', function () {
 
     it( 'should occur in `_capture` branches', function () {
-      flow = new Flow({
+      salt = new Salt({
         foo: {
           _capture: true,
           _on: function () {
             this.subs().should.have.lengthOf(0);
-            new Flow();
+            new Salt();
             this.subs().should.have.lengthOf(1);
           }
         },
         bar: function () {
           this.subs().should.have.lengthOf(1);
-          new Flow();
+          new Salt();
           this.subs().should.have.lengthOf(1);
         }
       });
-      flow.subs().should.equal(0);
-      flow.go('//foo', '//bar').should.be.ok;
-      flow.subs().should.equal(1);
+      salt.subs().should.equal(0);
+      salt.go('//foo', '//bar').should.be.ok;
+      salt.subs().should.equal(1);
     });
 
     it( 'should use a buffer to collect new instances', function () {
-      flow = new Flow({
+      salt = new Salt({
         _capture: true,
         _on: function () {
           this.subs({buffer: 0}).should.have.lengthOf(0);
-          new Flow();
-          new Flow();
+          new Salt();
+          new Salt();
           this.subs({buffer: 1}).should.have.lengthOf(2);
         }
       });
-      flow.go(1).should.be.ok;
+      salt.go(1).should.be.ok;
     });
 
     it( 'should commit buffered items when traversal completes', function () {
-      flow = new Flow({
+      salt = new Salt({
         _capture: true,
         _in: function () {
-          new Flow();
-          new Flow();
-          new Flow();
+          new Salt();
+          new Salt();
+          new Salt();
           this.subs({buffer:1}).should.have.lengthOf(3);
           this.subs({buffer:0}).should.have.lengthOf(0);
           this.wait();
@@ -90,12 +90,12 @@ describe( 'Sub-instance', function () {
           this.subs({buffer:0}).should.have.lengthOf(3);
         }
       });
-      flow.go(1).should.be.ok;
-      flow.status().paused.should.equal(true);
-      flow.subs({buffer:1}).should.equal(3);
-      flow.go();
-      flow.subs({buffer:1}).should.equal(0);
-      flow.subs({buffer:0}).should.equal(3);
+      salt.go(1).should.be.ok;
+      salt.status().paused.should.equal(true);
+      salt.subs({buffer:1}).should.equal(3);
+      salt.go();
+      salt.subs({buffer:1}).should.equal(0);
+      salt.subs({buffer:0}).should.equal(3);
     });
 
   });
@@ -125,59 +125,59 @@ describe( 'Sub-instance', function () {
     describe( 'strings', function () {
 
       it( 'should be matched against whole state names if no forward-slash', function () {
-        flow = new Flow({
+        salt = new Salt({
           _sequence: 1,
           _capture: true,
           foo: {
             _on: function () {
-              new Flow();
+              new Salt();
             },
             bar: function () {
-              new Flow();
-              new Flow();
+              new Salt();
+              new Salt();
             }
           },
           foobar: function () {
-            new Flow();
-            new Flow();
-            new Flow();
-            new Flow();
+            new Salt();
+            new Salt();
+            new Salt();
+            new Salt();
           }
         });
-        flow.go(1);
-        flow.subs({from:'fo'}).should.equal(0);
-        flow.subs({from:'ba'}).should.equal(0);
-        flow.subs({from:'foo'}).should.equal(3);
-        flow.subs({from:'bar'}).should.equal(2);
-        flow.subs({from:'foobar'}).should.equal(4);
+        salt.go(1);
+        salt.subs({from:'fo'}).should.equal(0);
+        salt.subs({from:'ba'}).should.equal(0);
+        salt.subs({from:'foo'}).should.equal(3);
+        salt.subs({from:'bar'}).should.equal(2);
+        salt.subs({from:'foobar'}).should.equal(4);
       });
 
       it( 'should be matched against whole sub-paths if there is a forward-slash', function () {
-        flow = new Flow({
+        salt = new Salt({
           _sequence: 1,
           _capture: true,
           foo: {
             _on: function () {
-              new Flow();
+              new Salt();
             },
             bar: function () {
-              new Flow();
-              new Flow();
+              new Salt();
+              new Salt();
             }
           },
           foobar: function () {
-            new Flow();
-            new Flow();
-            new Flow();
-            new Flow();
+            new Salt();
+            new Salt();
+            new Salt();
+            new Salt();
           }
         });
-        flow.go(1);
-        flow.subs({from:'/fo'}).should.equal(0);
-        flow.subs({from:'/ba'}).should.equal(0);
-        flow.subs({from:'oo/bar'}).should.equal(0);
-        flow.subs({from:'/bar'}).should.equal(2);
-        flow.subs({from:'foo/bar'}).should.equal(2);
+        salt.go(1);
+        salt.subs({from:'/fo'}).should.equal(0);
+        salt.subs({from:'/ba'}).should.equal(0);
+        salt.subs({from:'oo/bar'}).should.equal(0);
+        salt.subs({from:'/bar'}).should.equal(2);
+        salt.subs({from:'foo/bar'}).should.equal(2);
       });
 
     });
@@ -185,59 +185,59 @@ describe( 'Sub-instance', function () {
     describe( 'regular-expressions', function () {
 
       it( 'should be matched against state names with no forward-slash', function () {
-        flow = new Flow({
+        salt = new Salt({
           _sequence: 1,
           _capture: true,
           foo: {
             _on: function () {
-              new Flow();
+              new Salt();
             },
             bar: function () {
-              new Flow();
-              new Flow();
+              new Salt();
+              new Salt();
             }
           },
           foobar: function () {
-            new Flow();
-            new Flow();
-            new Flow();
-            new Flow();
+            new Salt();
+            new Salt();
+            new Salt();
+            new Salt();
           }
         });
-        flow.go(1);
-        flow.subs({from:/fo/}).should.equal(7);
-        flow.subs({from:/ba/}).should.equal(6);
-        flow.subs({from:/foo/}).should.equal(7);
-        flow.subs({from:/bar/}).should.equal(6);
-        flow.subs({from:/foobar/}).should.equal(4);
+        salt.go(1);
+        salt.subs({from:/fo/}).should.equal(7);
+        salt.subs({from:/ba/}).should.equal(6);
+        salt.subs({from:/foo/}).should.equal(7);
+        salt.subs({from:/bar/}).should.equal(6);
+        salt.subs({from:/foobar/}).should.equal(4);
       });
 
       it( 'should be matched against full paths if there is a forward-slash', function () {
-        flow = new Flow({
+        salt = new Salt({
           _sequence: 1,
           _capture: true,
           foo: {
             _on: function () {
-              new Flow();
+              new Salt();
             },
             bar: function () {
-              new Flow();
-              new Flow();
+              new Salt();
+              new Salt();
             }
           },
           foobar: function () {
-            new Flow();
-            new Flow();
-            new Flow();
-            new Flow();
+            new Salt();
+            new Salt();
+            new Salt();
+            new Salt();
           }
         });
-        flow.go(1);
-        flow.subs({from:/\/fo/}).should.equal(7);
-        flow.subs({from:/\/ba/}).should.equal(2);
-        flow.subs({from:/oo\/bar/}).should.equal(2);
-        flow.subs({from:/\/bar/}).should.equal(2);
-        flow.subs({from:/foo\/bar/}).should.equal(2);
+        salt.go(1);
+        salt.subs({from:/\/fo/}).should.equal(7);
+        salt.subs({from:/\/ba/}).should.equal(2);
+        salt.subs({from:/oo\/bar/}).should.equal(2);
+        salt.subs({from:/\/bar/}).should.equal(2);
+        salt.subs({from:/foo\/bar/}).should.equal(2);
       });
 
     });
@@ -247,17 +247,17 @@ describe( 'Sub-instance', function () {
       describe( 'from', function () {
 
         it( 'should filter items captured/added on or within the given state name', function () {
-          flow = new Flow({
+          salt = new Salt({
             _in: 'home',
             home: {
               _capture: true,
               _in: function () {
-                new Flow();
-                new Flow();
+                new Salt();
+                new Salt();
               },
               _on: 'base',
               base: function () {
-                new Flow();
+                new Salt();
               }
             },
             _on: function () {
@@ -265,21 +265,21 @@ describe( 'Sub-instance', function () {
               this.subs({from:'base'}).should.have.lengthOf(1);
             }
           });
-          flow.go(1).should.be.ok;
+          salt.go(1).should.be.ok;
         });
 
         it( 'should filter items captured/added on or within the given state path', function () {
-          flow = new Flow({
+          salt = new Salt({
             _in: 'home',
             home: {
               _capture: true,
               _in: function () {
-                new Flow();
-                new Flow();
+                new Salt();
+                new Salt();
               },
               _on: 'base',
               base: function () {
-                new Flow();
+                new Salt();
               }
             },
             _on: function () {
@@ -287,21 +287,21 @@ describe( 'Sub-instance', function () {
               this.subs({from:'home/base'}).should.have.lengthOf(1);
             }
           });
-          flow.go(1).should.be.ok;
+          salt.go(1).should.be.ok;
         });
 
         it( 'should filter items captured/added at the given state index', function () {
-          flow = new Flow({
+          salt = new Salt({
             _in: 'home',
             home: {
               _capture: true,
               _in: function () {
-                new Flow();
-                new Flow();
+                new Salt();
+                new Salt();
               },
               _on: 'base',
               base: function () {
-                new Flow();
+                new Salt();
               }
             },
             _on: function () {
@@ -309,7 +309,7 @@ describe( 'Sub-instance', function () {
               this.subs({from:3}).should.have.lengthOf(1);
             }
           });
-          flow.go(1).should.be.ok;
+          salt.go(1).should.be.ok;
         });
 
       });
@@ -317,41 +317,41 @@ describe( 'Sub-instance', function () {
       describe( 'has', function () {
 
         it( 'should filter items that have the given state name', function () {
-          flow = new Flow(function () {
-            this.subs(new Flow(fooProgram));
-            this.subs(new Flow(barProgram));
+          salt = new Salt(function () {
+            this.subs(new Salt(fooProgram));
+            this.subs(new Salt(barProgram));
           });
-          flow.go(1);
-          flow.subs().should.equal(2);
-          flow.subs({has: 'foo'}).should.equal(1);
-          flow.subs({has: 'bar'}).should.equal(1);
-          flow.subs({has: /./}).should.equal(2);
-          flow.subs({has: /f\w/}).should.equal(1);
+          salt.go(1);
+          salt.subs().should.equal(2);
+          salt.subs({has: 'foo'}).should.equal(1);
+          salt.subs({has: 'bar'}).should.equal(1);
+          salt.subs({has: /./}).should.equal(2);
+          salt.subs({has: /f\w/}).should.equal(1);
         });
 
         it( 'should filter items that contain the given path', function () {
-          flow = new Flow(function () {
-            this.subs(new Flow(fooProgram));
-            this.subs(new Flow(barProgram));
+          salt = new Salt(function () {
+            this.subs(new Salt(fooProgram));
+            this.subs(new Salt(barProgram));
           });
-          flow.go(1);
-          flow.subs().should.equal(2);
-          flow.subs({has: 'foo/bo'}).should.equal(1);
-          flow.subs({has: '/play'}).should.equal(1);
-          flow.subs({has: /\/./}).should.equal(2);
-          flow.subs({has: /r\/p/}).should.equal(1);
+          salt.go(1);
+          salt.subs().should.equal(2);
+          salt.subs({has: 'foo/bo'}).should.equal(1);
+          salt.subs({has: '/play'}).should.equal(1);
+          salt.subs({has: /\/./}).should.equal(2);
+          salt.subs({has: /r\/p/}).should.equal(1);
         });
 
         it( 'should filter items that have the given state index', function () {
-          flow = new Flow(function () {
-            this.subs(new Flow(fooProgram));
-            this.subs(new Flow(barProgram));
+          salt = new Salt(function () {
+            this.subs(new Salt(fooProgram));
+            this.subs(new Salt(barProgram));
           });
-          flow.go(1);
-          flow.subs().should.equal(2);
-          flow.subs({has: 1}).should.equal(2);
-          flow.subs({has: 3}).should.equal(2);
-          flow.subs({has: 4}).should.equal(1);
+          salt.go(1);
+          salt.subs().should.equal(2);
+          salt.subs({has: 1}).should.equal(2);
+          salt.subs({has: 3}).should.equal(2);
+          salt.subs({has: 4}).should.equal(1);
         });
 
       });
@@ -359,14 +359,14 @@ describe( 'Sub-instance', function () {
       describe( 'is', function () {
         
         it( 'should filter items sourced by the given value', function () {
-          flow = new Flow(function () {
-            this.subs(new Flow(fooProgram));
-            this.subs(new Flow(barProgram));
+          salt = new Salt(function () {
+            this.subs(new Salt(fooProgram));
+            this.subs(new Salt(barProgram));
           });
-          flow.go(1);
-          flow.subs().should.equal(2);
-          flow.subs({is: fooProgram}).should.equal(1);
-          flow.subs({is: barProgram}).should.equal(1);
+          salt.go(1);
+          salt.subs().should.equal(2);
+          salt.subs({is: fooProgram}).should.equal(1);
+          salt.subs({is: barProgram}).should.equal(1);
         });
 
       });
@@ -374,63 +374,63 @@ describe( 'Sub-instance', function () {
       describe( 'on', function () {
 
         it( 'should filter items that are on the given state name', function () {
-          flow = new Flow(function () {
+          salt = new Salt(function () {
             var
-              foo = new Flow(fooProgram),
-              bar = new Flow(barProgram)
+              foo = new Salt(fooProgram),
+              bar = new Salt(barProgram)
             ;
             foo.go(4).should.be.ok;
             this.subs(foo, bar);
             this.subs().should.have.lengthOf(2);
             bar.go('//bar/play').should.be.ok;
           });
-          flow.go(1);
-          flow.subs().should.equal(2);
-          flow.subs({on: 'foo'}).should.equal(0);
-          flow.subs({on: 'peep'}).should.equal(1);
-          flow.subs({on: 'play'}).should.equal(1);
-          flow.subs({on: /fo/}).should.equal(0);
-          flow.subs({on: /pe.p/}).should.equal(1);
-          flow.subs({on: /y$/}).should.equal(1);
+          salt.go(1);
+          salt.subs().should.equal(2);
+          salt.subs({on: 'foo'}).should.equal(0);
+          salt.subs({on: 'peep'}).should.equal(1);
+          salt.subs({on: 'play'}).should.equal(1);
+          salt.subs({on: /fo/}).should.equal(0);
+          salt.subs({on: /pe.p/}).should.equal(1);
+          salt.subs({on: /y$/}).should.equal(1);
         });
 
         it( 'should filter items that are on or within the given state path', function () {
-          flow = new Flow(function () {
+          salt = new Salt(function () {
             var
-              foo = new Flow(fooProgram),
-              bar = new Flow(barProgram)
+              foo = new Salt(fooProgram),
+              bar = new Salt(barProgram)
             ;
             foo.go(4).should.be.ok;
             this.subs(foo, bar);
             this.subs().should.have.lengthOf(2);
             bar.go('//bar/play').should.be.ok;
           });
-          flow.go(1);
-          flow.subs().should.equal(2);
-          flow.subs({on: '/fo'}).should.equal(0);
-          flow.subs({on: 'peep/'}).should.equal(1);
-          flow.subs({on: '/play'}).should.equal(1);
-          flow.subs({on: /\w\/fo/}).should.equal(0);
-          flow.subs({on: /o\/pe.p/}).should.equal(1);
-          flow.subs({on: /r\/p/}).should.equal(1);
+          salt.go(1);
+          salt.subs().should.equal(2);
+          salt.subs({on: '/fo'}).should.equal(0);
+          salt.subs({on: 'peep/'}).should.equal(1);
+          salt.subs({on: '/play'}).should.equal(1);
+          salt.subs({on: /\w\/fo/}).should.equal(0);
+          salt.subs({on: /o\/pe.p/}).should.equal(1);
+          salt.subs({on: /r\/p/}).should.equal(1);
         });
 
         it( 'should filter items that are on the given state index', function () {
-          flow = new Flow(function () {
+          salt = new Salt(function () {
             var
-              foo = new Flow(fooProgram),
-              bar = new Flow(barProgram)
+              foo = new Salt(fooProgram),
+              bar = new Salt(barProgram)
             ;
             foo.go(4).should.be.ok;
             this.subs(foo, bar);
             this.subs().should.have.lengthOf(2);
             bar.go('//bar/play').should.be.ok;
           });
-          flow.go(1);
-          flow.subs().should.equal(2);
-          flow.subs({on: 0}).should.equal(0);
-          flow.subs({on: 4}).should.equal(1);
-          flow.subs({on: 3}).should.equal(1);
+          salt.go(1);
+          salt.subs().should.equal(2);
+          salt.subs({on: 0}).should.equal(0);
+          salt.subs({on: 4}).should.equal(1);
+          salt.subs({on: 3}).should.equal(1);
         });
 
       });
@@ -438,61 +438,61 @@ describe( 'Sub-instance', function () {
       describe( 'within', function () {
 
         it( 'should filter items that are within the given state name', function () {
-          flow = new Flow(function () {
+          salt = new Salt(function () {
             var
-              foo = new Flow(fooProgram),
-              bar = new Flow(barProgram)
+              foo = new Salt(fooProgram),
+              bar = new Salt(barProgram)
             ;
             foo.go(4).should.be.ok;
             this.subs(foo, bar);
             this.subs().should.have.lengthOf(2);
             bar.go('//bar/play').should.be.ok;
           });
-          flow.go(1);
-          flow.subs().should.equal(2);
-          flow.subs({within: 'peep'}).should.equal(0);
-          flow.subs({within: 'foo'}).should.equal(1);
-          flow.subs({within: 'bar'}).should.equal(1);
-          flow.subs({within: /ep/}).should.equal(0);
-          flow.subs({within: /f.o/}).should.equal(1);
-          flow.subs({within: /[a-c]a/}).should.equal(1);
+          salt.go(1);
+          salt.subs().should.equal(2);
+          salt.subs({within: 'peep'}).should.equal(0);
+          salt.subs({within: 'foo'}).should.equal(1);
+          salt.subs({within: 'bar'}).should.equal(1);
+          salt.subs({within: /ep/}).should.equal(0);
+          salt.subs({within: /f.o/}).should.equal(1);
+          salt.subs({within: /[a-c]a/}).should.equal(1);
         });
 
         it( 'should filter items that are within or within the given state path', function () {
-          flow = new Flow(function () {
+          salt = new Salt(function () {
             var
-              foo = new Flow(fooProgram),
-              bar = new Flow(barProgram)
+              foo = new Salt(fooProgram),
+              bar = new Salt(barProgram)
             ;
             foo.go(4).should.be.ok;
             this.subs(foo, bar);
             this.subs().should.have.lengthOf(2);
             bar.go('//bar/play').should.be.ok;
           });
-          flow.go(1);
-          flow.subs({within: '/peep'}).should.equal(0);
-          flow.subs({within: 'foo/bo/'}).should.equal(1);
-          flow.subs({within: 'bar/'}).should.equal(1);
-          flow.subs({within: /o\/b$/}).should.equal(0);
-          flow.subs({within: /o\/b/}).should.equal(1);
-          flow.subs({within: /r\/$/}).should.equal(1);
+          salt.go(1);
+          salt.subs({within: '/peep'}).should.equal(0);
+          salt.subs({within: 'foo/bo/'}).should.equal(1);
+          salt.subs({within: 'bar/'}).should.equal(1);
+          salt.subs({within: /o\/b$/}).should.equal(0);
+          salt.subs({within: /o\/b/}).should.equal(1);
+          salt.subs({within: /r\/$/}).should.equal(1);
         });
 
         it( 'should filter items that are within the given state index', function () {
-          flow = new Flow(function () {
+          salt = new Salt(function () {
             var
-              foo = new Flow(fooProgram),
-              bar = new Flow(barProgram)
+              foo = new Salt(fooProgram),
+              bar = new Salt(barProgram)
             ;
             foo.go(4).should.be.ok;
             this.subs(foo, bar);
             this.subs().should.have.lengthOf(2);
             bar.go('//bar/play').should.be.ok;
           });
-          flow.go(1);
-          flow.subs({within: 0}).should.equal(2);
-          flow.subs({within: 3}).should.equal(1);
-          flow.subs({within: 2}).should.equal(2);
+          salt.go(1);
+          salt.subs({within: 0}).should.equal(2);
+          salt.subs({within: 3}).should.equal(1);
+          salt.subs({within: 2}).should.equal(2);
         });
 
       });
@@ -501,72 +501,72 @@ describe( 'Sub-instance', function () {
 
         it( 'should filter temporary items when truthy', function () {
           var spy = sinon.spy();
-          flow = new Flow({
+          salt = new Salt({
             _capture: true,
             _on: function () {
-              new Flow();
-              new Flow();
-              this.subs(new Flow());
-              this.subs(new Flow());
+              new Salt();
+              new Salt();
+              this.subs(new Salt());
+              this.subs(new Salt());
               this.subs({buffer: 1}).should.have.lengthOf(2);
               spy();
             }
           });
-          flow.go(1);
+          salt.go(1);
           spy.should.have.been.calledOnce;
         });
 
         it( 'should filter committed items when falsy', function () {
           var spy = sinon.spy();
-          flow = new Flow({
+          salt = new Salt({
             _capture: true,
             _on: function () {
-              new Flow();
-              new Flow();
-              this.subs(new Flow());
-              this.subs(new Flow());
+              new Salt();
+              new Salt();
+              this.subs(new Salt());
+              this.subs(new Salt());
               this.subs({buffer: 0}).should.have.lengthOf(2);
               spy();
             }
           });
-          flow.go(1);
+          salt.go(1);
           spy.should.have.been.calledOnce;
         });
 
         it( 'should filter both temporary and committed items when omitted or -1', function () {
           var spy = sinon.spy();
-          flow = new Flow({
+          salt = new Salt({
             _capture: true,
             _on: function () {
-              new Flow();
-              new Flow();
-              this.subs(new Flow());
-              this.subs(new Flow());
+              new Salt();
+              new Salt();
+              this.subs(new Salt());
+              this.subs(new Salt());
               this.subs({buffer: -1}).should.have.lengthOf(4);
               this.subs().should.have.lengthOf(4);
               spy();
             }
           });
-          flow.go(1);
+          salt.go(1);
           spy.should.have.been.calledOnce;
         });
 
         it( 'should be ignored via the _capture tag', function () {
           var spy = sinon.spy();
-          flow = new Flow({
+          salt = new Salt({
             _capture: {buffer: 0},
             _on: function () {
-              new Flow();
-              new Flow();
-              this.subs(new Flow());
-              this.subs(new Flow());
+              new Salt();
+              new Salt();
+              this.subs(new Salt());
+              this.subs(new Salt());
               this.subs({buffer: 1}).should.have.lengthOf(2);
               this.subs({buffer: 0}).should.have.lengthOf(2);
               this.subs().should.have.lengthOf(4);
               spy();
             }
           });
-          flow.go(1);
+          salt.go(1);
           spy.should.have.been.calledOnce;
         });
 
@@ -577,82 +577,82 @@ describe( 'Sub-instance', function () {
     describe( 'short-form', function () {
 
       it( 'should let `true` include all captured items', function () {
-        flow = new Flow({
+        salt = new Salt({
           _capture: true,
           _on: function () {
-            new Flow();
-            new Flow();
-            this.subs(new Flow());
-            this.subs(new Flow());
+            new Salt();
+            new Salt();
+            this.subs(new Salt());
+            this.subs(new Salt());
           }
         });
-        flow.go(1);
-        flow.subs(true).should.equal(4);
+        salt.go(1);
+        salt.subs(true).should.equal(4);
       });
 
       it( 'should let `false` exclude all captured items', function () {
-        flow = new Flow({
+        salt = new Salt({
           _capture: true,
           _on: function () {
-            new Flow();
-            new Flow();
-            this.subs(new Flow());
-            this.subs(new Flow());
+            new Salt();
+            new Salt();
+            this.subs(new Salt());
+            this.subs(new Salt());
           }
         });
-        flow.go(1);
-        flow.subs(false).should.equal(0);
+        salt.go(1);
+        salt.subs(false).should.equal(0);
       });
 
       it( 'should let a number filter items on the matching state index', function () {
-        flow = new Flow(function () {
+        salt = new Salt(function () {
           var
-            foo = new Flow(fooProgram),
-            bar = new Flow(barProgram)
+            foo = new Salt(fooProgram),
+            bar = new Salt(barProgram)
           ;
           foo.go(4).should.be.ok;
           bar.go('//bar/play').should.be.ok;
           this.subs(foo, bar);
         });
-        flow.go(1);
-        flow.subs(4).should.equal(1);
-        flow.subs(3).should.equal(1);
-        flow.subs(0).should.equal(0);
+        salt.go(1);
+        salt.subs(4).should.equal(1);
+        salt.subs(3).should.equal(1);
+        salt.subs(0).should.equal(0);
       });
 
       it( 'should let a string/regexp filter items on or within the matching state name', function () {
-        flow = new Flow(function () {
+        salt = new Salt(function () {
           var
-            foo = new Flow(fooProgram),
-            bar = new Flow(barProgram)
+            foo = new Salt(fooProgram),
+            bar = new Salt(barProgram)
           ;
           foo.go(4).should.be.ok;
           bar.go('//bar/play').should.be.ok;
           this.subs(foo, bar);
         });
-        flow.go(1);
-        flow.subs('peep').should.equal(1);
-        flow.subs('play').should.equal(1);
-        flow.subs('foo').should.equal(0);
-        flow.subs(/^./).should.equal(2);
+        salt.go(1);
+        salt.subs('peep').should.equal(1);
+        salt.subs('play').should.equal(1);
+        salt.subs('foo').should.equal(0);
+        salt.subs(/^./).should.equal(2);
       });
 
       it( 'should let a string/regexp filter items on or within the matching state path', function () {
-        flow = new Flow(function () {
+        salt = new Salt(function () {
           var
-            foo = new Flow(fooProgram),
-            bar = new Flow(barProgram)
+            foo = new Salt(fooProgram),
+            bar = new Salt(barProgram)
           ;
           foo.go(4).should.be.ok;
           bar.go('//bar/play').should.be.ok;
           this.subs(foo, bar);
         });
-        flow.go(1);
-        flow.subs('bo/peep').should.equal(1);
-        flow.subs('bar/play').should.equal(1);
-        flow.subs('bar/p').should.equal(0);
-        flow.subs('//').should.equal(2);
-        flow.subs(/\/p/).should.equal(2);
+        salt.go(1);
+        salt.subs('bo/peep').should.equal(1);
+        salt.subs('bar/play').should.equal(1);
+        salt.subs('bar/p').should.equal(0);
+        salt.subs('//').should.equal(2);
+        salt.subs(/\/p/).should.equal(2);
       });
 
     });

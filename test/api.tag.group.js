@@ -1,48 +1,48 @@
 describe( '_group tag', function () {
 
-  var flow;
+  var salt;
 
   it( 'should accept strings identifying an access group', function () {
-    flow = new Flow({
+    salt = new Salt({
       _group: 'foo'
     });
-    flow.state.groups.should.not.include('foo');
-    flow.go(1);
-    flow.state.groups.should.include('foo');
+    salt.state.groups.should.not.include('foo');
+    salt.go(1);
+    salt.state.groups.should.include('foo');
   });
 
   it( 'should accept an array of strings identifying multiple access groups', function () {
-    flow = new Flow({
+    salt = new Salt({
       _group: ['foo', 'bar']
     });
-    flow.state.groups.should.not.include('foo');
-    flow.state.groups.should.not.include('bar');
-    flow.go(1);
-    flow.state.groups.should.include('foo');
-    flow.state.groups.should.include('bar');
+    salt.state.groups.should.not.include('foo');
+    salt.state.groups.should.not.include('bar');
+    salt.go(1);
+    salt.state.groups.should.include('foo');
+    salt.state.groups.should.include('bar');
   });
 
   it( 'should ignore non-strings', function () {
-    flow = new Flow({
+    salt = new Salt({
       _group: [11, 'foo']
     });
-    flow.state.groups.should.not.include('foo');
-    flow.state.groups.should.not.include('11');
-    flow.go(1);
-    flow.state.groups.should.include('foo');
-    flow.state.groups.should.not.include('11');
+    salt.state.groups.should.not.include('foo');
+    salt.state.groups.should.not.include('11');
+    salt.go(1);
+    salt.state.groups.should.include('foo');
+    salt.state.groups.should.not.include('11');
   });
 
   it( 'should ignore built-in relationship groups', function () {
-    flow = new Flow({
+    salt = new Salt({
       _group: 'owner'
     });
-    flow.go(1);
-    flow.state.groups.should.not.include('owner');
+    salt.go(1);
+    salt.state.groups.should.not.include('owner');
   });
 
   it( 'should cascade declared groups', function () {
-    flow = new Flow({
+    salt = new Salt({
       _group: ['foo', 'bar'],
       string: {
         _group: 'zee'
@@ -51,73 +51,73 @@ describe( '_group tag', function () {
         _group: ['hay', 'pop']
       }
     });
-    flow.state.groups.should.have.lengthOf(0);
+    salt.state.groups.should.have.lengthOf(0);
 
-    flow.go(1);
-    flow.state.groups.should.have.lengthOf(2);
-    flow.state.groups.should.include('foo');
-    flow.state.groups.should.include('bar');
+    salt.go(1);
+    salt.state.groups.should.have.lengthOf(2);
+    salt.state.groups.should.include('foo');
+    salt.state.groups.should.include('bar');
 
-    flow.go('//string');
-    flow.state.groups.should.have.lengthOf(3);
-    flow.state.groups.should.include('foo');
-    flow.state.groups.should.include('bar');
-    flow.state.groups.should.include('zee');
+    salt.go('//string');
+    salt.state.groups.should.have.lengthOf(3);
+    salt.state.groups.should.include('foo');
+    salt.state.groups.should.include('bar');
+    salt.state.groups.should.include('zee');
 
-    flow.go(1);
-    flow.state.groups.should.have.lengthOf(2);
-    flow.state.groups.should.include('foo');
-    flow.state.groups.should.include('bar');
+    salt.go(1);
+    salt.state.groups.should.have.lengthOf(2);
+    salt.state.groups.should.include('foo');
+    salt.state.groups.should.include('bar');
 
-    flow.go('//array');
-    flow.state.groups.should.have.lengthOf(4);
-    flow.state.groups.should.include('foo');
-    flow.state.groups.should.include('bar');
-    flow.state.groups.should.include('hay');
-    flow.state.groups.should.include('pop');
+    salt.go('//array');
+    salt.state.groups.should.have.lengthOf(4);
+    salt.state.groups.should.include('foo');
+    salt.state.groups.should.include('bar');
+    salt.state.groups.should.include('hay');
+    salt.state.groups.should.include('pop');
   });
 
-  it( 'should allow access to self-identifying flows', function () {
-    var control = new Flow({
+  it( 'should allow access to self-identifying salts', function () {
+    var control = new Salt({
       _group: 'foo',
       _on: function () {
-        flow.go(0).should.be.ok;
+        salt.go(0).should.be.ok;
       }
     });
-    flow = new Flow({
+    salt = new Salt({
       _perms: false,
       _on: function () {
         this.perms('foo');
       }
     });
-    flow.go(1);
-    flow.state.perms.world.should.not.be.ok;
-    flow.go(0).should.not.be.ok;
+    salt.go(1);
+    salt.state.perms.world.should.not.be.ok;
+    salt.go(0).should.not.be.ok;
     control.go(1);
     control.state.groups.should.include('foo');
-    flow.state.index.should.equal(0);
+    salt.state.index.should.equal(0);
   });
 
-  it( 'should deny access to self-identifying flows', function () {
-    var control = new Flow({
+  it( 'should deny access to self-identifying salts', function () {
+    var control = new Salt({
       _group: 'foo',
       _on: function () {
-        flow.go(0).should.not.be.ok;
+        salt.go(0).should.not.be.ok;
       }
     });
-    flow = new Flow({
+    salt = new Salt({
       _perms: '!foo'
     });
-    flow.go(1);
-    flow.state.perms.foo.should.not.be.ok;
+    salt.go(1);
+    salt.state.perms.foo.should.not.be.ok;
     control.go(1);
     control.state.groups.should.include('foo');
-    flow.state.index.should.equal(1);
+    salt.state.index.should.equal(1);
   });
 
   it( 'should add the group identity during any traversal', function () {
     var tally = 0;
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _on: '//test',
       },
@@ -149,17 +149,17 @@ describe( '_group tag', function () {
         _on: '//a'
       }
     });
-    flow.go('//b');
+    salt.go('//b');
     tally.should.equal(5);
   });
 
   it( 'should left & right trim group identities', function () {
-    var flow = new Flow({
+    var salt = new Salt({
       _group: '  foo  '
     });
-    flow.state.groups.should.have.lengthOf(0);
-    flow.go(1);
-    flow.state.groups.should
+    salt.state.groups.should.have.lengthOf(0);
+    salt.go(1);
+    salt.state.groups.should
       .eql(['foo'])
       .and.have.lengthOf(1);
   });

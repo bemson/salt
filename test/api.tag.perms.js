@@ -1,10 +1,10 @@
 describe( '_perms tag', function () {
 
-  var flow;
+  var salt;
 
   it( 'should cascade permission settings', function () {
     var
-      flow = new Flow({
+      salt = new Salt({
         _perms: 'world',
         jail: {
           _perms: '!world',
@@ -13,27 +13,27 @@ describe( '_perms tag', function () {
           }
         }
       }),
-      master = new Flow(function () {
-        flow.state.perms.world.should.not.be.ok;
-        flow.state.perms.owner.should.be.ok;
-        flow.owner(this).should.be.ok;
-        flow.go('solitary');
-        flow.state.perms.owner.should.not.be.ok;
+      master = new Salt(function () {
+        salt.state.perms.world.should.not.be.ok;
+        salt.state.perms.owner.should.be.ok;
+        salt.owner(this).should.be.ok;
+        salt.go('solitary');
+        salt.state.perms.owner.should.not.be.ok;
       })
     ;
-    flow.state.perms.world.should.be.ok;
-    flow.state.perms.owner.should.be.ok;
-    flow.go('//jail');
-    flow.state.perms.world.should.not.be.ok;
-    flow.state.perms.owner.should.be.ok;
+    salt.state.perms.world.should.be.ok;
+    salt.state.perms.owner.should.be.ok;
+    salt.go('//jail');
+    salt.state.perms.world.should.not.be.ok;
+    salt.state.perms.owner.should.be.ok;
     master.go(1);
-    flow.state.path.should.equal('//jail/solitary/');
-    flow.state.perms.world.should.not.be.ok;
-    flow.state.perms.owner.should.not.be.ok;
+    salt.state.path.should.equal('//jail/solitary/');
+    salt.state.perms.world.should.not.be.ok;
+    salt.state.perms.owner.should.not.be.ok;
   });
 
   it( 'should restore parent permissions, if changed procedurally', function () {
-    flow = new Flow({
+    salt = new Salt({
       _perms: '!owner',
       _in: function () {
         this.perms('owner').should.be.ok;
@@ -42,29 +42,29 @@ describe( '_perms tag', function () {
         _perms: '!owner'
       }
     });
-    flow.go('//child');
-    flow.state.perms.owner.should.not.be.ok;
-    flow.go('@parent');
-    flow.state.perms.owner.should.be.ok;
+    salt.go('//child');
+    salt.state.perms.owner.should.not.be.ok;
+    salt.go('@parent');
+    salt.state.perms.owner.should.be.ok;
   });
 
   it( 'should allow/deny arbitrary groups', function () {
-    flow = new Flow({
+    salt = new Salt({
       _perms: 'foo',
       a: {
         _perms: '!foo'
       }
     });
-    flow.go(1);
-    flow.state.perms.should.haveOwnProperty('foo');
-    flow.state.perms.foo.should.be.ok;
+    salt.go(1);
+    salt.state.perms.should.haveOwnProperty('foo');
+    salt.state.perms.foo.should.be.ok;
 
-    flow.go('//a');
-    flow.state.perms.should.haveOwnProperty('foo');
-    flow.state.perms.foo.should.not.be.ok;
+    salt.go('//a');
+    salt.state.perms.should.haveOwnProperty('foo');
+    salt.state.perms.foo.should.not.be.ok;
 
-    flow.go(0);
-    flow.state.perms.should.not.haveOwnProperty('foo');
+    salt.go(0);
+    salt.state.perms.should.not.haveOwnProperty('foo');
   });
 
 });

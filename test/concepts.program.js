@@ -1,49 +1,49 @@
 describe( 'Program', function () {
 
   var
-    flow,
+    salt,
     source,
     corePkgDef,
     coreInst
   ;
 
   before(function () {
-    corePkgDef = Flow.pkg('core');
+    corePkgDef = Salt.pkg('core');
   });
 
   describe( 'source object', function () {
 
     it( 'should be the first initialization argument', function () {
       source = {};
-      corePkgDef(new Flow(source)).nodes[1].value.should.equal(source);
+      corePkgDef(new Salt(source)).nodes[1].value.should.equal(source);
     });
 
     it( 'should be any value', function () {
-      (new Flow()).should.be.ok;
-      (new Flow(undefined)).should.be.ok;
-      (new Flow(null)).should.be.ok;
-      (new Flow('')).should.be.ok;
-      (new Flow('foo bar')).should.be.ok;
-      (new Flow([])).should.be.ok;
-      (new Flow([1,'foo', {}])).should.be.ok;
-      (new Flow({})).should.be.ok;
-      (new Flow({hello: {world: 'foobar'}})).should.be.ok;
-      (new Flow(1)).should.be.ok;
-      (new Flow(true)).should.be.ok;
-      (new Flow(false)).should.be.ok;
-      (new Flow(/foo/)).should.be.ok;
+      (new Salt()).should.be.ok;
+      (new Salt(undefined)).should.be.ok;
+      (new Salt(null)).should.be.ok;
+      (new Salt('')).should.be.ok;
+      (new Salt('foo bar')).should.be.ok;
+      (new Salt([])).should.be.ok;
+      (new Salt([1,'foo', {}])).should.be.ok;
+      (new Salt({})).should.be.ok;
+      (new Salt({hello: {world: 'foobar'}})).should.be.ok;
+      (new Salt(1)).should.be.ok;
+      (new Salt(true)).should.be.ok;
+      (new Salt(false)).should.be.ok;
+      (new Salt(/foo/)).should.be.ok;
     });
 
-    it( 'should be reused from a given Flow instance', function () {
+    it( 'should be reused from a given Salt instance', function () {
       source = {
         cats: {
           dogs: {}
         }
       };
-      flow = new Flow(source);
-      flow.query('//cats/dogs').should.be.ok;
-      var clonedFlow = new Flow(flow);
-      clonedFlow.query('//cats/dogs').should.be.ok;
+      salt = new Salt(source);
+      salt.query('//cats/dogs').should.be.ok;
+      var clonedSalt = new Salt(salt);
+      clonedSalt.query('//cats/dogs').should.be.ok;
     });
 
   });
@@ -58,8 +58,8 @@ describe( 'Program', function () {
           }
         }
       };
-      flow = new Flow(source);
-      flow.query('//a/b/c/').should.be.ok;
+      salt = new Salt(source);
+      salt.query('//a/b/c/').should.be.ok;
     });
 
     it( 'should ignore inherited members', function () {
@@ -67,9 +67,9 @@ describe( 'Program', function () {
       Obj.prototype.foo = 1;
       source = new Obj();
       source.bar = 1;
-      flow = new Flow(source);
-      flow.query('//foo').should.not.be.ok;
-      flow.query('//bar').should.be.ok;
+      salt = new Salt(source);
+      salt.query('//foo').should.not.be.ok;
+      salt.query('//bar').should.be.ok;
     });
 
     it( 'should preserve the source object', function () {
@@ -78,7 +78,7 @@ describe( 'Program', function () {
       Object.freeze(source);
       Object.isFrozen(source).should.be.ok;
       expect(function () {
-        new Flow(source);
+        new Salt(source);
       }).to.not.throw();
     });
 
@@ -87,8 +87,8 @@ describe( 'Program', function () {
   describe( 'first state', function () {
 
     before(function () {
-      flow = new Flow();
-      coreInst = corePkgDef(flow);
+      salt = new Salt();
+      coreInst = corePkgDef(salt);
     });
 
     it( 'should have a value of `undefined`', function () {
@@ -109,8 +109,8 @@ describe( 'Program', function () {
 
     before(function () {
       source = {};
-      flow = new Flow(source);
-      coreInst = corePkgDef(flow);
+      salt = new Salt(source);
+      coreInst = corePkgDef(salt);
     });
 
     it( 'should have the source object as it\'s value', function () {
@@ -132,7 +132,7 @@ describe( 'Program', function () {
     describe( 'names', function () {
 
       it( 'should begin with a letter', function () {
-        flow = new Flow({
+        salt = new Salt({
           '2fail': 1,
           '*fail': 1,
           ' fail': 1,
@@ -141,45 +141,45 @@ describe( 'Program', function () {
           '/fail': 1,
           'success* 2': 1
         });
-        flow.query('//2fail').should.not.be.ok;
-        flow.query('//*fail').should.not.be.ok;
-        flow.query('// fail').should.not.be.ok;
-        flow.query('//@fail').should.not.be.ok;
-        flow.query('//|fail').should.not.be.ok;
-        flow.query('///fail').should.not.be.ok;
-        flow.query('//success* 2').should.be.ok;
+        salt.query('//2fail').should.not.be.ok;
+        salt.query('//*fail').should.not.be.ok;
+        salt.query('// fail').should.not.be.ok;
+        salt.query('//@fail').should.not.be.ok;
+        salt.query('//|fail').should.not.be.ok;
+        salt.query('///fail').should.not.be.ok;
+        salt.query('//success* 2').should.be.ok;
       });
 
       it( 'should not be "toString"', function () {
-        flow = new Flow({
+        salt = new Salt({
           toString: 1,
           tostring: 1
         });
-        flow.query('//toString').should.not.be.ok;
-        flow.query('//tostring').should.be.ok;
+        salt.query('//toString').should.not.be.ok;
+        salt.query('//tostring').should.be.ok;
       });
 
       it( 'should not contain a ".", "/", or "|" character', function () {
-        flow = new Flow({
+        salt = new Salt({
           'hello world': 1,
           'hello.world': 1,
           'hello/world': 1,
           'hello|world': 1
         });
 
-        flow.query('//hello world').should.be.ok;
-        flow.query('//hello.world').should.not.be.ok;
-        flow.query('//hello/world').should.not.be.ok;
-        flow.query('//hello|world').should.not.be.ok;
+        salt.query('//hello world').should.be.ok;
+        salt.query('//hello.world').should.not.be.ok;
+        salt.query('//hello/world').should.not.be.ok;
+        salt.query('//hello|world').should.not.be.ok;
       });
 
       it( 'should allow spaces', function () {
-        flow = new Flow({
+        salt = new Salt({
           'hello world': {
             'good bye, universe': {}
           }
         });
-        flow.query('//hello world/good bye, universe/').should.be.ok;
+        salt.query('//hello world/good bye, universe/').should.be.ok;
       });
 
     });
@@ -187,13 +187,13 @@ describe( 'Program', function () {
     describe( 'attributes (or tags)', function () {
 
       it( 'should begin with an underscore ("_")', function () {
-        flow = new Flow({
+        salt = new Salt({
           _tag: 1,
           state_: 1
         });
-        flow.query('//_tag').should.not.be.ok;
-        flow.query('//state_').should.be.ok;
-        corePkgDef(flow).nodes[1].attrs
+        salt.query('//_tag').should.not.be.ok;
+        salt.query('//state_').should.be.ok;
+        corePkgDef(salt).nodes[1].attrs
           .should.include.keys('_tag')
           .and.not.include.keys('state_');
       });

@@ -1,11 +1,11 @@
 describe( 'Query', function () {
 
   var
-    flow
+    salt
   ;
 
   before(function () {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         b: {}
       }
@@ -13,13 +13,13 @@ describe( 'Query', function () {
   });
 
   it( 'should resolve a state path', function () {
-    flow.query('//a/b/').should.equal('//a/b/');
+    salt.query('//a/b/').should.equal('//a/b/');
   });
 
   describe( 'compatible methods', function () {
 
     before(function () {
-      flow = new Flow({
+      salt = new Salt({
         state: {},
         delay: {
           _on: function (callback) {
@@ -33,16 +33,16 @@ describe( 'Query', function () {
     });
 
     it( 'should be .go(), .target(), .query(), and .wait()', function (done) {
-      flow.go('//state/').should.be.ok;
-      flow.target('//state/').should.be.ok;
-      flow.query('//state/').should.be.ok;
+      salt.go('//state/').should.be.ok;
+      salt.target('//state/').should.be.ok;
+      salt.query('//state/').should.be.ok;
       // navigate (and pass callback) to state that invokes .wait()
-      flow.target('//delay/', done);
+      salt.target('//delay/', done);
     });
 
     it( 'should return `false` when resolution fails', function () {
-      flow.query('//non-existent/path/').should.equal(false);
-      flow.query(-1).should.equal(false);
+      salt.query('//non-existent/path/').should.equal(false);
+      salt.query(-1).should.equal(false);
     });
 
   });
@@ -50,7 +50,7 @@ describe( 'Query', function () {
   describe( 'type', function () {
 
     before(function () {
-      flow = new Flow({
+      salt = new Salt({
         a: {
           _root: true,
           b: {}
@@ -62,17 +62,17 @@ describe( 'Query', function () {
     describe( 'strings', function () {
 
       before(function () {
-        flow.go(0);
+        salt.go(0);
       });
 
       it( 'should list state names and/or query-tokens, delimited by forward-slashes ("/")', function () {
-        flow.query('//a/').should.be.ok;
-        flow.query('//a/b/').should.be.ok;
-        flow.query('//a/b/c/').should.not.be.ok;
+        salt.query('//a/').should.be.ok;
+        salt.query('//a/b/').should.be.ok;
+        salt.query('//a/b/c/').should.not.be.ok;
       });
 
       it( 'should allow omitting the final slash', function () {
-        flow.query('//a/').should.equal(flow.query('//a'));
+        salt.query('//a/').should.equal(salt.query('//a'));
       });
 
     });
@@ -82,8 +82,8 @@ describe( 'Query', function () {
       it( 'should start resolution at the program root', function () {
         var absQuery = '//b';
 
-        flow.go('//a/');
-        flow.query(absQuery).should.equal('//b/');
+        salt.go('//a/');
+        salt.query(absQuery).should.equal('//b/');
       });
 
     });
@@ -93,11 +93,11 @@ describe( 'Query', function () {
       it( 'should start resolution at the (current or ancestor) rooted state', function () {
         var rootQuery = '/b';
 
-        flow.go('//');
-        flow.query(rootQuery).should.equal('//b/');
+        salt.go('//');
+        salt.query(rootQuery).should.equal('//b/');
 
-        flow.go('//a/');
-        flow.query(rootQuery).should.equal('//a/b/');
+        salt.go('//a/');
+        salt.query(rootQuery).should.equal('//a/b/');
       });
 
     });
@@ -107,11 +107,11 @@ describe( 'Query', function () {
       it( 'should start resolution from the current state', function () {
         var relativeQuery = 'b';
 
-        flow.go('//');
-        flow.query(relativeQuery).should.equal('//b/');
+        salt.go('//');
+        salt.query(relativeQuery).should.equal('//b/');
 
-        flow.go('//a/');
-        flow.query(relativeQuery).should.equal('//a/b/');
+        salt.go('//a/');
+        salt.query(relativeQuery).should.equal('//a/b/');
       });
 
     });
@@ -119,9 +119,9 @@ describe( 'Query', function () {
     describe( 'integers', function () {
 
       it( 'should be the zero-indexed position of a state', function () {
-        flow.query(1).should.equal('//');
-        flow.query(3).should.equal('//a/b/');
-        flow.query(-1).should.not.be.ok;
+        salt.query(1).should.equal('//');
+        salt.query(3).should.equal('//a/b/');
+        salt.query(-1).should.not.be.ok;
       });
 
     });
@@ -133,11 +133,11 @@ describe( 'Query', function () {
     describe( '"..//" (null state)', function () {
 
       before(function () {
-        flow = new Flow();
+        salt = new Salt();
       });
 
       it( 'should return the first "null" state', function () {
-        flow.query('..//').should.equal(flow.query(0));
+        salt.query('..//').should.equal(salt.query(0));
       });
 
     });
@@ -145,11 +145,11 @@ describe( 'Query', function () {
     describe( '"//" (program state)', function () {
 
       before(function () {
-        flow = new Flow();
+        salt = new Salt();
       });
 
       it( 'should return the second "program" state', function () {
-        flow.query('//').should.equal(flow.query(1));
+        salt.query('//').should.equal(salt.query(1));
       });
 
     });
@@ -157,7 +157,7 @@ describe( 'Query', function () {
     describe( '".." (parent)', function () {
 
       before(function () {
-        flow = new Flow({
+        salt = new Salt({
           father: {
             son: {}
           }
@@ -165,8 +165,8 @@ describe( 'Query', function () {
       });
 
       it( 'should return the parent state', function () {
-        flow.go('//father/son/');
-        flow.query('..').should.equal('//father/');
+        salt.go('//father/son/');
+        salt.query('..').should.equal('//father/');
       });
 
     });
@@ -174,11 +174,11 @@ describe( 'Query', function () {
     describe( '"." (self)', function () {
 
       before(function () {
-        flow = new Flow();
+        salt = new Salt();
       });
 
       it( 'should return the current state', function () {
-        flow.state.path.should.equal(flow.query('.'));
+        salt.state.path.should.equal(salt.query('.'));
       });
 
     });
@@ -186,11 +186,11 @@ describe( 'Query', function () {
     describe( '@null', function () {
 
       before(function () {
-        flow = new Flow();
+        salt = new Salt();
       });
 
       it( 'should return the first "null" state', function () {
-        flow.query('@null').should.equal('..//');
+        salt.query('@null').should.equal('..//');
       });
 
     });
@@ -198,11 +198,11 @@ describe( 'Query', function () {
     describe( '@program', function () {
 
       before(function () {
-        flow = new Flow();
+        salt = new Salt();
       });
 
       it( 'should return the second "program" state', function () {
-        flow.query('@program').should.equal('//');
+        salt.query('@program').should.equal('//');
       });
 
     });
@@ -210,7 +210,7 @@ describe( 'Query', function () {
     describe( "@root", function () {
 
       before(function () {
-        flow = new Flow({
+        salt = new Salt({
           rooted: {
             _root: true,
             child: {}
@@ -223,16 +223,16 @@ describe( 'Query', function () {
       });
 
       it( 'should return the nearest, rooted (current or ancestor) state', function () {
-        flow.go('//rooted/child/');
-        flow.query('@root').should.equal('//rooted/');
+        salt.go('//rooted/child/');
+        salt.query('@root').should.equal('//rooted/');
       });
 
       it( 'should return the current state when on the "program" or "null" states', function () {
-        flow.go('@null');
-        flow.query('@root').should.equal('..//');
+        salt.go('@null');
+        salt.query('@root').should.equal('..//');
 
-        flow.go('@program');
-        flow.query('@root').should.equal('//');
+        salt.go('@program');
+        salt.query('@root').should.equal('//');
       });
 
     });
@@ -240,11 +240,11 @@ describe( 'Query', function () {
     describe( '@self', function () {
 
       before(function () {
-        flow = new Flow();
+        salt = new Salt();
       });
 
       it( 'should return the current state', function () {
-        flow.state.path.should.equal(flow.query('@self'));
+        salt.state.path.should.equal(salt.query('@self'));
       });
 
     });
@@ -252,7 +252,7 @@ describe( 'Query', function () {
     describe( '@parent', function () {
 
       before(function () {
-        flow = new Flow({
+        salt = new Salt({
           father: {
             son: {}
           }
@@ -260,8 +260,8 @@ describe( 'Query', function () {
       });
 
       it( 'should return the parent state', function () {
-        flow.go('//father/son/');
-        flow.query('@parent').should.equal('//father/');
+        salt.go('//father/son/');
+        salt.query('@parent').should.equal('//father/');
       });
 
     });
@@ -269,7 +269,7 @@ describe( 'Query', function () {
     describe( '@child', function () {
 
       before(function () {
-        flow = new Flow({
+        salt = new Salt({
           father: {
             son: {}
           }
@@ -277,8 +277,8 @@ describe( 'Query', function () {
       });
 
       it( 'should return the first child state', function () {
-        flow.go('//father/');
-        flow.query('@child').should.equal('//father/son/');
+        salt.go('//father/');
+        salt.query('@child').should.equal('//father/son/');
       });
 
     });
@@ -286,15 +286,15 @@ describe( 'Query', function () {
     describe( '@next', function () {
 
       before(function () {
-        flow = new Flow({
+        salt = new Salt({
           a: {},
           b: {}
         });
       });
 
       it( 'should return the adjacent older/right state', function () {
-        flow.go('//a/');
-        flow.query('@next').should.equal('//b/');
+        salt.go('//a/');
+        salt.query('@next').should.equal('//b/');
       });
 
     });
@@ -302,15 +302,15 @@ describe( 'Query', function () {
     describe( '@previous', function () {
 
       before(function () {
-        flow = new Flow({
+        salt = new Salt({
           a: {},
           b: {}
         });
       });
 
       it( 'should return the adjacent younger/left state', function () {
-        flow.go('//b/');
-        flow.query('@previous').should.equal('//a/');
+        salt.go('//b/');
+        salt.query('@previous').should.equal('//a/');
       });
 
     });
@@ -318,15 +318,15 @@ describe( 'Query', function () {
     describe( '@youngest', function () {
 
       before(function () {
-         flow = new Flow({
+         salt = new Salt({
           a: {},
           b: {}
         });
       });
 
       it( 'should return the youngest/left-most sibling state', function () {
-        flow.go('//b/');
-        flow.query('@youngest').should.equal('//a/');
+        salt.go('//b/');
+        salt.query('@youngest').should.equal('//a/');
       });
 
     });
@@ -334,15 +334,15 @@ describe( 'Query', function () {
     describe( '@oldest', function () {
 
       before(function () {
-         flow = new Flow({
+         salt = new Salt({
           a: {},
           b: {}
         });
       });
 
       it( 'should return the oldest/right-most sibling state', function () {
-        flow.go('//a/');
-        flow.query('@oldest').should.equal('//b/');
+        salt.go('//a/');
+        salt.query('@oldest').should.equal('//b/');
       });
 
     });
@@ -350,7 +350,7 @@ describe( 'Query', function () {
     describe( 'defined by the _alias tag', function () {
 
       before(function () {
-        flow = new Flow({
+        salt = new Salt({
           deep: {
             deep: {
               alias: {
@@ -365,11 +365,11 @@ describe( 'Query', function () {
       });
 
       it('should return the corresponding state', function () {
-        flow.query('@custom').should.equal('//deep/deep/alias/');
+        salt.query('@custom').should.equal('//deep/deep/alias/');
       });
 
       it( 'should not alter what built-in tokens resolve', function () {
-        flow.query('@program').should.equal('//')
+        salt.query('@program').should.equal('//')
           .and.not.equal('//fake/');
       });
 
@@ -378,19 +378,19 @@ describe( 'Query', function () {
     describe( 'pointing to child states', function () {
 
       before(function () {
-        flow = new Flow({
+        salt = new Salt({
           foo: {}
         });
       });
 
       it( 'should return the matching child state', function () {
-        flow.go(1);
-        flow.query('foo').should.be.ok;
+        salt.go(1);
+        salt.query('foo').should.be.ok;
       });
 
       it( 'should deny targeting the program state by name', function () {
-        flow.go(0);
-        flow.query('_program').should.not.be.ok;
+        salt.go(0);
+        salt.query('_program').should.not.be.ok;
       });
     });
 
@@ -398,7 +398,7 @@ describe( 'Query', function () {
     describe( 'lists', function () {
 
       before(function () {
-        flow = new Flow({
+        salt = new Salt({
           a: {
             _restrict: true,
             b: {}
@@ -408,11 +408,11 @@ describe( 'Query', function () {
       });
 
       it( 'should be delimited with pipe characters', function () {
-        flow.query('bacon|foo|@null').should.be.ok;
+        salt.query('bacon|foo|@null').should.be.ok;
       });
 
       it( 'should return the first valid token per slash-group', function () {
-        flow.query('@next|@previous|@null/@next|@parent|@child|@null/bar|zee|a/b').should.be.ok;
+        salt.query('@next|@previous|@null/@next|@parent|@child|@null/bar|zee|a/b').should.be.ok;
       });
 
     });
@@ -424,7 +424,7 @@ describe( 'Query', function () {
     describe( 'with the _restrict tag', function () {
 
       before(function () {
-        flow = new Flow({
+        salt = new Salt({
           jail: {
             _restrict: true,
             escape: {
@@ -436,12 +436,12 @@ describe( 'Query', function () {
       });
 
       it ( 'should deny resolving paths outside a state', function () {
-        flow.query('//free/').should.be.ok;
-        flow.go('//jail/');
-        flow.query('//free/').should.not.be.ok;
+        salt.query('//free/').should.be.ok;
+        salt.go('//jail/');
+        salt.query('//free/').should.not.be.ok;
 
-        flow.go('escape');
-        flow.query('//free/').should.be.ok;
+        salt.go('escape');
+        salt.query('//free/').should.be.ok;
       });
 
     });
@@ -449,7 +449,7 @@ describe( 'Query', function () {
     describe( 'with the _conceal tag', function () {
 
       before(function () {
-        flow = new Flow({
+        salt = new Salt({
           superman: {
             identity: {
               _conceal: 1,
@@ -464,22 +464,22 @@ describe( 'Query', function () {
       });
 
       it( 'should deny resolving paths to and within a state', function () {
-        flow.query('//superman').should.be.ok;
-        flow.query('//superman/identity').should.not.be.ok;
+        salt.query('//superman').should.be.ok;
+        salt.query('//superman/identity').should.not.be.ok;
       });
 
       it( 'should allow resolving revealed paths within a hidden branch', function () {
-        flow.query('//superman').should.be.ok;
-        flow.query('//superman/identity').should.not.be.ok;
-        flow.query('//superman/identity/loves').should.not.be.ok;
-        flow.query('//superman/identity/loves/loise_lane').should.be.ok;
+        salt.query('//superman').should.be.ok;
+        salt.query('//superman/identity').should.not.be.ok;
+        salt.query('//superman/identity/loves').should.not.be.ok;
+        salt.query('//superman/identity/loves/loise_lane').should.be.ok;
       });
     });
 
     describe( 'with the _ingress tag', function () {
 
       before(function () {
-        flow = new Flow({
+        salt = new Salt({
           hallway: {
             _ingress: true,
             kitchen: {}
@@ -488,9 +488,9 @@ describe( 'Query', function () {
       });
 
       it('should deny resolving paths within a state, until it is entered', function () {
-        flow.query('//hallway/kitchen/').should.not.be.ok;
-        flow.go('//hallway/');
-        flow.query('//hallway/kitchen/').should.be.ok;
+        salt.query('//hallway/kitchen/').should.not.be.ok;
+        salt.go('//hallway/');
+        salt.query('//hallway/kitchen/').should.be.ok;
       });
 
     });

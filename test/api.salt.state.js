@@ -1,13 +1,13 @@
-describe( 'Flow#state', function () {
+describe( 'Salt#state', function () {
 
   var
     state,
-    flow,
+    salt,
     stateAlias = 'foo'
   ;
 
   before(function () {
-    flow = new Flow({
+    salt = new Salt({
       _group: 'pop',
       a: {
         _perms: '!sub',
@@ -24,15 +24,15 @@ describe( 'Flow#state', function () {
         }
       }
     });
-    state = flow.state;
+    state = salt.state;
   });
 
   beforeEach(function () {
-    flow.go(0);
+    salt.go(0);
   });
 
   it( 'should be an object-member', function () {
-    flow.should.haveOwnProperty('state');
+    salt.should.haveOwnProperty('state');
     state.should.be.an('object');
   });
 
@@ -88,7 +88,7 @@ describe( 'Flow#state', function () {
   });
 
   it( 'should reflect the "program" state as expected', function () {
-    flow.go(1);
+    salt.go(1);
     state.name.should.equal('_program');
     state.index.should.equal(1);
     state.depth.should.equal(1);
@@ -101,7 +101,7 @@ describe( 'Flow#state', function () {
   });
 
   it( 'should reflect the current state', function () {
-    flow.go('//a');
+    salt.go('//a');
     state.name.should.equal('a');
     state.index.should.equal(2);
     state.depth.should.equal(2);
@@ -112,7 +112,7 @@ describe( 'Flow#state', function () {
     state.groups.should.have.lengthOf(1);
     state.groups.should.include('pop');
 
-    flow.go('//c/');
+    salt.go('//c/');
     state.name.should.equal('c');
     state.index.should.equal(4);
     state.depth.should.equal(2);

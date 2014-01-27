@@ -1,5 +1,5 @@
 var
-  Flow = require('../src/flow'),
+  Salt = require('../src/salt'),
   sinon = require('sinon'),
   chai = require('chai'),
   sinonChai = require('sinon-chai')
@@ -8,6 +8,6 @@ var
 chai.use(sinonChai);
 chai.should();
 
-global.Flow = Flow;
+global.Salt = Salt;
 global.sinon = sinon;
 global.expect = chai.expect;

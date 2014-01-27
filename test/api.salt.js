@@ -1,23 +1,23 @@
-describe( 'Flow', function () {
+describe( 'Salt', function () {
 
   it( 'should throw without the `new` statement', function () {
-    expect(Flow).to.throw();
+    expect(Salt).to.throw();
   });
 
   it( 'should return an instance', function () {
-    (new Flow()).should.be.an.instanceOf(Flow);
+    (new Salt()).should.be.an.instanceOf(Salt);
   });
 
   it( 'should accept zero arguments', function () {
-    (new Flow()).should.be.ok;
+    (new Salt()).should.be.ok;
   });
 
   it( 'should expect two arguments', function () {
-    Flow.length.should.equal(2);
+    Salt.length.should.equal(2);
   });
 
   it( 'should compile a depth-first index of states (the "program") from the first argument\'s local members', function () {
-    var pkgInst = Flow.pkg('core')(new Flow({
+    var pkgInst = Salt.pkg('core')(new Salt({
       a: {
         c: {}
       },
@@ -30,7 +30,7 @@ describe( 'Flow', function () {
   });
 
   it( 'should ignore inherited members of the first argument', function () {
-    var pkgInst = Flow.pkg('core')(new Flow(new Thing()));
+    var pkgInst = Salt.pkg('core')(new Salt(new Thing()));
 
     pkgInst.nodes.length.should.equal(3);
     pkgInst.nodes[2].name.should.equal('local');
@@ -43,46 +43,46 @@ describe( 'Flow', function () {
 
   it( 'should pass the second argument to delegating packages when it\'s an object', function () {
     var
-      coreInitSpy = sinon.spy(Flow.pkg('core'), 'init'),
+      coreInitSpy = sinon.spy(Salt.pkg('core'), 'init'),
       objArg = {},
       nonObjArg = 'not an object'
     ;
-    new Flow('anything', objArg);
+    new Salt('anything', objArg);
     coreInitSpy.should.have.been.calledWithExactly(objArg);
 
-    new Flow('anything', nonObjArg);
+    new Salt('anything', nonObjArg);
     coreInitSpy.should.not.have.been.calledWith(nonObjArg);
-    Flow.pkg('core').init.restore();
+    Salt.pkg('core').init.restore();
   });
 
   describe( '::pkg()', function () {
 
     it( 'should be a member function', function () {
-      Flow.should.itself.respondTo('pkg');
+      Salt.should.itself.respondTo('pkg');
     });
 
     it( 'should return an array of strings when called with no arguments', function () {
-      Flow.pkg().should.be.an.instanceOf(Array);
+      Salt.pkg().should.be.an.instanceOf(Array);
     });
 
     it( 'should list "core" as the only defined package', function () {
-      Flow.pkg()[0].should.equal('core');
+      Salt.pkg()[0].should.equal('core');
     });
 
     it( 'should return a package-definition (singleton function) when given the same string', function () {
-      Flow.pkg('core').should.equal(Flow.pkg('core'));
-      Flow.pkg('core').should.be.a('function');
+      Salt.pkg('core').should.equal(Salt.pkg('core'));
+      Salt.pkg('core').should.be.a('function');
     });
   });
 
   describe( '.version', function () {
 
     it( 'should be a member property', function () {
-      Flow.hasOwnProperty('version').should.be.ok;
+      Salt.hasOwnProperty('version').should.be.ok;
     });
 
     it( 'should be a semver formatted string', function () {
-      Flow.version
+      Salt.version
         .should.be.a('string')
         .and.match(/^\d+\.\d+\.\d+$/);
     });

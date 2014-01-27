@@ -1,10 +1,10 @@
 describe( '_root tag', function () {
 
-  var flow;
+  var salt;
 
   it( 'should identify the local root of a program branch', function () {
     var relativeQuery = '/state';
-    flow = new Flow({
+    salt = new Salt({
       unrooted: {
         state: {}
       },
@@ -14,15 +14,15 @@ describe( '_root tag', function () {
       },
       state: {}
     });
-    flow.go('//unrooted');
-    flow.query(relativeQuery).should.equal('//state/');
-    flow.go('//rooted');
-    flow.query(relativeQuery).should.equal('//rooted/state/');
+    salt.go('//unrooted');
+    salt.query(relativeQuery).should.equal('//state/');
+    salt.go('//rooted');
+    salt.query(relativeQuery).should.equal('//rooted/state/');
   });
 
   it( 'should accept a truthy value', function () {
     var relativeQuery = '/state';
-    flow = new Flow({
+    salt = new Salt({
       unrooted: {
         state: {}
       },
@@ -32,19 +32,19 @@ describe( '_root tag', function () {
       },
       state: {}
     });
-    flow.go('//unrooted');
-    flow.query(relativeQuery).should.equal('//state/');
-    flow.go('//rooted');
-    flow.query(relativeQuery).should.equal('//rooted/state/');
+    salt.go('//unrooted');
+    salt.query(relativeQuery).should.equal('//state/');
+    salt.go('//rooted');
+    salt.query(relativeQuery).should.equal('//rooted/state/');
   });
 
   it( 'should have no effect on the program node', function () {
-    flow = new Flow({
+    salt = new Salt({
       _root: false,
       b: {}
     });
-    flow.go('//b');
-    flow.query('/').should.equal('//');
+    salt.go('//b');
+    salt.query('/').should.equal('//');
   });
 
 });

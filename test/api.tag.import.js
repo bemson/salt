@@ -1,9 +1,9 @@
 describe( '_import tag', function () {
 
-  var flow;
+  var salt;
 
   it( 'should deep clone another program branch', function () {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         c: {
           d: {}
@@ -13,7 +13,7 @@ describe( '_import tag', function () {
         _import: '//a/'
       }
     });
-    flow.query('//b/c/d/').should.be.ok;
+    salt.query('//b/c/d/').should.be.ok;
   });
 
   it( 'should deep clone an object reference', function () {
@@ -22,30 +22,30 @@ describe( '_import tag', function () {
         d: {}
       }
     };
-    flow = new Flow({
+    salt = new Salt({
       b: {
         _import: cPath
       }
     });
-    flow.query('//b/c/d/').should.be.ok;
+    salt.query('//b/c/d/').should.be.ok;
   });
 
-  it( 'should deep clone a Flow instance', function () {
-    var cFlow = new Flow({
+  it( 'should deep clone a Salt instance', function () {
+    var cSalt = new Salt({
       c: {
         d: {}
       }
     });
-    flow = new Flow({
+    salt = new Salt({
       b: {
-        _import: cFlow
+        _import: cSalt
       }
     });
-    flow.query('//b/c/d/').should.be.ok;
+    salt.query('//b/c/d/').should.be.ok;
   });
 
   it( 'should support descendent imports', function () {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _import: '//x/'
       },
@@ -58,7 +58,7 @@ describe( '_import tag', function () {
         c: {}
       }
     });
-    flow.query('//a/b/c/').should.be.ok;
+    salt.query('//a/b/c/').should.be.ok;
   });
 
   it( 'should assume an imported function is the _on callback', function () {
@@ -66,14 +66,14 @@ describe( '_import tag', function () {
       inSpy = sinon.spy(),
       onSpy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _import: '//b/',
         _in: inSpy
       },
       b: onSpy
     });
-    flow.go('//a/');
+    salt.go('//a/');
     inSpy.should.have.been.calledOnce;
     onSpy.should.have.been.calledOnce;
     inSpy.should.have.been.calledBefore(onSpy);
@@ -81,16 +81,16 @@ describe( '_import tag', function () {
 
   it( 'should assume an imported (short-form) function is the _on callback', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       a: '//b/',
       b: spy
     });
-    flow.go('//a');
+    salt.go('//a');
     spy.should.have.been.calledOnce;
   });
 
   it( 'should support same-state imports', function () {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         c: {
           d: {}
@@ -103,11 +103,11 @@ describe( '_import tag', function () {
         _import: '//b/'
       }
     });
-    flow.query('//c/c/d/').should.be.ok;
+    salt.query('//c/c/d/').should.be.ok;
   });
 
   it( 'should only work with a full program path', function () {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         c: {}
       },
@@ -115,12 +115,12 @@ describe( '_import tag', function () {
         _import: '@previous'
       }
     });
-    flow.query('//b/c/').should.not.be.ok;
+    salt.query('//b/c/').should.not.be.ok;
   });
 
   it( 'should let the tagged state override imported descendants', function () {
     var onSpy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       jail: {
         _import: '//arrest/',
         _restrict: 1,
@@ -136,14 +136,14 @@ describe( '_import tag', function () {
         }
       }
     });
-    flow.query('//jail/punish/taze').should.be.ok;
-    flow.go('//jail');
-    flow.query('//').should.not.be.ok;
+    salt.query('//jail/punish/taze').should.be.ok;
+    salt.go('//jail');
+    salt.query('//').should.not.be.ok;
     onSpy.should.have.been.calledOnce;
   });
 
   it( 'should use a short-form string paired directly to a program state', function () {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         c: '//j/'
       },
@@ -153,7 +153,7 @@ describe( '_import tag', function () {
         d: {}
       }
     });
-    flow.query('//c/c/d/').should.be.ok;
+    salt.query('//c/c/d/').should.be.ok;
   });
 
   it( 'should prepend imported states', function () {
@@ -161,7 +161,7 @@ describe( '_import tag', function () {
       aSpy = sinon.spy(),
       bSpy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       alphabet: {
         _sequence: 1,
         a: aSpy,
@@ -171,7 +171,7 @@ describe( '_import tag', function () {
         b: bSpy
       }
     });
-    flow.go('//alphabet');
+    salt.go('//alphabet');
     aSpy.should.have.been.calledOnce;
     bSpy.should.have.been.calledOnce;
     bSpy.should.have.been.calledBefore(aSpy);

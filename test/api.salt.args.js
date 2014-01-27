@@ -1,23 +1,23 @@
-describe( 'Flow#args', function () {
+describe( 'Salt#args', function () {
 
-  var flow;
+  var salt;
 
   it( 'should be an array', function () {
-    flow = new Flow(function (x, y) {
+    salt = new Salt(function (x, y) {
       this.args
         .should.be.an.instanceOf(Array)
         .and.have.lengthOf(2)
         .and.contain(x, y);
     });
-    flow.target(1, 'foo', 'bar');
+    salt.target(1, 'foo', 'bar');
   });
 
   it( 'should be a navigation only member', function () {
-    flow = new Flow(function () {
+    salt = new Salt(function () {
       this.should.haveOwnProperty('args');
     });
-    flow.go(1);
-    flow.should.not.haveOwnProperty('args');
+    salt.go(1);
+    salt.should.not.haveOwnProperty('args');
   });
 
   it( 'should reflect navigation arguments', function () {
@@ -25,19 +25,19 @@ describe( 'Flow#args', function () {
       xVal = {},
       yVal = {}
     ;
-    flow = new Flow(function (x, y) {
+    salt = new Salt(function (x, y) {
       this.args.should.have.lengthOf(2);
       this.args[0].should.equal(xVal);
       this.args[1].should.equal(yVal);
       expect(x).to.equal(xVal);
       expect(y).to.equal(yVal);
     });
-    flow.target(1, xVal, yVal);
+    salt.target(1, xVal, yVal);
   });
 
   it( 'should be the same array betwen states and state-phases', function () {
     var argRef;
-    flow = new Flow({
+    salt = new Salt({
       _in: function () {
         argRef = this.args;
       },
@@ -45,20 +45,20 @@ describe( 'Flow#args', function () {
         this.args.should.equal(argRef);
       }
     });
-    flow.go('//a');
-    flow.should.not.haveOwnProperty('args');
+    salt.go('//a');
+    salt.should.not.haveOwnProperty('args');
   });
 
   it( 'should preserve and restore an existing .args property, when active to idle', function () {
     var
       priv = {}
     ;
-    flow = new Flow(function () {
+    salt = new Salt(function () {
       this.args.should.not.equal(priv);
     });
-    flow.args = priv;
-    flow.go(1);
-    expect(flow.args).to.equal(priv);
+    salt.args = priv;
+    salt.go(1);
+    expect(salt.args).to.equal(priv);
   });
 
   it( 'should accept entirely new arrays', function () {
@@ -67,7 +67,7 @@ describe( 'Flow#args', function () {
       goodArg = {},
       spy = sinon.spy
     ;
-    flow = new Flow({
+    salt = new Salt({
       _in: function () {
         this.args = [badArg];
       },
@@ -76,7 +76,7 @@ describe( 'Flow#args', function () {
         expect(x).to.equal(badArg);
       }
     });
-    flow.target(0, badArg);
+    salt.target(0, badArg);
   });
 
 });

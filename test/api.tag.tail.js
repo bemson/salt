@@ -1,75 +1,75 @@
 describe( '_tail tag', function () {
   
-  var flow;
+  var salt;
 
   it( 'should redirect when navigation ends in a tagged branch', function () {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _tail: '@next',
         b: {}
       },
       c: {}
     });
-    flow.go('//a/');
-    flow.state.path.should.equal('//c/');
-    flow.go('//a/b/');
-    flow.state.path.should.equal('//c/');
+    salt.go('//a/');
+    salt.state.path.should.equal('//c/');
+    salt.go('//a/b/');
+    salt.state.path.should.equal('//c/');
   });
 
   it( 'should not redirect when redirecting to, and stopping on, the tagged state', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _tail: '.',
         _on: spy
       }
     });
-    flow.go('//a/');
+    salt.go('//a/');
     spy.should.have.been.calledOnce;
   });
 
   it( 'should not redirect when targeting within the tagged branch', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _tail: 'b',
         b: spy
       }
     });
-    flow.go('//a/');
-    flow.state.path.should.equal('//a/');
+    salt.go('//a/');
+    salt.state.path.should.equal('//a/');
     spy.should.not.have.been.called;
   });
 
   it( 'should not redirect when given a bad query', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _tail: 'foo',
         b: spy
       }
     });
-    flow.go('//a/');
-    flow.state.path.should.equal('//a/');
+    salt.go('//a/');
+    salt.state.path.should.equal('//a/');
     spy.should.not.have.been.called;
   });
 
   it( 'should only apply to the destination state', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _tail: '//c/'
       },
       b: {},
       c: spy
     });
-    flow.go('//a/', '//b/');
+    salt.go('//a/', '//b/');
     spy.should.not.have.been.called;
   });
 
   it( 'should treat `true` as a query to the tagged state', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _on: spy,
         _tail: true,
@@ -77,29 +77,29 @@ describe( '_tail tag', function () {
       }
     });
 
-    flow.go('//a/');
+    salt.go('//a/');
     spy.should.have.been.calledOnce;
     spy.reset();
 
-    flow.go('//a/b/');
-    flow.state.path.should.equal('//a/');
+    salt.go('//a/b/');
+    salt.state.path.should.equal('//a/');
   });
 
   it( 'should treat `false` as a bad query', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _tail: false,
         b: spy
       }
     });
-    flow.go('//a/');
-    flow.state.path.should.equal('//a/');
+    salt.go('//a/');
+    salt.state.path.should.equal('//a/');
     spy.should.not.have.been.called;
   });
 
   it( 'should ignore ancestor settings', function () {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _tail: true,
         b:{
@@ -113,25 +113,25 @@ describe( '_tail tag', function () {
       },
       e: {}
     });
-    flow.go('//a/b/');
-    flow.state.path.should.equal('//a/');
+    salt.go('//a/b/');
+    salt.state.path.should.equal('//a/');
 
-    flow.go('//a/b/c/');
-    flow.state.path.should.equal('//a/b/c/');
+    salt.go('//a/b/c/');
+    salt.state.path.should.equal('//a/b/c/');
 
-    flow.go('//a/b/d/');
-    flow.state.path.should.equal('//e/');
+    salt.go('//a/b/d/');
+    salt.state.path.should.equal('//e/');
   });
 
   it( 'should allow tailing to the null state', function () {
-    flow = new Flow({_tail: 0});
-    flow.go(1);
-    flow.state.path.should.equal('..//');
+    salt = new Salt({_tail: 0});
+    salt.go(1);
+    salt.state.path.should.equal('..//');
   });
 
   it( 'should allow for compounding redirects', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _tail: '//b/',
         _on: spy
@@ -142,13 +142,13 @@ describe( '_tail tag', function () {
       },
       c: spy
     });
-    flow.go('//a/');
-    flow.state.path.should.equal('//c/');
+    salt.go('//a/');
+    salt.state.path.should.equal('//c/');
     spy.should.have.been.calledThrice;
   });
 
   it( 'should work when navigation is paused', function (done) {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _tail: '//b/',
         _on: function () {
@@ -157,14 +157,14 @@ describe( '_tail tag', function () {
       },
       b: done
     });
-    flow.go('//a/');
+    salt.go('//a/');
   });
 
   it( 'should work when navigation is pinned', function (done) {
-    var pinner = new Flow(function () {
+    var pinner = new Salt(function () {
       this.wait(0);
     });
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _tail: '//b/',
         _on: function () {
@@ -173,9 +173,9 @@ describe( '_tail tag', function () {
       },
       b: done
     });
-    flow.go('//a/');
-    flow.status().pinned.should.equal(true);
-    flow.state.path.should.equal('//a/');
+    salt.go('//a/');
+    salt.status().pinned.should.equal(true);
+    salt.state.path.should.equal('//a/');
     pinner.go();
   });
 

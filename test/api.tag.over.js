@@ -1,63 +1,63 @@
 describe( '_over tag', function () {
 
-  var flow;
+  var salt;
 
   it( 'should execute the given function when a state is bypassed for older sibling states', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _over: spy
       },
       b: {}
     });
-    flow.go('//b/');
+    salt.go('//b/');
     spy.should.have.been.calledOnce;
   });
 
-  it( 'should scope the given function to the Flow instance', function () {
+  it( 'should scope the given function to the Salt instance', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _over: spy
       },
       b: {}
     });
-    flow.go('//b/');
-    spy.should.have.been.calledOn(flow);
+    salt.go('//b/');
+    spy.should.have.been.calledOn(salt);
   });
 
   describe( 'redirects', function () {
 
     it( 'should navigate to the resolved state', function () {
       var spy = sinon.spy();
-      flow = new Flow({
+      salt = new Salt({
         a: {
           _over: '//d/'
         },
         b: {},
         d: spy
       });
-      flow.go('//b/');
+      salt.go('//b/');
       spy.should.have.been.calledOnce;
     });
 
     it( 'should navigate queries as waypoints', function () {
       var spy = sinon.spy();
-      flow = new Flow({
+      salt = new Salt({
         a: {
           _over: '@self',
           _on: spy
         },
         b: {}
       });
-      flow.go('//b/');
+      salt.go('//b/');
       spy.should.have.been.calledOnce;
-      flow.state.path.should.equal('//b/');
+      salt.state.path.should.equal('//b/');
     });
 
     it( 'should not invoke if _out redirects from a younger to an older sibling state', function () {
       var spy = sinon.spy();
-      flow = new Flow({
+      salt = new Salt({
         scenario: {
           _root: true,
           _on: 'start',
@@ -74,14 +74,14 @@ describe( '_over tag', function () {
           }
         }
       });
-      flow.go('//scenario');
-      flow.state.path.should.equal('//scenario/older/');
+      salt.go('//scenario');
+      salt.state.path.should.equal('//scenario/older/');
       spy.should.not.have.been.called;
     });
 
     it( 'should invoke if _bover redirects toward an older sibling state', function () {
       var spy = sinon.spy();
-      flow = new Flow({
+      salt = new Salt({
         scenario: {
           _root: true,
           _on: 'start',
@@ -100,14 +100,14 @@ describe( '_over tag', function () {
           }
         }
       });
-      flow.go('//scenario');
+      salt.go('//scenario');
       spy.should.have.been.calledTwice;
-      flow.state.path.should.equal('//scenario/older/');
+      salt.state.path.should.equal('//scenario/older/');
     });
 
     it( 'should cause an infinite sequence when pointing to a younger/ancestor state', function () {
       var spy = sinon.spy();
-      flow = new Flow({
+      salt = new Salt({
         _on: function () {
           if (this.status().loops > 100) {
             this.target(0);
@@ -119,7 +119,7 @@ describe( '_over tag', function () {
         },
         b: {}
       });
-      flow.go('//b/');
+      salt.go('//b/');
       spy.callCount.should.equal(102);
     });
 
@@ -127,7 +127,7 @@ describe( '_over tag', function () {
 
       it( 'should not cause an infinite sequence when pointing to a younger/ancestor state', function () {
         var spy = sinon.spy();
-        flow = new Flow({
+        salt = new Salt({
           _on: function () {
             if (this.status().loops > 100) {
               this.target(0);
@@ -139,7 +139,7 @@ describe( '_over tag', function () {
           },
           b: {}
         });
-        flow.go('//b/');
+        salt.go('//b/');
         spy.callCount.should.equal(1);
       });
 
@@ -148,18 +148,18 @@ describe( '_over tag', function () {
           Bspy = sinon.spy(),
           Cspy = sinon.spy()
         ;
-        flow = new Flow({
+        salt = new Salt({
           a: {
             _over: '>//c'
           },
           b: Bspy,
           c: Cspy
         });
-        flow.go('//b');
+        salt.go('//b');
 
         Bspy.should.not.have.been.called;
         Cspy.should.have.been.calledOnce;
-        flow.state.path.should.equal('//c/');
+        salt.state.path.should.equal('//c/');
       });
 
       it( 'should pass-thru arguments', function () {
@@ -169,19 +169,19 @@ describe( '_over tag', function () {
           arg1 = {},
           arg2 = {}
         ;
-        flow = new Flow({
+        salt = new Salt({
           a: {
             _over: '>//c'
           },
           b: Bspy,
           c: Cspy
         });
-        flow.target('//b', arg1, arg2);
+        salt.target('//b', arg1, arg2);
 
         Bspy.should.not.have.been.called;
         Cspy.should.have.been.calledOnce;
         Cspy.should.have.been.calledWith(arg1, arg2);
-        flow.state.path.should.equal('//c/');
+        salt.state.path.should.equal('//c/');
       });
 
     });

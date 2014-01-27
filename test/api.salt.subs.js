@@ -1,21 +1,21 @@
-describe( 'Flow#subs()', function () {
+describe( 'Salt#subs()', function () {
 
-  var flow;
+  var salt;
 
   it( 'should retrieve all sub-instances by default', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       _capture: 1,
       _on: function () {
         this.subs().should.have.lengthOf(0);
-        var x = new Flow();
+        var x = new Salt();
         this.subs()
           .should.have.lengthOf(1)
           .and.contain(x);
         spy();
       }
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
@@ -25,18 +25,18 @@ describe( 'Flow#subs()', function () {
       barProgram = {},
       spy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       _capture: {is:fooProgram},
       _on: function () {
-        new Flow(fooProgram);
-        new Flow(barProgram);
+        new Salt(fooProgram);
+        new Salt(barProgram);
         this.subs().should.have.lengthOf(2);
         this.subs(null).should.have.lengthOf(1);
         this.subs(null)[0].should.eql(this.subs({is:fooProgram})[0]);
         spy();
       }
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
@@ -45,28 +45,28 @@ describe( 'Flow#subs()', function () {
       fooProgram = {},
       barProgram = {}
     ;
-    flow = new Flow(function () {
+    salt = new Salt(function () {
       var
-        foo = new Flow(fooProgram),
-        bar = new Flow(barProgram)
+        foo = new Salt(fooProgram),
+        bar = new Salt(barProgram)
       ;
       foo.go(1);
       bar.go(1);
       this.subs(foo, bar);
     });
-    flow.go(1);
-    flow.subs({is:fooProgram}).should.equal(1);
-    flow.subs({is:barProgram}).should.equal(1);
-    flow.subs({on:1}).should.equal(2);
+    salt.go(1);
+    salt.subs({is:fooProgram}).should.equal(1);
+    salt.subs({is:barProgram}).should.equal(1);
+    salt.subs({on:1}).should.equal(2);
   });
 
   it( 'should both filter buffered and stored sub-instances, by default', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       _capture: true,
       _on: function () {
-        new Flow();
-        this.subs(new Flow());
+        new Salt();
+        this.subs(new Salt());
         this.subs({buffer:1}).should.have.lengthOf(1);
         this.subs({buffer:0}).should.have.lengthOf(1);
         this.subs({buffer:-1}).should.have.lengthOf(2);
@@ -74,90 +74,90 @@ describe( 'Flow#subs()', function () {
         spy();
       }
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
   it( 'should return an array of sub-instances internally', function () {
     var spy = sinon.spy();
-    flow = new Flow(function () {
+    salt = new Salt(function () {
       this.subs().should.be.an.instanceOf(Array);
       spy();
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
   it( 'should return the number of matching sub-instances externally', function () {
-    flow = new Flow();
-    flow.subs().should.be.a('number');
+    salt = new Salt();
+    salt.subs().should.be.a('number');
   });
 
   it( 'should give privileged access to "self" and "owner"', function () {
     var
       spy = sinon.spy(),
-      owningFlow = new Flow(function () {
-        flow.subs().should.be.a('number');
-        flow.owner(this);
-        flow.subs().should.be.an.instanceOf(Array);
+      owningSalt = new Salt(function () {
+        salt.subs().should.be.a('number');
+        salt.owner(this);
+        salt.subs().should.be.an.instanceOf(Array);
         spy();
       })
     ;
-    flow = new Flow(function () {
+    salt = new Salt(function () {
       this.subs().should.be.an.instanceOf(Array);
       spy();
     });
-    flow.go(1);
-    owningFlow.go(1);
+    salt.go(1);
+    owningSalt.go(1);
     spy.should.have.been.calledTwice;
   });
 
   it( 'should store passed in sub-instances', function () {
     var spy = sinon.spy();
-    flow = new Flow(function () {
-      var inst = new Flow();
+    salt = new Salt(function () {
+      var inst = new Salt();
       this.subs(inst);
       this.subs().should.contain(inst);
       spy();
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
   it( 'should return the number new sub-instances added', function () {
     var spy = sinon.spy();
-    flow = new Flow(function () {
-      var inst = new Flow();
-      this.subs(inst, new Flow(), inst).should.equal(2);
+    salt = new Salt(function () {
+      var inst = new Salt();
+      this.subs(inst, new Salt(), inst).should.equal(2);
       this.subs(inst).should.equal(0);
       spy();
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
   it( 'should abort adding sub-instances, when given mixed arguments', function () {
     var spy = sinon.spy();
-    flow = new Flow(function () {
-      var inst = new Flow();
-      this.subs(inst, new Flow(), 'not a flow instance').should.equal(0);
+    salt = new Salt(function () {
+      var inst = new Salt();
+      this.subs(inst, new Salt(), 'not a salt instance').should.equal(0);
       this.subs().should.have.lengthOf(0);
       spy();
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
   it( 'should allow removing sub-instances by criteria or reference', function () {
     var
-      inst = new Flow(),
+      inst = new Salt(),
       spy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       _capture: true,
       _on: function () {
-        var inst = new Flow();
-        new Flow();
+        var inst = new Salt();
+        new Salt();
         this.subs(inst);
         this.subs().should.have.lengthOf(2);
         this.subs('remove', {buffer:1});
@@ -170,22 +170,22 @@ describe( 'Flow#subs()', function () {
         spy();
       }
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
   it( 'should return the number of sub-instances removed', function () {
     var spy = sinon.spy();
-    flow = new Flow(function () {
-      var inst = new Flow();
-      this.subs(new Flow(), inst);
+    salt = new Salt(function () {
+      var inst = new Salt();
+      this.subs(new Salt(), inst);
       inst.go(1);
       this.subs().should.have.lengthOf(2);
       this.subs('remove', {on:1}).should.equal(1);
       this.subs().should.have.lengthOf(1);
       spy();
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
@@ -194,12 +194,12 @@ describe( 'Flow#subs()', function () {
       fooProgram = {},
       spy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       _capture: {is:fooProgram},
       _in: function () {
-        new Flow();
-        new Flow();
-        new Flow(fooProgram);
+        new Salt();
+        new Salt();
+        new Salt(fooProgram);
         this.subs().should.have.lengthOf(3);
         this.subs('remove', null).should.equal(1);
         this.subs().should.have.lengthOf(2);
@@ -209,23 +209,23 @@ describe( 'Flow#subs()', function () {
         spy();
       }
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
   it( 'should abort removing sub-instances, when given mixed arguments', function () {
     var spy = sinon.spy();
-    flow = new Flow(function () {
+    salt = new Salt(function () {
       var
-        foo = new Flow(),
-        bar = new Flow()
+        foo = new Salt(),
+        bar = new Salt()
       ;
       this.subs(foo, bar);
       this.subs().should.have.lengthOf(2);
-      this.subs('remove', foo, bar, 'not a flow instance').should.equal(0);
+      this.subs('remove', foo, bar, 'not a salt instance').should.equal(0);
       spy();
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 

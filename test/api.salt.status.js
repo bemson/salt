@@ -1,11 +1,11 @@
-describe( 'Flow#status()', function () {
+describe( 'Salt#status()', function () {
 
-  var flow;
+  var salt;
 
   it( 'should return a unique status object', function () {
-    flow = new Flow();
-    var status = flow.status();
-    status.should.not.equal(flow.status());
+    salt = new Salt();
+    var status = salt.status();
+    status.should.not.equal(salt.status());
     status.should.haveOwnProperty('targets');
     status.should.haveOwnProperty('trail');
     status.should.haveOwnProperty('paused');
@@ -20,7 +20,7 @@ describe( 'Flow#status()', function () {
 
   it( 'should list completed states', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       a: function () {
         var status = this.status();
         status.trail.should.have.a.lengthOf(1);
@@ -29,13 +29,13 @@ describe( 'Flow#status()', function () {
       },
       b: {}
     });
-    flow.go(1, '//a', '//b');
+    salt.go(1, '//a', '//b');
     spy.should.have.been.calledOnce;
   });
 
   it( 'should list targeted states', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       _on: function () {
         var status = this.status();
         status.targets.should.have.a.lengthOf(2);
@@ -46,13 +46,13 @@ describe( 'Flow#status()', function () {
       a: {},
       b: {}
     });
-    flow.go(1, '//a', '//b');
+    salt.go(1, '//a', '//b');
     spy.should.have.been.calledOnce;
   });
 
   it( 'should indicate the current traversal phase', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       _in: function () {
         this.status('phase').should.equal('in');
       },
@@ -73,30 +73,30 @@ describe( 'Flow#status()', function () {
       },
       end: {}
     });
-    flow.go(1,'//end',0);
+    salt.go(1,'//end',0);
     spy.should.have.been.calledOnce;
   });
 
   it( 'should have an empty phase when idle', function () {
-    flow = new Flow();
-    flow.status('phase').should.equal('');
+    salt = new Salt();
+    salt.status('phase').should.equal('');
   });
 
-  it( 'should indicate when the Flow is active/idle', function () {
+  it( 'should indicate when the Salt is active/idle', function () {
     var spy = sinon.spy();
-    flow = new Flow(function () {
+    salt = new Salt(function () {
       var status = this.status();
       status.active.should.be.ok;
       spy();
     });
-    flow.status().active.should.not.be.ok;
-    flow.go(1);
+    salt.status().active.should.not.be.ok;
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
-  it( 'should indicate when the Flow is paused', function () {
+  it( 'should indicate when the Salt is paused', function () {
     var spy = sinon.spy();
-    flow = new Flow(function () {
+    salt = new Salt(function () {
       this.status().paused.should.not.be.ok;
       this.wait();
       this.status().paused.should.be.ok;
@@ -109,24 +109,24 @@ describe( 'Flow#status()', function () {
       this.wait();
       spy();
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
-    flow.status().paused.should.be.ok;
+    salt.status().paused.should.be.ok;
   });
 
   it( 'should preserve sequence data while paused or pinned', function () {
-    flow = new Flow({
+    salt = new Salt({
       pause: function () {
         this.wait();
       },
       next: {}
     });
-    flow.go('//', '//pause', '//next');
-    flow.status().targets.should.not.be.empty;
-    flow.status().trail.should.not.be.empty;
-    flow.go();
-    flow.status().targets.should.be.empty;
-    flow.status().trail.should.be.empty;
+    salt.go('//', '//pause', '//next');
+    salt.status().targets.should.not.be.empty;
+    salt.status().trail.should.not.be.empty;
+    salt.go();
+    salt.status().targets.should.be.empty;
+    salt.status().trail.should.be.empty;
   });
 
   it( 'should indicate the number of times a phase is repeated', function () {
@@ -136,7 +136,7 @@ describe( 'Flow#status()', function () {
       outSpy = sinon.spy(),
       outSpy = sinon.spy()
     ;
-    flow = new Flow({
+    salt = new Salt({
       _on: function () {
         onHits++;
         if (onHits < 10) {
@@ -150,17 +150,17 @@ describe( 'Flow#status()', function () {
         outSpy();
       }
     });
-    flow.go(1, 0);
+    salt.go(1, 0);
     onHits.should.equal(10);
     onSpy.should.have.been.called;
     outSpy.should.have.been.called;
   });
 
   it( 'should return the matching property (or `undefined`)', function () {
-    flow = new Flow();
-    flow.status('targets').should.be.an.instanceOf(Array);
-    expect(flow.status('foo')).to.equal(undefined);
-    expect(flow.status(null)).to.equal(undefined);
+    salt = new Salt();
+    salt.status('targets').should.be.an.instanceOf(Array);
+    expect(salt.status('foo')).to.equal(undefined);
+    expect(salt.status(null)).to.equal(undefined);
   });
 
 });

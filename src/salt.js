@@ -1,6 +1,6 @@
 /*!
- * Flow v0.5.0
- * http://github.com/bemson/Flow/
+ * Salt v0.5.0
+ * http://github.com/bemson/Salt/
  *
  * Dependencies:
  * - Panzer v0.3.7 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
@@ -12,12 +12,12 @@
 !function (inAMD, inCJS, Array, Math, Object, RegExp, scope, undefined) {
 
   // dependent module initializer
-  function initFlow(require) {
+  function initSalt(require) {
 
     var
-      Flow = ((inCJS || inAMD) ? require('Panzer') : scope.Panzer).create(),
+      Salt = ((inCJS || inAMD) ? require('Panzer') : scope.Panzer).create(),
       rand_string = (Math.ceil(Math.random() * 5000) + 3000).toString(18),
-      corePkgDef = Flow.pkg('core'),
+      corePkgDef = Salt.pkg('core'),
       staticUnusedArray = [],
       staticUnusedObject = {},
       sharedProxyStateGroupsMember = [],
@@ -51,7 +51,7 @@
         '3': 'over',
         '4': 'bover'
       },
-      activeFlows = [],
+      activeSalts = [],
       reservedQueryTokens = {
         'null': {
           f: 0,
@@ -179,7 +179,7 @@
             pkg.perms = [node.perms = node.lp = defaultPermissions];
           }
         },
-        // Defines the path to update an owning flow - if any.
+        // Defines the path to update an owning salt - if any.
         _owner: function (tagName, exists, tags, node, parentNode, pkg) {
           node.oGate = 0;
 
@@ -290,7 +290,7 @@
             }
           }
         },
-        // Specifies when a paused state will prevent parent flow's from completing their navigation.
+        // Specifies when a paused state will prevent parent salt's from completing their navigation.
         _pins: function (tagName, exists, tags, node, parentNode) {
           if (exists) {
             node.pins = !!tags._pins;
@@ -311,7 +311,7 @@
             node.fncs[traversalCallbackOrder[tagName]] = tagValue;
           }
         },
-        // Specifies where to direct the flow at the end of a sequence for a given branch
+        // Specifies where to direct the salt at the end of a sequence for a given branch
         _tail: function (tagName, exists, tags, node, parentNode, pkg) {
           var
             tagValue,
@@ -357,7 +357,7 @@
         _sequence: function (tagName, exists, tags, node) {
           delete node.lastWalk;
         },
-        // Specifies where to direct the flow at the end of a sequence for a given branch
+        // Specifies where to direct the salt at the end of a sequence for a given branch
         _tail: function (tagName, exists, tags, node, parentNode, pkg) {
           var
             tailData = node.tail,
@@ -536,7 +536,7 @@
       corePostTagKeyCount
     ;
 
-    Flow.version = '0.5.0';
+    Salt.version = '0.5.0';
 
     // define remaining core tags and share tag initializers
     /*
@@ -567,8 +567,8 @@
     reservedQueryTokens['..'] = reservedQueryTokens.parent;
     reservedQueryTokens.youngest = reservedQueryTokens.oldest;
 
-    function isFlow(thing) {
-      return thing instanceof Flow;
+    function isSalt(thing) {
+      return thing instanceof Salt;
     }
 
     // add or remove from stack when there is an item
@@ -1196,7 +1196,7 @@
 
     // gets tag key tests for parsing state tags
     function import_cacheTagKeyTests () {
-      var pkgNames = Flow.pkg();
+      var pkgNames = Salt.pkg();
       // only compile if the number of packages has changed
       // NOTE: this approach is performant but fails if attrkeys are changed per package
       if (pkgNames.length !== import_pkgCnt) {
@@ -1216,7 +1216,7 @@
     }
 
     function import_cacheTagKeyTests_map ( pkgName ) {
-      return Flow.pkg(pkgName).attrKey;
+      return Salt.pkg(pkgName).attrKey;
     }
 
     function import_cacheTagKeyTests_filter ( tagKeyTest ) {
@@ -1353,7 +1353,7 @@
         importTagValue = sourceState._import;
         // determine whether we're importing a path or an (external) object
         if (typeof importTagValue === 'object') {
-          if (importTagValue instanceof Flow) {
+          if (importTagValue instanceof Salt) {
             importTagValue = corePkgDef(importTagValue).nodes[1].value;
           }
           baseState = corePkgDef.prepNode(importTagValue, importTagValue) || importTagValue;
@@ -1386,15 +1386,15 @@
 
     function sharedRedirectEventHandler() {
       var
-        flow = this,
-        pkg = corePkgDef(flow),
+        salt = this,
+        pkg = corePkgDef(salt),
         tgtConfig = pkg.nodes[pkg.tank.currentIndex].reds[pkg.phase],
         tgtIndex = tgtConfig[1]
       ;
       if (tgtConfig[0]) {
-        flow.target.apply(flow, [tgtIndex].concat(pkg.args));
+        salt.target.apply(salt, [tgtIndex].concat(pkg.args));
       } else {
-        flow.go(tgtIndex);
+        salt.go(tgtIndex);
       }
     }
 
@@ -1416,8 +1416,8 @@
       prepTree: function (orig) {
         import_cacheTagKeyTests();
 
-        if (isFlow(orig)) {
-          // when given a Flow instance, return the original instance's program
+        if (isSalt(orig)) {
+          // when given a Salt instance, return the original instance's program
           return corePkgDef(orig).nodes[1].value;
         }
       },
@@ -1438,11 +1438,11 @@
       },
 
       // initialize the package instance with custom properties
-      // only argument is the object passed after the program when calling "new Flow(program, extraArg)"
+      // only argument is the object passed after the program when calling "new Salt(program, extraArg)"
       init: function () {
         var
           pkg = this,
-          activeFlow = activeFlows[0],
+          activeSalt = activeSalts[0],
           sharedProxyDataMember = {},
           sharedProxyStateMember = {
             name: '_null',
@@ -1501,19 +1501,19 @@
           // store cache
           store: {}
         };
-        // indicates when this flow is in the stack of navigating flows
+        // indicates when this salt is in the stack of navigating salts
         pkg.active = 0;
         // flag when being invoked by a blessed function
         pkg.blessed = 0;
         // init index of node paths
         pkg.nids = {};
-        // the number of child flows fired by this flow's program functions
+        // the number of child salts fired by this salt's program functions
         pkg.pinned = 0;
-        // collection of parent flow references
+        // collection of parent salt references
         pkg.pinning = [];
         // collection of targeted nodes
         pkg.targets = [];
-        // identify the initial phase for this flow, 0 by default
+        // identify the initial phase for this salt, 0 by default
         pkg.phase = 0;
         // set owner permission and assignment defaults
         pkg.owner = pkg.ownable = 0;
@@ -1574,16 +1574,16 @@
           }
         }
 
-        if (activeFlow) {
+        if (activeSalt) {
 
-          // use active flow as the owner
+          // use active salt as the owner
           if (pkg.ownable) {
-            pkg.owner = activeFlow;
+            pkg.owner = activeSalt;
           }
 
-          // auto capture to the active flow's temporary store
-          if (activeFlow.caps[0]) {
-            subs_addInsts(activeFlow.tin, [pkg], activeFlow);
+          // auto capture to the active salt's temporary store
+          if (activeSalt.caps[0]) {
+            subs_addInsts(activeSalt.tin, [pkg], activeSalt);
           }
         }
 
@@ -1597,13 +1597,13 @@
           pkg = this
         ;
 
-        // add to the private and public flow stack
-        activeFlows.unshift(pkg);
+        // add to the private and public salt stack
+        activeSalts.unshift(pkg);
         corePkgDef.actives.unshift(pkg.proxy);
         pkg.active = 1;
 
         pkg.preMove();
-        // prevent going forward when pinned by another flow
+        // prevent going forward when pinned by another salt
         if (pkg.pinned) {
           pkg.tank.stop();
         }
@@ -1737,7 +1737,7 @@
         var
           pkg = this,
           tank = pkg.tank,
-          parentFlow = activeFlows[1],
+          parentSalt = activeSalts[1],
           parentTank,
           blocked = pkg.pause || pkg.pinned || pkg.phase,
           hasTargets = pkg.targets.length,
@@ -1749,22 +1749,22 @@
             // direct tank to the next state
             tank.go(pkg.targets[0]);
           } else {
-            // instruct flow to tail state
+            // instruct salt to tail state
             pkg.proxy.go(node.tail);
           }
         } else {
           if (blocked) {
             // link pinnable parents with this pinnable state
             if (
-              parentFlow &&
-              parentFlow.nodes[(parentTank = parentFlow.tank).currentIndex].pins &&
+              parentSalt &&
+              parentSalt.nodes[(parentTank = parentSalt.tank).currentIndex].pins &&
               node.pins &&
               !pkg.pinning[parentTank.id] &&
-              !parentFlow.pinning[tank.id]
+              !parentSalt.pinning[tank.id]
             ) {
-              // bind parent and this flow
-              parentFlow.pinned++;
-              pkg.pinning[parentTank.id] = parentFlow;
+              // bind parent and this salt
+              parentSalt.pinned++;
+              pkg.pinning[parentTank.id] = parentSalt;
               parentTank.stop();
             }
           } else {
@@ -1772,7 +1772,7 @@
             // inform owner that we've stopped
             if (~node.ping) {
               pkg.pingOwner(node.ping);
-              // exit if owners end up directing this flow
+              // exit if owners end up directing this salt
               if (pkg.paused || pkg.pinned || pkg.targets.length) {
                 return;
               }
@@ -1790,24 +1790,24 @@
               pkg.vars = {};
             }
 
-            // update pinned flows
+            // update pinned salts
             if (pkg.pinning.length) {
-              // first, reduce pinned count of each pinned flow
-              pkg.pinning.forEach(function (pinnedFlow) {
-                pinnedFlow.pinned--;
+              // first, reduce pinned count of each pinned salt
+              pkg.pinning.forEach(function (pinnedSalt) {
+                pinnedSalt.pinned--;
               });
               tank.post(function () {
-                // then, resume each pinned flow (once this flow is complete)
-                pkg.pinning.splice(0).forEach(function (pinnedFlow) {
-                  if (!(pinnedFlow.pinned || pinnedFlow.pause)) {
-                    pinnedFlow.go();
+                // then, resume each pinned salt (once this salt is complete)
+                pkg.pinning.splice(0).forEach(function (pinnedSalt) {
+                  if (!(pinnedSalt.pinned || pinnedSalt.pause)) {
+                    pinnedSalt.go();
                   }
                 });
               });
             }
           }
-          // remove private and public activeflow status
-          activeFlows.shift();
+          // remove private and public activesalt status
+          activeSalts.shift();
           corePkgDef.actives.shift();
           pkg.active = 0;
         }
@@ -2016,7 +2016,7 @@
         var pkg = this;
         // clear any delays
         clearTimeout(pkg.waitTimer);
-        // unpause this flow
+        // unpause this salt
         pkg.pause = 0;
       },
 
@@ -2026,21 +2026,21 @@
           pkg = this,
           activeId,
           perms = pkg.perms[0],
-          activeFlow = activeFlows[0],
-          betweenFlows = activeFlow && pkg !== activeFlow,
+          activeSalt = activeSalts[0],
+          betweenSalts = activeSalt && pkg !== activeSalt,
           argumentIdx = arguments.length,
           perm
         ;
         // prioritize group permissions
-        if (betweenFlows) {
+        if (betweenSalts) {
           for (perm in perms) {
             if (
               // when local
               perms.hasOwnProperty(perm) &&
               // when not a relationship permission
               !defaultPermissions.hasOwnProperty(perm) &&
-              // when the calling flow identifies as the allowed group
-              activeFlow.groups.hasOwnProperty(perm)
+              // when the calling salt identifies as the allowed group
+              activeSalt.groups.hasOwnProperty(perm)
             ) {
               // allow/deny based on group assignment
               return perms[perm];
@@ -2051,22 +2051,22 @@
         while (argumentIdx--) {
           switch (arguments[argumentIdx]) {
             case 'self':
-              if (pkg === activeFlow || pkg.blessed) {
+              if (pkg === activeSalt || pkg.blessed) {
                 return 1;
               }
             break;
             case 'owner':
-              if (perms.owner && pkg.owner === activeFlow) {
+              if (perms.owner && pkg.owner === activeSalt) {
                 return 1;
               }
             break;
             case 'sub':
-              if (perms.sub && betweenFlows && (pkg.bin.hasOwnProperty((activeId = activeFlow.tank.id)) || pkg.tin.hasOwnProperty(activeId))) {
+              if (perms.sub && betweenSalts && (pkg.bin.hasOwnProperty((activeId = activeSalt.tank.id)) || pkg.tin.hasOwnProperty(activeId))) {
                 return 1;
               }
             break;
             case 'world':
-              if (perms.world && (!activeFlow || !pkg.is('sub', 'owner', 'self'))) {
+              if (perms.world && (!activeSalt || !pkg.is('sub', 'owner', 'self'))) {
                 return 1;
               }
             break;
@@ -2075,7 +2075,7 @@
         return 0;
       },
 
-      // direct owning flow to the given state
+      // direct owning salt to the given state
       pingOwner: function (stateQuery) {
         var
           pkg = this,
@@ -2203,7 +2203,7 @@
           // resolve the parent node to check
           parentNode = arguments.length ? (typeof nodeRef === 'object' ? nodeRef : this.pkg.nodes[nodeRef]) : this.pkg.nodes[this.pkg.tank.currentIndex];
 
-        // return whether the current node is within the parent node - auto-pass when parentNode is the flow state
+        // return whether the current node is within the parent node - auto-pass when parentNode is the salt state
         return parentNode ? parentNode !== this && (!parentNode.index || !this.path.indexOf(parentNode.path)) : false;
       }
 
@@ -2211,7 +2211,7 @@
 
     // instance prototype methods
     mix(corePkgDef.proxy, {
-      // add method to return callbacks to this flow's states
+      // add method to return callbacks to this salt's states
       callbacks: function (qry, waypoint, bless) {
         var
           pkg = corePkgDef(this),
@@ -2278,11 +2278,11 @@
         }
         return false;
       },
-      // access and edit the locked status of a flow
+      // access and edit the locked status of a salt
       perms: function (options) {
         var
-          flow = this,
-          pkg = corePkgDef(flow),
+          salt = this,
+          pkg = corePkgDef(salt),
           argumentsLength = arguments.length
         ;
         if (pkg.is('sub', 'owner', 'self')) {
@@ -2290,7 +2290,7 @@
             if (argumentsLength > 1) {
               options = protoSlice.call(arguments);
             }
-            flow.state.perms = merge(pkg.perms[0] = perms_parse(options, pkg.perms[0]));
+            salt.state.perms = merge(pkg.perms[0] = perms_parse(options, pkg.perms[0]));
           }
           return true;
         }
@@ -2306,13 +2306,13 @@
           // resolve a node index from qry, or nothing if allowed or unlocked
           tgtIdx = (pkg.is('world', 'sub', 'owner', 'self')) ? pkg.vetIndexOf(qry) : -1
         ;
-        // if the destination node is valid, and the flow can move...
+        // if the destination node is valid, and the salt can move...
         if (~tgtIdx) {
           // capture (new) arguments after the tgt
           pkg.args = proxy.args = protoSlice.call(arguments).slice(1);
           // reset targets array
           pkg.targets = [tgtIdx];
-          // navigate towards the targets (unpauses the flow)
+          // navigate towards the targets (unpauses the salt)
           pkg.go();
         } else { // otherwise, when the target node is invalid...
           // return false
@@ -2338,7 +2338,7 @@
       },
       /**
       Target, add, or insert nodes to traverse, or resume towards the last target node.
-      Returns false when there is no new destination, a waypoint was invalid, or the flow was locked or pinned.
+      Returns false when there is no new destination, a waypoint was invalid, or the salt was locked or pinned.
 
       Forms:
         go() - resume traversal
@@ -2444,14 +2444,14 @@
                 ~~delay // number of milliseconds to wait (converted to an integer)
               );
             }
-            // indicate success with pausing flow
+            // indicate success with pausing salt
             return true;
           }
         }
-        // indicate failure to pause flow
+        // indicate failure to pause salt
         return false;
       },
-      // retrieve the flow that owns this one, if any
+      // retrieve the salt that owns this one, if any
       // owner may be set by the owner or child
       // owner may be removed by the owner or child
       owner: function (owner) {
@@ -2465,11 +2465,11 @@
         if (argumentsLength) {
           if (writeAccess) {
             // change owner to something other than itself
-            if (isFlow(owner) && owner !== pkg.proxy) {
+            if (isSalt(owner) && owner !== pkg.proxy) {
               pkg.owner = corePkgDef(owner);
               return owner;
             }
-            // remove this flow's owner
+            // remove this salt's owner
             if (owner === false) {
               pkg.owner = 0;
               return true;
@@ -2505,12 +2505,12 @@
           }
           // focus on remaining arguments
           args.shift();
-          if (isFlow(args[0])) {
+          if (isSalt(args[0])) {
             i = args.length;
             // get core package instances
             while (i--) {
               if (!(args[i] = corePkgDef(args[i]))) {
-                // fail when not a flow instance
+                // fail when not a salt instance
                 return 0;
               }
             }
@@ -2538,7 +2538,7 @@
 
         // add sub-instances
 
-        if (isFlow(rawCriteria)) {
+        if (isSalt(rawCriteria)) {
           if (!allowed) {
             // deny unauthorized additions
             return 0;
@@ -2547,7 +2547,7 @@
           // get core package instances
           while (i--) {
             if (!(args[i] = corePkgDef(args[i]))) {
-              // fail when not adding a flow instance or adding self
+              // fail when not adding a salt instance or adding self
               return 0;
             }
           }
@@ -2587,7 +2587,7 @@
         // return number of results
         return i;
       },
-      // return an object with status information about the flow and it's current state
+      // return an object with status information about the salt and it's current state
       status: function (metric) {
         var
           // get the package instance
@@ -2638,16 +2638,16 @@
 
     });
 
-    return Flow;
+    return Salt;
   }
 
-  // initialize and expose Flow, based on the environment
+  // initialize and expose Salt, based on the environment
   if (inAMD) {
-    define(initFlow);
+    define(initSalt);
   } else if (inCJS) {
-    module.exports = initFlow(require);
-  } else if (!scope.Flow) {
-    scope.Flow = initFlow();
+    module.exports = initSalt(require);
+  } else if (!scope.Salt) {
+    scope.Salt = initSalt();
   }
 }(
   typeof define == 'function',

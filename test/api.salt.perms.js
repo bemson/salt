@@ -1,23 +1,23 @@
-describe( 'Flow#perms()', function () {
+describe( 'Salt#perms()', function () {
 
-  var flow;
+  var salt;
 
   it( 'should return false, when caller has no permission', function () {
-    flow = new Flow();
-    flow.perms().should.equal(false);
-    flow.perms('world').should.equal(false);
-    flow.perms(true).should.equal(false);
+    salt = new Salt();
+    salt.perms().should.equal(false);
+    salt.perms('world').should.equal(false);
+    salt.perms(true).should.equal(false);
   });
 
   it( 'should return true, when caller has permission', function () {
     var spy = sinon.spy();
-    flow = new Flow(function () {
-      flow.perms().should.equal(true);
-      flow.perms('world').should.equal(true);
-      flow.perms(true).should.equal(true);
+    salt = new Salt(function () {
+      salt.perms().should.equal(true);
+      salt.perms('world').should.equal(true);
+      salt.perms(true).should.equal(true);
       spy();
     });
-    flow.go(1);
+    salt.go(1);
     spy.should.have.been.calledOnce;
   });
 
@@ -25,17 +25,17 @@ describe( 'Flow#perms()', function () {
     var
       setting = '!world',
       spy = sinon.spy(),
-      master = new Flow(function () {
-        flow.perms(setting).should.not.be.ok;
-        flow.owner(this);
-        flow.perms(setting).should.be.ok;
+      master = new Salt(function () {
+        salt.perms(setting).should.not.be.ok;
+        salt.owner(this);
+        salt.perms(setting).should.be.ok;
         spy();
       })
     ;
-    flow = new Flow(function () {
-      flow.perms(setting).should.be.ok;
+    salt = new Salt(function () {
+      salt.perms(setting).should.be.ok;
     });
-    flow.perms(setting).should.not.be.ok;
+    salt.perms(setting).should.not.be.ok;
     master.go(1);
     spy.should.have.been.calledOnce;
   });

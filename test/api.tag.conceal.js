@@ -1,21 +1,21 @@
 describe( '_conceal tag', function () {
 
-  var flow;
+  var salt;
 
   it( 'should prevent external access to a program branch', function () {
-    flow = new Flow({
+    salt = new Salt({
       foo: {
         _conceal: 1
       },
       zee: {}
     });
-    flow.go('//').should.be.ok;
-    flow.go('//foo').should.not.be.ok;
-    flow.go('//zee').should.be.ok;
+    salt.go('//').should.be.ok;
+    salt.go('//foo').should.not.be.ok;
+    salt.go('//zee').should.be.ok;
   });
 
   it( 'should allow external access to a concealed branch', function () {
-    flow = new Flow({
+    salt = new Salt({
       foo: {
         _conceal: 1,
         bar: {
@@ -23,27 +23,27 @@ describe( '_conceal tag', function () {
         }
       }
     });
-    flow.go('//').should.be.ok;
-    flow.go('//foo').should.not.be.ok;
-    flow.go('//foo/bar').should.be.ok;
+    salt.go('//').should.be.ok;
+    salt.go('//foo').should.not.be.ok;
+    salt.go('//foo/bar').should.be.ok;
   });
 
   it( 'should have no impact on internal/trusted queries', function () {
     var spy = sinon.spy();
-    flow = new Flow({
+    salt = new Salt({
       _on: 'foo',
       foo: {
         _conceal: 1,
         _on: spy
       }
     });
-    flow.go('//foo').should.not.be.ok;
-    flow.go('//');
+    salt.go('//foo').should.not.be.ok;
+    salt.go('//');
     spy.should.have.been.calledOnce;
   });
 
   it( 'should have no impact when falsy', function () {
-    flow = new Flow({
+    salt = new Salt({
       foo: {
         _conceal: false,
         bar: {
@@ -51,18 +51,18 @@ describe( '_conceal tag', function () {
         }
       }
     });
-    flow.go('//').should.be.ok;
-    flow.go('//foo').should.be.ok;
-    flow.go('//foo/bar').should.be.ok;
+    salt.go('//').should.be.ok;
+    salt.go('//foo').should.be.ok;
+    salt.go('//foo/bar').should.be.ok;
   });
 
   it( 'should be ignored by the program root', function () {
-    flow = new Flow({
+    salt = new Salt({
       _conceal: 1,
       foo: {}
     });
-    flow.query('//').should.be.ok;
-    flow.query('//foo').should.be.ok;
+    salt.query('//').should.be.ok;
+    salt.query('//foo').should.be.ok;
   });
 
 });

@@ -1,8 +1,8 @@
 {
-  "name": "Flow",
+  "name": "salt",
   "version": "0.5.0",
   "description": "A semantic JavaScript framework, for unparalled code organization and execution control.",
-  "main": "src/flow.js",
+  "main": "src/salt.js",
   "dependencies" : {
     "Panzer": "~0.3.10"
   },
@@ -30,12 +30,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "http://github.com/bemson/Flow.git"
+    "url": "http://github.com/bemson/salt.git"
   },
   "licenses": [
     {
       "type" : "MIT",
-      "url" : "https://github.com/bemson/Flow/raw/master/LICENSE"
+      "url" : "https://github.com/bemson/salt/raw/master/LICENSE"
     }
   ]
 }

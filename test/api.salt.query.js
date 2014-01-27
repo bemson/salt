@@ -1,9 +1,9 @@
-describe( 'Flow#query()', function () {
+describe( 'Salt#query()', function () {
   
-  var flow;
+  var salt;
 
   beforeEach(function () {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         b: {}
       },
@@ -12,44 +12,44 @@ describe( 'Flow#query()', function () {
   });
 
   it( 'should return the full path of a given query', function () {
-    flow.query('//a').should.equal('//a/');
-    flow.query('@program/a/@next').should.equal('//b/');
+    salt.query('//a').should.equal('//a/');
+    salt.query('@program/a/@next').should.equal('//b/');
   });
 
   it( 'should be performed from the current state\'s perspective', function () {
-    flow.query('b').should.not.be.ok;
-    flow.go('//');
-    flow.query('b').should.equal('//b/');
-    flow.go('a');
-    flow.query('b').should.equal('//a/b/');
+    salt.query('b').should.not.be.ok;
+    salt.go('//');
+    salt.query('b').should.equal('//b/');
+    salt.go('a');
+    salt.query('b').should.equal('//a/b/');
   });
 
   it( 'should return an array of paths when given multiple queries', function () {
-    flow.query('//a', '@program/a/@next')
+    salt.query('//a', '@program/a/@next')
       .should.be.an.instanceOf(Array)
       .and.include('//a/', '//b/')
       .and.a.lengthOf(2);
   });
 
   it( 'should return false if one or more queries are invalid', function () {
-    flow.query('//fubar').should.not.be.ok;
-    flow.query('//a/','//fubar').should.not.be.ok;
+    salt.query('//fubar').should.not.be.ok;
+    salt.query('//a/','//fubar').should.not.be.ok;
   }); 
 
   it( 'should return false if one or more queries are inaccessible', function () {
-    flow = new Flow({
+    salt = new Salt({
       a: {
         _restrict: true
       },
       b: {}
     });
-    flow.query('//a', '//b').should.be.ok;
-    flow.go('//a');
-    flow.query('//a', '//b').should.not.be.ok;
+    salt.query('//a', '//b').should.be.ok;
+    salt.go('//a');
+    salt.query('//a', '//b').should.not.be.ok;
   });
 
-  it( 'should not return false, for valid inaccessible queries, if the Flow is active', function () {
-    flow = new Flow({
+  it( 'should not return false, for valid inaccessible queries, if the Salt is active', function () {
+    salt = new Salt({
       a: {
         _restrict: true,
         _on: function () {
@@ -58,18 +58,18 @@ describe( 'Flow#query()', function () {
       },
       b: {}
     });
-    flow.query('//a', '//b').should.be.ok;
-    flow.target('//a').should.equal('//b/');
-    flow.query('//a', '//b').should.not.be.ok;
+    salt.query('//a', '//b').should.be.ok;
+    salt.target('//a').should.equal('//b/');
+    salt.query('//a', '//b').should.not.be.ok;
   });
 
   it( 'should return false when querying without permission', function () {
-    flow = new Flow({
+    salt = new Salt({
       _perms: '!world'
     });
-    flow.go(1).should.be.ok;
-    flow.go(0).should.not.be.ok;
-    flow.query(0).should.not.be.ok;
+    salt.go(1).should.be.ok;
+    salt.go(0).should.not.be.ok;
+    salt.query(0).should.not.be.ok;
   });
 
 });

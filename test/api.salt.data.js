@@ -1,9 +1,9 @@
-describe( 'Flow#data', function () {
+describe( 'Salt#data', function () {
 
-  var flow;
+  var salt;
 
   beforeEach(function () {
-    flow = new Flow({
+    salt = new Salt({
       _data: 'foo',
       a: {
         _data: {foo: 10}
@@ -12,40 +12,40 @@ describe( 'Flow#data', function () {
   });
 
   it( 'should initially be an empty object', function () {
-    flow.data.should.be.empty;
+    salt.data.should.be.empty;
   });
 
   it( 'should have members present and set according to the current state\'s _data tag', function () {
-    flow.data.should.not.have.ownProperty('foo');
-    flow.go(1);
-    flow.data.should.have.ownProperty('foo');
-    expect(flow.data.foo).to.equal(undefined);
-    flow.go('//a/');
-    flow.data.foo.should.equal(10);
-    flow.go(1);
-    expect(flow.data.foo).to.equal(undefined);
-    flow.go(0);
-    flow.data.should.not.have.ownProperty('foo');
+    salt.data.should.not.have.ownProperty('foo');
+    salt.go(1);
+    salt.data.should.have.ownProperty('foo');
+    expect(salt.data.foo).to.equal(undefined);
+    salt.go('//a/');
+    salt.data.foo.should.equal(10);
+    salt.go(1);
+    expect(salt.data.foo).to.equal(undefined);
+    salt.go(0);
+    salt.data.should.not.have.ownProperty('foo');
   });
 
   it( 'should have manually added members restored when a given state is exited', function () {
     var obj = {};
-    flow.data.should.not.have.ownProperty('foo');
-    flow.data.foo = obj;
-    flow.go('//a/');
-    flow.data.foo.should.equal(10);
-    flow.go(0);
-    flow.data.foo.should.equal(obj);
+    salt.data.should.not.have.ownProperty('foo');
+    salt.data.foo = obj;
+    salt.go('//a/');
+    salt.data.foo.should.equal(10);
+    salt.go(0);
+    salt.data.foo.should.equal(obj);
   });
 
   it( 'should restore user-deleted members when exiting a state', function () {
-    flow.data.should.not.have.ownProperty('foo');
-    flow.go('//a/');
-    flow.data.foo.should.equal(10);
-    delete flow.data.foo;
-    flow.go(1);
-    flow.data.should.have.ownProperty('foo');
-    expect(flow.data.foo).to.equal(undefined);
+    salt.data.should.not.have.ownProperty('foo');
+    salt.go('//a/');
+    salt.data.foo.should.equal(10);
+    delete salt.data.foo;
+    salt.go(1);
+    salt.data.should.have.ownProperty('foo');
+    expect(salt.data.foo).to.equal(undefined);
   });
 
 
