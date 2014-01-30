@@ -9,7 +9,7 @@ describe( 'Salt#args', function () {
         .and.have.lengthOf(2)
         .and.contain(x, y);
     });
-    salt.target(1, 'foo', 'bar');
+    salt.get(1, 'foo', 'bar');
   });
 
   it( 'should be a navigation only member', function () {
@@ -32,7 +32,7 @@ describe( 'Salt#args', function () {
       expect(x).to.equal(xVal);
       expect(y).to.equal(yVal);
     });
-    salt.target(1, xVal, yVal);
+    salt.get(1, xVal, yVal);
   });
 
   it( 'should be the same array betwen states and state-phases', function () {
@@ -76,7 +76,7 @@ describe( 'Salt#args', function () {
         expect(x).to.equal(badArg);
       }
     });
-    salt.target(0, badArg);
+    salt.get(0, badArg);
   });
 
 });

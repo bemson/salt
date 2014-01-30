@@ -69,7 +69,7 @@ describe( '_over tag', function () {
           },
           older: {
             _in: function () {
-              this.target('.');
+              this.get('.');
             }
           }
         }
@@ -95,7 +95,7 @@ describe( '_over tag', function () {
           },
           older: {
             _in: function () {
-              this.target('.');
+              this.get('.');
             }
           }
         }
@@ -110,7 +110,7 @@ describe( '_over tag', function () {
       salt = new Salt({
         _on: function () {
           if (this.status().loops > 100) {
-            this.target(0);
+            this.get(0);
           }
           spy();
         },
@@ -130,7 +130,7 @@ describe( '_over tag', function () {
         salt = new Salt({
           _on: function () {
             if (this.status().loops > 100) {
-              this.target(0);
+              this.get(0);
             }
             spy();
           },
@@ -176,7 +176,7 @@ describe( '_over tag', function () {
           b: Bspy,
           c: Cspy
         });
-        salt.target('//b', arg1, arg2);
+        salt.get('//b', arg1, arg2);
 
         Bspy.should.not.have.been.called;
         Cspy.should.have.been.calledOnce;

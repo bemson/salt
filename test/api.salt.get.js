@@ -1,4 +1,4 @@
-describe( 'Salt#target()', function () {
+describe( 'Salt#get()', function () {
 
   var salt;
 
@@ -8,7 +8,7 @@ describe( 'Salt#target()', function () {
       _in: inSpy
     });
     salt.state.path.should.equal('..//');
-    salt.target(1);
+    salt.get(1);
     salt.state.path.should.equal('//');
     inSpy.should.have.been.calledOnce;
   });
@@ -27,7 +27,7 @@ describe( 'Salt#target()', function () {
       },
       _on: onSpy
     });
-    salt.target(1, arg1, arg2);
+    salt.get(1, arg1, arg2);
     inSpy.should.have.been.calledWithExactly();
     onSpy.should.have.been.calledWithExactly(arg1, arg2);
   });
@@ -40,10 +40,10 @@ describe( 'Salt#target()', function () {
 
     salt = new Salt(function () {
       this.args.should.eql([fooArg]);
-      this.target(0, barArg);
+      this.get(0, barArg);
       this.args.should.eql([barArg]);
     });
-    salt.target(1, fooArg).should.equal(true);
+    salt.get(1, fooArg).should.equal(true);
   });
 
   it( 'should define a new destination state', function () {
@@ -51,7 +51,7 @@ describe( 'Salt#target()', function () {
     salt = new Salt({
       _in: function () {
         var originalDestination = this.status().targets.slice(-1)[0];
-        this.target('@self');
+        this.get('@self');
         this.status().targets.slice(-1)[0].should.not.equal(originalDestination);
         inSpy();
       },
@@ -68,7 +68,7 @@ describe( 'Salt#target()', function () {
     salt = new Salt({
       _in: function () {
         this.status().targets.should.have.length.above(1);
-        this.target('@self');
+        this.get('@self');
         this.status().targets.should.have.lengthOf(1);
         inSpy();
       },
@@ -107,18 +107,18 @@ describe( 'Salt#target()', function () {
 
     salt.go('//pause');
     salt.status().paused.should.be.ok;
-    salt.target(1);
+    salt.get(1);
     salt.status().paused.should.not.be.ok;
 
     salt.go('//delay/nav');
     salt.status().paused.should.be.ok;
-    salt.target(1);
+    salt.get(1);
     salt.status().paused.should.not.be.ok;
     navSpy.should.not.have.been.called;
 
     salt.go('//delay/fnc');
     salt.status().paused.should.be.ok;
-    salt.target(1);
+    salt.get(1);
     salt.status().paused.should.not.be.ok;
     fncSpy.should.not.have.been.called;
   });
@@ -128,13 +128,13 @@ describe( 'Salt#target()', function () {
     salt = new Salt(function () {
       return val;
     });
-    salt.target(1).should.equal(val);
+    salt.get(1).should.equal(val);
   });
 
   it( 'should return true if the destination\'s has no _on callback or it returns `undefined`', function () {
     var spy = sinon.spy();
     salt = new Salt(spy);
-    salt.target(1).should.equal(true);
+    salt.get(1).should.equal(true);
     spy.should.have.been.calledOnce;
     spy.should.have.returned(undefined);
   });
@@ -155,11 +155,11 @@ describe( 'Salt#target()', function () {
       }
     });
 
-    salt.target('//pause').should.equal(false);
+    salt.get('//pause').should.equal(false);
     salt.status().paused.should.be.ok;
     pauseSpy.should.have.returned(undefined);
 
-    salt.target('//delay').should.equal(false);
+    salt.get('//delay').should.equal(false);
     salt.status().paused.should.be.ok;
     delaySpy.should.have.returned(undefined);
   });
@@ -172,7 +172,7 @@ describe( 'Salt#target()', function () {
       pinner.go(1);
     });
 
-    salt.target(1).should.equal(false);
+    salt.get(1).should.equal(false);
     salt.status().paused.should.not.be.ok;
     salt.status().pinned.should.equal(true);
     pinner.go();
@@ -186,7 +186,7 @@ describe( 'Salt#target()', function () {
     salt.state.perms.world.should.be.ok;
     salt.go(1);
     salt.state.perms.world.should.not.be.ok;
-    salt.target(0).should.equal(false);
+    salt.get(0).should.equal(false);
   });
 
 });

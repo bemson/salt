@@ -13,7 +13,7 @@ describe( 'Salt#wait()', function () {
     salt = new Salt(function () {
       var f = this;
       [ 'a', {}, /a/, [] ].forEach(function (nonNumber) {
-        // test with target
+        // test with get
         f.wait(0, nonNumber).should.equal(false);
         // test without
         f.wait(nonNumber).should.equal(false);
@@ -43,7 +43,7 @@ describe( 'Salt#wait()', function () {
         passedThru();
       }
     });
-    salt.target(1, done);
+    salt.get(1, done);
   });
 
   it( 'should redirect after delay', function (done) {
@@ -67,7 +67,7 @@ describe( 'Salt#wait()', function () {
         passedThru();
       }
     });
-    salt.target(1, done);
+    salt.get(1, done);
   });
 
   it( 'should pass-through arguments to delayed callbacks', function (done) {
@@ -76,7 +76,7 @@ describe( 'Salt#wait()', function () {
         delayFnc();
       }, 0, passedThru);
     });
-    salt.target(1, done);
+    salt.get(1, done);
   });
 
   it( 'should work via (multiple) delayed callbacks', function (done) {

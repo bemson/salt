@@ -1392,7 +1392,7 @@
         tgtIndex = tgtConfig[1]
       ;
       if (tgtConfig[0]) {
-        salt.target.apply(salt, [tgtIndex].concat(pkg.args));
+        salt.get.apply(salt, [tgtIndex].concat(pkg.args));
       } else {
         salt.go(tgtIndex);
       }
@@ -2087,7 +2087,7 @@
           lastPingId = '' + pkg.tank.currentIndex + pkg.phase + owner.tank.id + stateQuery;
           if (lastPingId !== pkg.lastPing) {
             pkg.lastPing = lastPingId;
-            owner.proxy.target(stateQuery, proxy, proxy.status(), merge(proxy.state));
+            owner.proxy.get(stateQuery, proxy, proxy.status(), merge(proxy.state));
           }
         }
       },
@@ -2244,7 +2244,7 @@
           if (waypoint) {
             rslt = pkg.proxy.go(qry);
           } else {
-            rslt = pkg.proxy.target.apply(pkg.proxy, [qry].concat(protoSlice.call(arguments)));
+            rslt = pkg.proxy.get.apply(pkg.proxy, [qry].concat(protoSlice.call(arguments)));
           }
           if (setBlessed) {
             pkg.blessed = 0;
@@ -2297,7 +2297,7 @@
         return false;
       },
       // add method to program api
-      target: function (qry) {
+      get: function (qry) {
         var
           // alias proxy
           proxy = this,
@@ -2413,9 +2413,9 @@
                 if (~delayNodeIdx) {
                   callback = function () {
                     if (hasArgs) {
-                      proxy.target.apply(proxy, [delayNodeIdx].concat(protoSlice.call(args, 2)));
+                      proxy.get.apply(proxy, [delayNodeIdx].concat(protoSlice.call(args, 2)));
                     } else {
-                      proxy.target.call(proxy, delayNodeIdx);
+                      proxy.get.call(proxy, delayNodeIdx);
                     }
                   };
                 }

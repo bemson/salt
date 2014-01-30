@@ -32,12 +32,12 @@ describe( 'Query', function () {
       });
     });
 
-    it( 'should be .go(), .target(), .query(), and .wait()', function (done) {
+    it( 'should be .go(), .get(), .query(), and .wait()', function (done) {
       salt.go('//state/').should.be.ok;
-      salt.target('//state/').should.be.ok;
+      salt.get('//state/').should.be.ok;
       salt.query('//state/').should.be.ok;
       // navigate (and pass callback) to state that invokes .wait()
-      salt.target('//delay/', done);
+      salt.get('//delay/', done);
     });
 
     it( 'should return `false` when resolution fails', function () {

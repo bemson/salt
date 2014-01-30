@@ -10,11 +10,11 @@ describe( 'Permission', function () {
     });
     salt.state.perms.world.should.be.ok;
     salt.go(1).should.be.ok;
-    salt.target(0).should.be.ok;
+    salt.get(0).should.be.ok;
     salt.go('//deny');
     salt.state.perms.world.should.not.be.ok;
     salt.go(1).should.not.be.ok;
-    salt.target(0).should.not.be.ok;
+    salt.get(0).should.not.be.ok;
   });
 
   it( 'should be ignored by blessed callbacks', function () {

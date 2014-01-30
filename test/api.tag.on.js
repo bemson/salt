@@ -90,7 +90,7 @@ describe( '_on tag', function () {
           },
           c: Cspy
         });
-        salt.target(1, arg1, arg2);
+        salt.get(1, arg1, arg2);
 
         Cspy.should.not.have.been.called;
         Bspy.should.have.been.calledOnce;

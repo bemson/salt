@@ -55,7 +55,7 @@ describe( '_out tag', function () {
         a: {
           _on: function () {
             if (this.status().loops > 100) {
-              this.target('stop');
+              this.get('stop');
             }
             spy();
           },
@@ -75,7 +75,7 @@ describe( '_out tag', function () {
           a: {
             _on: function () {
               if (this.status().loops > 100) {
-                this.target('stop');
+                this.get('stop');
               }
               spy();
             },
@@ -110,7 +110,7 @@ describe( '_out tag', function () {
         salt = new Salt({
           _out: '>a/b',
           _on: function () {
-            this.target(0, arg1, arg2);
+            this.get(0, arg1, arg2);
           },
           a: {
             b: Bspy

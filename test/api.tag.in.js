@@ -38,7 +38,7 @@ describe( '_in tag', function () {
       salt = new Salt({
         _on: function () {
           if (this.status().loops > 100) {
-            this.target(0);
+            this.get(0);
           }
           spy();
         },
@@ -97,7 +97,7 @@ describe( '_in tag', function () {
             b: Bspy
           }
         });
-        salt.target(1, arg1, arg2);
+        salt.get(1, arg1, arg2);
 
         spy.should.not.have.been.called;
         Bspy.should.have.been.calledOnce;

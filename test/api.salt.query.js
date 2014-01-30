@@ -59,7 +59,7 @@ describe( 'Salt#query()', function () {
       b: {}
     });
     salt.query('//a', '//b').should.be.ok;
-    salt.target('//a').should.equal('//b/');
+    salt.get('//a').should.equal('//b/');
     salt.query('//a', '//b').should.not.be.ok;
   });
 

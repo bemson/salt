@@ -11,7 +11,7 @@ describe( '_restrict tag', function () {
     salt.go('//jail');
     salt.query('/').should.not.be.ok;
     salt.go(0).should.not.be.ok;
-    salt.target('/').should.not.be.ok;
+    salt.get('/').should.not.be.ok;
   });
 
   it( 'should accept truthy values', function () {
@@ -22,6 +22,6 @@ describe( '_restrict tag', function () {
     });
     salt.go('//jail');
     salt.go(0).should.not.be.ok;
-    salt.target('/').should.not.be.ok;
+    salt.get('/').should.not.be.ok;
   });
 });

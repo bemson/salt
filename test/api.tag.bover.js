@@ -63,7 +63,7 @@ describe( '_bover tag', function () {
           _on: 'start',
           younger: {
             _in: function () {
-              this.target('.');
+              this.get('.');
             }
           },
           start: {
@@ -87,7 +87,7 @@ describe( '_bover tag', function () {
           _on: 'older',
           younger: {
             _in: function () {
-              this.target('.');
+              this.get('.');
             }
           },
           test: {
@@ -111,7 +111,7 @@ describe( '_bover tag', function () {
         b: {},
         c: function () {
           if (this.status().loops > 100) {
-            this.target('//b/');
+            this.get('//b/');
           }
           spy();
         }
@@ -131,7 +131,7 @@ describe( '_bover tag', function () {
           b: {},
           c: function () {
             if (this.status().loops > 100) {
-              this.target('//b/');
+              this.get('//b/');
             }
             spy();
           }
@@ -181,7 +181,7 @@ describe( '_bover tag', function () {
           },
           b: Bspy
         });
-        salt.target('//c', arg1, arg2);
+        salt.get('//c', arg1, arg2);
 
         Bspy.should.have.been.calledOnce;
         Bspy.should.have.been.calledWith(arg1, arg2);

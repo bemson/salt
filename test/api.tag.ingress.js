@@ -15,7 +15,7 @@ describe( '_ingress tag', function () {
     salt.go(0);
   })
 
-  it( 'should require external calls to target a state before it\'s branch', function () {
+  it( 'should require external calls to get a state before it\'s branch', function () {
     salt.query('//gated/state').should.not.be.ok;
     salt.go('//gated/state').should.not.be.ok;
     salt.go('//gated').should.be.ok;

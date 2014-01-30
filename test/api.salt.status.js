@@ -104,7 +104,7 @@ describe( 'Salt#status()', function () {
       this.status().paused.should.not.be.ok;
       this.wait(5);
       this.status().paused.should.be.ok;
-      this.target('.');
+      this.get('.');
       this.status().paused.should.not.be.ok;
       this.wait();
       spy();

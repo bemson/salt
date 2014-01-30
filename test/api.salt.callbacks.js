@@ -10,16 +10,16 @@ describe( 'Salt#callbacks()', function () {
     val = {};
   });
 
-  it( 'should return a curried call to `.target()`', function () {
+  it( 'should return a curried call to `.get()`', function () {
     var
       salt = new Salt(),
-      spyTarget = sinon.spy(salt, 'target'),
+      spyTarget = sinon.spy(salt, 'get'),
       callback = salt.callbacks()
     ;
     callback.should.be.a('function');
     callback();
     spyTarget.should.have.been.calledOnce;
-    salt.target.restore();
+    salt.get.restore();
   });
 
   it( 'should navigate to the given "query"', function () {
@@ -54,7 +54,7 @@ describe( 'Salt#callbacks()', function () {
           callback = salt.callbacks(0, 0, true);
         }
       }),
-      spyTarget = sinon.spy(salt, 'target'),
+      spyTarget = sinon.spy(salt, 'get'),
       callback
     ;
     salt.state.perms.world.should.be.ok;
@@ -65,7 +65,7 @@ describe( 'Salt#callbacks()', function () {
     callback();
     salt.state.index.should.equal(0);
     spyTarget.should.have.been.calledOnce;
-    salt.target.restore();
+    salt.get.restore();
   });
 
   it( 'should ignore the "blessed" flag if used outside the Salt program', function () {
@@ -73,7 +73,7 @@ describe( 'Salt#callbacks()', function () {
       salt = new Salt({
         _perms: '!world'
       }),
-      spyTarget = sinon.spy(salt, 'target'),
+      spyTarget = sinon.spy(salt, 'get'),
       callback = salt.callbacks(0, false, true)
     ;
     salt.state.perms.world.should.be.ok;
@@ -84,7 +84,7 @@ describe( 'Salt#callbacks()', function () {
     callback();
     salt.state.index.should.not.equal(0);
     spyTarget.should.have.been.calledOnce;
-    salt.target.restore();
+    salt.get.restore();
   });
 
   it( 'should cache callbacks to the same state', function () {
