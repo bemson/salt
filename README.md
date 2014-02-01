@@ -5,7 +5,7 @@
 version 0.5.0
 by Bemi Faison
 
-[![Build Status](https://travis-ci.org/bemson/salt.png)](https://travis-ci.org/bemson/salt)
+[![Build Status](https://travis-ci.org/bemson/salt.png?branch=master)](https://travis-ci.org/bemson/salt)
 
 ## Description
 
