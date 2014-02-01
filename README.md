@@ -97,7 +97,7 @@ console.log(helloSalt.data.phrase); // undefined
 
 ------
 
-Salt is a hybrid declarative and procedural architecture, which offers many development and extension possibilities. Please visit the [online wiki](http://github.com/bemson/salt/wiki) to review the [Salt instance API](https://github.com/bemson/salt/wiki/Salt-API) and [program tag glossary](https://github.com/bemson/salt/wiki/Progam-Tags).
+Salt features a hybrid, declarative and procedural architecture, which offers many programmatic advantages and possibilities (and, it's extensible to boot). Please visit the [online wiki](http://github.com/bemson/salt/wiki) to review the [instance API](https://github.com/bemson/salt/wiki/Salt-API) and [program tag glossary](https://github.com/bemson/salt/wiki/Progam-Tags), for information on how to best use Salt in your code.
 
 
 ## Installation
