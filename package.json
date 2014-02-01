@@ -1,7 +1,7 @@
 {
   "name": "salt",
   "version": "0.5.0",
-  "description": "A semantic JavaScript framework, for unparalled code organization and execution control.",
+  "description": "State And Logic Traversal, for today's infinite-application.",
   "main": "src/salt.js",
   "dependencies" : {
     "Panzer": "~0.3.10"
@@ -13,16 +13,16 @@
     "sinon-chai": "~2.3"
   },
   "keywords": [
-    "semantic",
     "state",
-    "thread",
-    "architecture",
+    "logic",
+    "organization",
+    "declarative",
+    "execution",
     "framework"
   ],
   "scripts": {
     "test": "node_modules/.bin/mocha"
   },
-  "private": true,
   "author": {
     "name": "Bemi Faison",
     "email": "bemson@gmail.com",
@@ -32,10 +32,5 @@
     "type": "git",
     "url": "http://github.com/bemson/salt.git"
   },
-  "licenses": [
-    {
-      "type" : "MIT",
-      "url" : "https://github.com/bemson/salt/raw/master/LICENSE"
-    }
-  ]
+  "license": "MIT"
 }
