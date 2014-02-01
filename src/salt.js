@@ -1,6 +1,6 @@
 /*!
  * Salt v0.5.0
- * http://github.com/bemson/Salt/
+ * http://github.com/bemson/salt/
  *
  * Dependencies:
  * - Panzer v0.3.7 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
