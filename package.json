@@ -20,9 +20,17 @@
     "execution",
     "framework"
   ],
+  "engines": {
+    "node": ">=0.6.x <=0.10.x"
+  },
+  "bugs": {
+    "url": "https://github.com/bemson/salt/issues",
+    "email": "bemson+salt-bugs@gmail.com"
+  },
   "scripts": {
     "test": "node_modules/.bin/mocha"
   },
+  "homepage": "http://github.com/bemson/salt",
   "author": {
     "name": "Bemi Faison",
     "email": "bemson@gmail.com",
