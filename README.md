@@ -5,7 +5,7 @@
 version 0.5.0
 by Bemi Faison
 
-[![Build Status](https://travis-ci.org/bemson/Flow.png)](https://travis-ci.org/bemson/Flow)
+[![Build Status](https://travis-ci.org/bemson/salt.png)](https://travis-ci.org/bemson/salt)
 
 ## Description
 
