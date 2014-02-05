@@ -178,3 +178,6 @@ require(['salt'], function (Salt) {
 Salt is available under the terms of the [MIT-License](http://en.wikipedia.org/wiki/MIT_License#License_terms).
 
 Copyright 2014, Bemi Faison
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/bemson/salt/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
