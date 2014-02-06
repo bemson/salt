@@ -1,5 +1,5 @@
 --ui bdd
 --growl
---reporter list
+--reporter spec
 --bail
 --require test/setup
