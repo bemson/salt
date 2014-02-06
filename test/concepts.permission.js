@@ -251,10 +251,6 @@ describe( 'Permission', function () {
       delete corePkgDef.proxy.groupIs;
     });
 
-    it( '', function () {
-
-    });
-
     describe( 'self', function () {
 
       it( 'should apply when the invoker is the invokee', function () {
