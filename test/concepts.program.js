@@ -127,7 +127,7 @@ describe( 'Program', function () {
 
   });
 
-  describe( 'states', function () {
+  describe( 'state', function () {
 
     describe( 'names', function () {
 

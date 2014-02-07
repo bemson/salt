@@ -244,7 +244,7 @@ describe( 'Sub-instance', function () {
 
     describe( 'option', function () {
 
-      describe( 'from', function () {
+      describe( '"from"', function () {
 
         it( 'should filter items captured/added on or within the given state name', function () {
           salt = new Salt({
@@ -314,7 +314,7 @@ describe( 'Sub-instance', function () {
 
       });
 
-      describe( 'has', function () {
+      describe( '"has"', function () {
 
         it( 'should filter items that have the given state name', function () {
           salt = new Salt(function () {
@@ -356,7 +356,7 @@ describe( 'Sub-instance', function () {
 
       });
 
-      describe( 'is', function () {
+      describe( '"is"', function () {
         
         it( 'should filter items sourced by the given value', function () {
           salt = new Salt(function () {
@@ -371,7 +371,7 @@ describe( 'Sub-instance', function () {
 
       });
 
-      describe( 'on', function () {
+      describe( '"on"', function () {
 
         it( 'should filter items that are on the given state name', function () {
           salt = new Salt(function () {
@@ -435,7 +435,7 @@ describe( 'Sub-instance', function () {
 
       });
 
-      describe( 'within', function () {
+      describe( '"within"', function () {
 
         it( 'should filter items that are within the given state name', function () {
           salt = new Salt(function () {
@@ -497,7 +497,7 @@ describe( 'Sub-instance', function () {
 
       });
 
-      describe( 'buffer', function () {
+      describe( '"buffer"', function () {
 
         it( 'should filter temporary items when truthy', function () {
           var spy = sinon.spy();
