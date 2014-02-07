@@ -52,18 +52,18 @@ Internally, Salt compiles this into a private state-chart, where the following e
   4. "//piece/together/" at index 3
   5. "//speak/" at index 4
 
-The first two states exist in every Salt instance: the _null_ and _program-root_ states, respectively. As well, all instances start "on" the _null_ state, which parents the _program-root_ - the first state from your program. The state index reflects it's compilation order, and can be used to reference navigation targets.
+The first two states exist in every Salt instance: the _null_ and _program-root_ states, respectively. As well, all instances start "on" the _null_ state, which parents the _program-root_ - the first state from your program. The state index reflects its compilation order, and can be used to reference navigation targets.
 
 #### Using state order in logic
 
-While tag order is irrelevant, state order _can_ matter in a program. Understandably, some developers are uncomfortable treating an object like an array. Thus, despite exhibiting the same [FIFO](http://en.wikipedia.org/wiki/FIFO) object-member behavior, wary developers can rest assured that you Salt may be used with it's order-dependent features. Read more [about key order preservation](https://github.com/bemson/salt/wiki/About-Key-Order-Preservation) in the wiki.
+While tag order is irrelevant, state order _can_ matter in a program. Understandably, some developers are uncomfortable treating an object like an array. Thus, despite exhibiting the same [FIFO](http://en.wikipedia.org/wiki/FIFO) object-member behavior, wary developers can rest assured that you Salt may be used with its order-dependent features. Read more [about key order preservation](https://github.com/bemson/salt/wiki/About-Key-Order-Preservation) in the wiki.
 
 For instance, with the example above, you could replace the spatial query "@next" with the relative query "../speak". The relative query requires a specific sibling; a state named "speak. The spatial query requires a specific relationship; the older/right-adjacent sibling state. Both retain a level of portability, but only one relies on sibling order.
 
 
 ### Controlling your Salt instance
 
-In order to execute your logic, direct your Salt instance toward a program state - i.e., one of the pre-compiled endpoints. Salt then observes the logic of states along it's navigation path, which can invoke functions based on _how_ a state is traversed (or, the transition type). Navigation ends when the destination state has completed an "on" transition.
+In order to execute your logic, direct your Salt instance toward a program state - i.e., one of the pre-compiled endpoints. Salt then observes the logic of states along its navigation path, which can invoke functions based on _how_ a state is traversed (or, the transition type). Navigation ends when the destination state has completed an "on" transition.
 
 The example below uses the `.go()` method to direct our Salt instance towards the "//piece/together/" state.
 
@@ -80,7 +80,7 @@ console.log(helloSalt.state.name);  // "speak"
 console.log(helloSalt.state.index); // 4
 ```
 
-To "exit" a program, direct Salt toward it's _null_ state (at index 0). The _null_ state parents the program root, allowing you to trigger any program entry/exit logic.
+To "exit" a program, direct Salt toward its _null_ state (at index 0). The _null_ state parents the program root, allowing you to trigger any program entry/exit logic.
 
 ```js
 helloSalt.go(0);
@@ -105,7 +105,7 @@ Salt works within modern JavaScript environments, including CommonJS (Node.js) a
 
 #### Dependencies
 
-Salt depends on the [Panzer](http://github.com/bemson/Panzer) library. Visit the Panzer project page, to learn about it's dependencies and requirements.
+Salt depends on the [Panzer](http://github.com/bemson/Panzer) library. Visit the Panzer project page, to learn about its dependencies and requirements.
 
 Salt also uses the following ECMAScript 5 features:
   * [Array.forEach](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach)
@@ -113,7 +113,7 @@ Salt also uses the following ECMAScript 5 features:
   * [Object.keys](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object/keys)
   * [String.trim](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String/trim)
 
-You will need to implement shims for these methods in unsupported environments - specifically , Internet Explorer versions 6, 7 & 8. ([Augment.js](http://augmentjs.com/) shims these and other missing methods.)
+You will need to implement shims for these methods in unsupported environments - specifically, Internet Explorer versions 6, 7 & 8. ([Augment.js](http://augmentjs.com/) shims these and other missing methods.)
 
 ### Web Browsers
 
@@ -128,7 +128,7 @@ Use a `<SCRIPT>` tag to load the _salt.min.js_ file in your web page. The file i
 
 ### Node.js
 
-Use [npm](http://npmjs.org) to install the [salt](https://npmjs.org/package/salt) module, along with it's dependencies. The _salt_ module exports the Salt constructor, not a module namespace.
+Use [npm](http://npmjs.org) to install the [salt](https://npmjs.org/package/salt) module, along with its dependencies. The _salt_ module exports the Salt constructor, not a module namespace.
 
 ```bash
 npm install salt
@@ -188,4 +188,3 @@ Salt is available under the terms of the [MIT-License](http://en.wikipedia.org/w
 Copyright 2014, Bemi Faison
 
 [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/bemson/salt/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
-
