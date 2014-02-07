@@ -166,6 +166,14 @@ require(['salt'], function (Salt) {
 
 **Warning:** Do not load the minified file via AMD, since it includes Salt dependencies which themselves export modules. Use AMD optimizers like [r.js](https://github.com/jrburke/r.js/) in order to roll-up your dependency tree.
 
+## Testing
+
+Salt has over 350 unit tests to inspire and guide your usage. They were written with [Mocha](http://visionmedia.github.io/mocha), using [Chai](http://chaijs.com/) and [Sinon](http://sinonjs.org) (via the [Sinon-chai](http://chaijs.com/plugins/sinon-chai) plugin).
+
+  * To browse test results, visit [Salt on Travis-CI](https://travis-ci.org/bemson/salt).
+  * To run tests in Node, invoke `npm test`
+  * To run tests in a browser: (1) install Salt, then (2) load _test/index.html_ locally. (Unfortunately, the tests do not run in IE6, 7, or 8.)
+
 ## Shout-outs
 
   * Peter Jones - Best. Sounding. Board. Ever.
