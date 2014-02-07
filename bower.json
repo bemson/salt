@@ -1,0 +1,33 @@
+{
+  "name": "salt",
+  "version": "0.5.0",
+  "homepage": "https://github.com/bemson/salt",
+  "authors": [
+    "Bemi Faison <bemson@gmail.com>  (http://learnings-bemson.blogspot.com)"
+  ],
+  "description": "State And Logic Traversal, for today's infinite-application.",
+  "main": "src/salt.js",
+  "dependencies": {
+    "Panzer": "~0.3"
+  },
+  "keywords": [
+    "state",
+    "logic",
+    "organization",
+    "declarative",
+    "execution",
+    "framework"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "*.json",
+    "node_modules",
+    "test",
+    "bower_components",
+    "components",
+    "README.md",
+    "LICENSE",
+    "salt.min.js"
+  ]
+}

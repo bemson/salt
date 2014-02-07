@@ -128,19 +128,9 @@ Use a `<SCRIPT>` tag to load the _salt.min.js_ file in your web page. The file i
 
 ### Node.js
 
-Use [npm](http://npmjs.org) to install the [salt](https://npmjs.org/package/salt) module, along with it's dependencies. The _salt_ module exports the Salt constructor, not a module namespace.
-
-```bash
-npm install salt
-```
-
-Then require and use it in your application code:
-
-```js
-var Salt = require('salt');
-
-// ... Salt dependent code ...
-```
+  * `npm install salt` if you're using [npm](http://npmjs.org/)
+  * `component install bemson/salt` if you're using [component](https://github.com/component/component)
+  * `bower install salt` if you're using [Bower](http://bower.io)
 
 ### AMD
 

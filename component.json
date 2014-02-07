@@ -1,0 +1,23 @@
+{
+  "name": "salt",
+  "repo": "bemson/salt",
+  "description": "State And Logic Traversal, for today's infinite-application.",
+  "version": "0.5.0",
+  "keywords": [
+    "state",
+    "logic",
+    "organization",
+    "declarative",
+    "execution",
+    "framework"
+  ],
+  "dependencies": {
+    "bemson/Panzer": "0.3.11"
+  },
+  "development": {},
+  "license": "MIT",
+  "main": "src/salt.js",
+  "scripts": [
+    "src/salt.js"
+  ]
+}
