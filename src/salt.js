@@ -522,6 +522,12 @@
         // capture criteria stack
         3: function (node, pkg, add) {
           shared_nodeStackHandler(pkg.caps, node.caps, add);
+          // if exiting program node
+          if (node.index === 1 && !add) {
+            // clear sub-instances
+            pkg.bin = {};
+            pkg.tin = {};
+          }
         }
       },
       nodeScopeActionsLength = 4,
