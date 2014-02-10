@@ -93,6 +93,31 @@ describe( 'Salt#subs()', function () {
     salt.subs().should.be.a('number');
   });
 
+  it( 'should have zero manually added subs when on the null node', function () {
+    salt = new Salt(function () {
+      this.subs(new Salt());
+    });
+    salt.subs().should.equal(0);
+    salt.go(1);
+    salt.subs().should.equal(1);
+    salt.go(0);
+    salt.subs().should.equal(0);
+  });
+
+  it( 'should have zero auto-captured subs when on the null node', function () {
+    salt = new Salt({
+      _capture: true,
+      _on: function () {
+        new Salt();
+      }
+    });
+    salt.subs().should.equal(0);
+    salt.go(1);
+    salt.subs().should.equal(1);
+    salt.go(0);
+    salt.subs().should.equal(0);
+  });
+
   it( 'should give privileged access to "self" and "owner"', function () {
     var
       spy = sinon.spy(),
