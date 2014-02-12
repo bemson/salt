@@ -3,42 +3,26 @@ describe( '_tail tag', function () {
   var salt;
 
   it( 'should redirect when navigation ends in a tagged branch', function () {
-    salt = new Salt({
-      a: {
-        _tail: '@next',
-        b: {}
-      },
-      c: {}
-    });
-    salt.go('//a/');
-    salt.state.path.should.equal('//c/');
-    salt.go('//a/b/');
-    salt.state.path.should.equal('//c/');
-  });
-
-  it( 'should not redirect when redirecting to, and stopping on, the tagged state', function () {
     var spy = sinon.spy();
     salt = new Salt({
-      a: {
-        _tail: '.',
-        _on: spy
-      }
+      _tail: '@next|@child',
+      a: spy,
+      b: '//a/',
+      c: '//a/',
+      d: '//a/'
     });
-    salt.go('//a/');
+    salt.go(1);
+    spy.callCount.should.equal(4);
+  });
+
+  it( 'should not redirect to the current state', function () {
+    var spy = sinon.spy();
+    salt = new Salt({
+      _tail: '@self',
+      _on: spy
+    });
+    salt.go(1);
     spy.should.have.been.calledOnce;
-  });
-
-  it( 'should not redirect when targeting within the tagged branch', function () {
-    var spy = sinon.spy();
-    salt = new Salt({
-      a: {
-        _tail: 'b',
-        b: spy
-      }
-    });
-    salt.go('//a/');
-    salt.state.path.should.equal('//a/');
-    spy.should.not.have.been.called;
   });
 
   it( 'should not redirect when given a bad query', function () {
