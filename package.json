@@ -10,7 +10,8 @@
     "mocha": "~1.7",
     "sinon": "~1.5",
     "chai": "~1.4",
-    "sinon-chai": "~2.3"
+    "sinon-chai": "~2.3",
+    "mocha-jshint": "*"
   },
   "keywords": [
     "state",

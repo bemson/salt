@@ -1,0 +1,16 @@
+{
+    "strict": false,
+    "expr": true,
+    "boss": true,
+    "predef": [
+        "Salt",
+        "describe",
+        "expect",
+        "it",
+        "before",
+        "beforeEach",
+        "after",
+        "afterEach",
+        "sinon"
+    ]
+}
