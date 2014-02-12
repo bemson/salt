@@ -312,32 +312,30 @@
           }
         },
         // Specifies where to direct the salt at the end of a sequence for a given branch
-        _tail: function (tagName, exists, tags, node, parentNode, pkg) {
-          var
-            tagValue,
-            tailData
-          ;
+        _tail: function (tagName, exists, tags, node, parentNode) {
+          var tagValue;
+
           if (exists) {
-            tagValue = tags._tail;
-            node.tail = tailData = {
-              p: tagValue
-            };
-            if (tagValue === true) {
-              tailData.n = node;
-            } else if (tagValue === false) {
-              // skip all when false
-              tailData.n =
-              tailData.t =
-                -1;
-            } else if (typeof tagValue === 'number' && !(tailData.n = pkg.nodes[tagValue])) {
-              // ignore invalid numbers now
-              tailData.t = -1;
+
+            // get paired value
+            tagValue = tags[tagName];
+
+            // exit if branch should not tail, or tails a non-existing index
+            if (tagValue === false || tagValue < 0) {
+              node.tail = 0;
+              return;
             }
+
+            // (otherwise) define tail query - use tagged index when "true"
+            node.tail = {
+              q: tagValue === true ? node.index : tagValue
+            };
           } else if (parentNode) {
             node.tail = parentNode.tail;
           } else {
             node.tail = 0;
           }
+
         },
         // Specifies when a branch should be invisible to external queries
         _conceal: function (tagName, exists, tags, node, parentNode, pkg, idx) {
@@ -356,58 +354,6 @@
         // Clean up lastWalk flag
         _sequence: function (tagName, exists, tags, node) {
           delete node.lastWalk;
-        },
-        // Specifies where to direct the salt at the end of a sequence for a given branch
-        _tail: function (tagName, exists, tags, node, parentNode, pkg) {
-          var
-            tailData = node.tail,
-            tailNode
-          ;
-          node.tail = -1;
-          // if there is tail data to use/process
-          if (tailData) {
-
-            // resolve path when there is no node
-            if (!tailData.hasOwnProperty('n')) {
-              tailData.n = pkg.nodes[pkg.indexOf(tailData.p, node)];
-            }
-
-            // resolve tail index
-            if (!tailData.hasOwnProperty('t')) {
-              tailNode = tailData.n;
-              // if...
-              if (
-                // there is a tail target, and...
-                tailNode &&
-                // the tail target is not a descendent of this node, and...
-                !tailNode.within(node) &&
-                (
-                  // the tail target is not a sequence, or...
-                  !tailNode.seq ||
-                  (
-                    // the tail sequence is not the owning node, and...
-                    tailNode !== node &&
-                    // not an ancestor anyway
-                    !node.within(tailNode)
-                  )
-                )
-              ) {
-                // capture tail target index
-                tailData.t = tailNode.index;
-              } else {
-                // ignore invalid tail target
-                tailData.t = -1;
-              }
-            }
-
-            // if this is an owning node that tails itself...
-            if (exists && tailData.n === node) {
-              // use parent's tail value
-              node.tail = parentNode.tail;
-            } else {
-              node.tail = tailData.t;
-            }
-          }
         },
         // ensure node alias was not overridden
         _alias: function (tagName, exists, tags, node, parentNode, pkg, idx) {
@@ -1747,16 +1693,17 @@
           parentTank,
           blocked = pkg.pause || pkg.pinned || pkg.phase,
           hasTargets = pkg.targets.length,
-          node = pkg.nodes[tank.currentIndex]
+          node = pkg.nodes[tank.currentIndex],
+          tailIdx
         ;
 
-        if (!blocked && (hasTargets || ~node.tail)) {
+        if (!blocked && (hasTargets || node.tail)) {
           if (hasTargets) {
             // direct tank to the next state
             tank.go(pkg.targets[0]);
-          } else {
-            // instruct salt to tail state
-            pkg.proxy.go(node.tail);
+          } else if (~(tailIdx = pkg.indexOf(node.tail.q)) && tailIdx !== node.index) { // ensure query doesn't match current node
+            // instruct salt to the given tail query
+            pkg.proxy.go(tailIdx);
           }
         } else {
           if (blocked) {
