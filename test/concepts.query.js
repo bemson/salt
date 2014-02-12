@@ -207,7 +207,7 @@ describe( 'Query', function () {
 
     });
 
-    describe( "@root", function () {
+    describe( '@root', function () {
 
       before(function () {
         salt = new Salt({
@@ -361,7 +361,7 @@ describe( 'Query', function () {
           fake: {
             _alias: 'program'
           }
-        })
+        });
       });
 
       it('should return the corresponding state', function () {

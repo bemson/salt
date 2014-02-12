@@ -1799,12 +1799,14 @@
         // based on the type of qry...
         switch (typeof qry) {
           case 'object':
+
             // if not null "object"...
             if (qry !== null) {
               // assume the object is a node, and retrieve it's index property value
               qry = qry.index;
             }
 
+          /* falls through */
           case 'number':
             // if the index is valid...
             if (nodes[qry]) {
@@ -1818,6 +1820,7 @@
             // get toString version of this function
             qry = qry + '';
 
+          /* falls through */
           case 'string':
 
             // short circuit special queries
@@ -2062,7 +2065,7 @@
           pkg.targs = proxy.args;
         }
         // set "private" vars member
-        proxy.vars = pkg.vars;        
+        proxy.vars = pkg.vars;
         // set "private" args member
         proxy.args = pkg.args;
       },
@@ -2287,7 +2290,7 @@
           return true;
         } else {
           return pkg.result;
-        } 
+        }
       },
       /**
       Target, add, or insert nodes to traverse, or resume towards the last target node.

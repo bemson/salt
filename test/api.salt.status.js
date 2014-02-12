@@ -133,7 +133,6 @@ describe( 'Salt#status()', function () {
     var
       onHits = 0,
       onSpy = sinon.spy(),
-      outSpy = sinon.spy(),
       outSpy = sinon.spy()
     ;
     salt = new Salt({

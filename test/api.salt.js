@@ -36,7 +36,7 @@ describe( 'Salt', function () {
     pkgInst.nodes[2].name.should.equal('local');
 
     function Thing() {
-      this.local = {}
+      this.local = {};
     }
     Thing.prototype.inherited = 'inherited property';
   });

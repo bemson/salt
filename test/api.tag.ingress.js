@@ -13,7 +13,7 @@ describe( '_ingress tag', function () {
 
   afterEach(function () {
     salt.go(0);
-  })
+  });
 
   it( 'should require external calls to get a state before it\'s branch', function () {
     salt.query('//gated/state').should.not.be.ok;
