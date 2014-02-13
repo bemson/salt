@@ -12,7 +12,7 @@
     "framework"
   ],
   "dependencies": {
-    "bemson/Panzer": "0.3.11"
+    "bemson/Panzer": "0.3.12"
   },
   "development": {},
   "license": "MIT",

@@ -1,9 +1,9 @@
 /*!
- * Salt v0.5.1
+ * Salt v0.5.3
  * http://github.com/bemson/salt/
  *
  * Dependencies:
- * - Panzer v0.3.7 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
+ * - Panzer v0.3.12 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
  *
  * Copyright, Bemi Faison
  * Released under the MIT License
@@ -1300,6 +1300,7 @@
         importPath = sourceState;
       } else if (
         sourceStateType === 'object' &&
+        sourceState !== null &&
         sourceState.hasOwnProperty('_import')
       ) {
         importTagValue = sourceState._import;
