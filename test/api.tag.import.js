@@ -30,6 +30,48 @@ describe( '_import tag', function () {
     salt.query('//b/c/d/').should.be.ok;
   });
 
+  it( 'should merge phase callbacks (based on path)', function () {
+    var
+      inSpy = sinon.spy(),
+      onSpy = sinon.spy(),
+      outSpy = sinon.spy(),
+      salt = new Salt({
+        _import: '//templateBranch/',
+        _on: onSpy,
+        templateBranch: {
+          _in: inSpy,
+          _out: outSpy
+        }
+      });
+    salt.go(1, 0);
+    inSpy.should.have.been.calledOnce;
+    onSpy.should.have.been.calledOnce;
+    outSpy.should.have.been.calledOnce;
+    inSpy.should.have.been.calledBefore(onSpy);
+    onSpy.should.have.been.calledBefore(outSpy);
+  });
+
+  it( 'should merge phase callbacks (based on object)', function () {
+    var
+      inSpy = sinon.spy(),
+      onSpy = sinon.spy(),
+      outSpy = sinon.spy(),
+      phasesObj = {
+        _in: inSpy,
+        _out: outSpy
+      },
+      salt = new Salt({
+        _import: phasesObj,
+        _on: onSpy
+      });
+    salt.go(1, 0);
+    inSpy.should.have.been.calledOnce;
+    onSpy.should.have.been.calledOnce;
+    outSpy.should.have.been.calledOnce;
+    inSpy.should.have.been.calledBefore(onSpy);
+    onSpy.should.have.been.calledBefore(outSpy);
+  });
+
   it( 'should deep clone a Salt instance', function () {
     var cSalt = new Salt({
       c: {
