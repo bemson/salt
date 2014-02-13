@@ -1403,6 +1403,7 @@
             index: 0,
             pins: true,
             alias: 'null',
+            root: true,
             perms: copyOfDefaultPermissions,
             groups: sharedProxyStateGroupsMember
           },
@@ -1575,6 +1576,7 @@
         state.path = currentNode.path;
         state.pins = currentNode.pins;
         state.alias = currentNode.alias;
+        state.root = currentNode.index == currentNode.rootIndex;
         state.groups = currentNode.cGrps.concat();
 
         // set pkg info
