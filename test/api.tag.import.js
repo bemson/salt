@@ -1,6 +1,17 @@
 describe( '_import tag', function () {
 
-  var salt;
+  var
+    salt,
+    inSpy,
+    onSpy,
+    outSpy
+  ;
+
+  beforeEach(function () {
+    inSpy = sinon.spy();
+    onSpy = sinon.spy();
+    outSpy = sinon.spy();
+  });
 
   it( 'should deep clone another program branch', function () {
     salt = new Salt({
@@ -28,48 +39,6 @@ describe( '_import tag', function () {
       }
     });
     salt.query('//b/c/d/').should.be.ok;
-  });
-
-  it( 'should merge phase callbacks (based on path)', function () {
-    var
-      inSpy = sinon.spy(),
-      onSpy = sinon.spy(),
-      outSpy = sinon.spy(),
-      salt = new Salt({
-        _import: '//templateBranch/',
-        _on: onSpy,
-        templateBranch: {
-          _in: inSpy,
-          _out: outSpy
-        }
-      });
-    salt.go(1, 0);
-    inSpy.should.have.been.calledOnce;
-    onSpy.should.have.been.calledOnce;
-    outSpy.should.have.been.calledOnce;
-    inSpy.should.have.been.calledBefore(onSpy);
-    onSpy.should.have.been.calledBefore(outSpy);
-  });
-
-  it( 'should merge phase callbacks (based on object)', function () {
-    var
-      inSpy = sinon.spy(),
-      onSpy = sinon.spy(),
-      outSpy = sinon.spy(),
-      phasesObj = {
-        _in: inSpy,
-        _out: outSpy
-      },
-      salt = new Salt({
-        _import: phasesObj,
-        _on: onSpy
-      });
-    salt.go(1, 0);
-    inSpy.should.have.been.calledOnce;
-    onSpy.should.have.been.calledOnce;
-    outSpy.should.have.been.calledOnce;
-    inSpy.should.have.been.calledBefore(onSpy);
-    onSpy.should.have.been.calledBefore(outSpy);
   });
 
   it( 'should deep clone a Salt instance', function () {
@@ -217,6 +186,176 @@ describe( '_import tag', function () {
     aSpy.should.have.been.calledOnce;
     bSpy.should.have.been.calledOnce;
     bSpy.should.have.been.calledBefore(aSpy);
+  });
+
+  describe( 'on program state', function () {
+
+    describe( 'from path', function  () {
+
+      it( 'should merge tags', function () {
+        salt = new Salt({
+          _import: '//templateBranch/',
+          _on: onSpy,
+          templateBranch: {
+            _tail: 0,
+            _in: inSpy,
+            _out: outSpy
+          }
+        });
+        salt.go(1);
+
+        inSpy.should.have.been.calledOnce;
+        onSpy.should.have.been.calledOnce;
+        outSpy.should.have.been.calledOnce;
+        inSpy.should.have.been.calledBefore(onSpy);
+        onSpy.should.have.been.calledBefore(outSpy);
+      });
+
+    });
+
+    describe( 'from object', function () {
+
+      it( 'should merge tags', function () {
+        var phasesObj = {
+          _tail: 0,
+          _in: inSpy,
+          _out: outSpy
+        };
+        salt = new Salt({
+          _import: phasesObj,
+          _on: onSpy
+        });
+        salt.go(1);
+
+        inSpy.should.have.been.calledOnce;
+        onSpy.should.have.been.calledOnce;
+        outSpy.should.have.been.calledOnce;
+        inSpy.should.have.been.calledBefore(onSpy);
+        onSpy.should.have.been.calledBefore(outSpy);
+      });
+
+    });
+
+  });
+
+  describe( 'on state branch', function () {
+
+    var targetSpy;
+
+    beforeEach(function () {
+      targetSpy = sinon.spy();
+    });
+
+    describe( 'from path', function  () {
+
+      it( 'should merge tags', function () {
+        salt = new Salt({
+          templateBranch: {
+            _tail: 0,
+            _in: inSpy,
+            _out: outSpy
+          },
+          branch: {
+            _import: '//templateBranch/',
+            _on: onSpy,
+            _sequence: true,
+            foo: targetSpy
+          }
+        });
+        salt.go('//branch');
+
+        targetSpy.should.have.been.calledOnce;
+        inSpy.should.have.been.calledOnce;
+        onSpy.should.have.been.calledOnce;
+        outSpy.should.have.been.calledOnce;
+        inSpy.should.have.been.calledBefore(onSpy);
+        onSpy.should.have.been.calledBefore(outSpy);
+      });
+
+    });
+
+    describe( 'from object', function () {
+
+      it( 'should merge tags', function () {
+        var phasesObj = {
+          _tail: 0,
+          _in: inSpy,
+          _out: outSpy
+        };
+        salt = new Salt({
+          branch: {
+            _import: phasesObj,
+            _sequence: true,
+            _on: onSpy,
+            foo: targetSpy
+          }
+        });
+        salt.go('//branch');
+
+        targetSpy.should.have.been.calledOnce;
+        inSpy.should.have.been.calledOnce;
+        onSpy.should.have.been.calledOnce;
+        outSpy.should.have.been.calledOnce;
+        inSpy.should.have.been.calledBefore(onSpy);
+        onSpy.should.have.been.calledBefore(outSpy);
+      });
+
+    });
+
+  });
+
+  describe( 'on leaf state', function () {
+
+    describe( 'from path', function  () {
+
+      it( 'should merge tags', function () {
+        salt = new Salt({
+          templateBranch: {
+            _tail: 0,
+            _in: inSpy,
+            _out: outSpy
+          },
+          leaf: {
+            _import: '//templateBranch/',
+            _on: onSpy
+          }
+        });
+        salt.go('//leaf');
+
+        inSpy.should.have.been.calledOnce;
+        onSpy.should.have.been.calledOnce;
+        outSpy.should.have.been.calledOnce;
+        inSpy.should.have.been.calledBefore(onSpy);
+        onSpy.should.have.been.calledBefore(outSpy);
+      });
+
+    });
+
+    describe( 'from object', function () {
+
+      it( 'should merge tags', function () {
+        var phasesObj = {
+          _tail: 0,
+          _in: inSpy,
+          _out: outSpy
+        };
+        salt = new Salt({
+          leaf: {
+            _import: phasesObj,
+            _on: onSpy
+          }
+        });
+        salt.go('//leaf');
+
+        inSpy.should.have.been.calledOnce;
+        onSpy.should.have.been.calledOnce;
+        outSpy.should.have.been.calledOnce;
+        inSpy.should.have.been.calledBefore(onSpy);
+        onSpy.should.have.been.calledBefore(outSpy);
+      });
+
+    });
+
   });
 
 });
