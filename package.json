@@ -4,7 +4,7 @@
   "description": "State And Logic Traversal, for today's infinite-application.",
   "main": "src/salt.js",
   "dependencies" : {
-    "Panzer": "~0.3"
+    "panzer": "~0.3"
   },
   "devDependencies": {
     "mocha": "~1.7",
