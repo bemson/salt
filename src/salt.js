@@ -15,7 +15,7 @@
   function initSalt(require) {
 
     var
-      Salt = ((inCJS || inAMD) ? require('Panzer') : scope.Panzer).create(),
+      Salt = ((inCJS || inAMD) ? require('panzer') : scope.Panzer).create(),
       rand_string = (Math.ceil(Math.random() * 5000) + 3000).toString(18),
       corePkgDef = Salt.pkg('core'),
       staticUnusedArray = [],
