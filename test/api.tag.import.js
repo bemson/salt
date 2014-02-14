@@ -603,6 +603,7 @@ var master = new Salt({
         //run/command/wria2-build/action/
         action: function () {},
 
+        //run/command/wria2-build/result/
         result: {
 
           _in: inSpy
