@@ -1293,6 +1293,7 @@
         baseState,
         sourceStateType = typeof sourceState,
         importTagValue,
+        importTagValueType,
         importPath
       ;
 
@@ -1304,12 +1305,16 @@
         sourceState.hasOwnProperty('_import')
       ) {
         importTagValue = sourceState._import;
+        importTagValueType = typeof importTagValue;
         // determine whether we're importing a path or an (external) object
-        if (typeof importTagValue === 'object') {
+        if (importTagValueType === 'object') {
           if (importTagValue instanceof Salt) {
             importTagValue = corePkgDef(importTagValue).nodes[1].value;
           }
           baseState = corePkgDef.prepNode(importTagValue, importTagValue) || importTagValue;
+        } else if (importTagValueType === 'function') {
+          // convert functions to states
+          baseState = {_on: importTagValue};
         } else {
           importPath = importTagValue;
         }

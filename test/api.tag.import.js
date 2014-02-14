@@ -188,9 +188,11 @@ describe( '_import tag', function () {
     bSpy.should.have.been.calledBefore(aSpy);
   });
 
-  describe( 'on program state', function () {
+  it( 'should not augment the source object');
 
-    describe( 'from path', function  () {
+  describe( 'on program root', function () {
+
+    describe( 'via path', function  () {
 
       it( 'should merge tags', function () {
         salt = new Salt({
@@ -213,7 +215,7 @@ describe( '_import tag', function () {
 
     });
 
-    describe( 'from object', function () {
+    describe( 'via object', function () {
 
       it( 'should merge tags', function () {
         var phasesObj = {
@@ -246,7 +248,7 @@ describe( '_import tag', function () {
       targetSpy = sinon.spy();
     });
 
-    describe( 'from path', function  () {
+    describe( 'via path', function  () {
 
       it( 'should merge tags', function () {
         salt = new Salt({
@@ -274,7 +276,7 @@ describe( '_import tag', function () {
 
     });
 
-    describe( 'from object', function () {
+    describe( 'via object', function () {
 
       it( 'should merge tags', function () {
         var phasesObj = {
@@ -306,7 +308,7 @@ describe( '_import tag', function () {
 
   describe( 'on leaf state', function () {
 
-    describe( 'from path', function  () {
+    describe( 'via path', function  () {
 
       it( 'should merge tags', function () {
         salt = new Salt({
@@ -331,7 +333,7 @@ describe( '_import tag', function () {
 
     });
 
-    describe( 'from object', function () {
+    describe( 'via object', function () {
 
       it( 'should merge tags', function () {
         var phasesObj = {
@@ -354,6 +356,290 @@ describe( '_import tag', function () {
         onSpy.should.have.been.calledBefore(outSpy);
       });
 
+    });
+
+  });
+
+  describe( 'with function', function () {
+
+    describe( 'on program root', function () {
+
+      describe( 'via external', function () {
+
+        it( 'should see source as _on tag', function () {
+
+          salt = new Salt({
+            _import: onSpy,
+            _in: inSpy,
+            _out: outSpy
+          });
+          salt.go(1, 0);
+
+          inSpy.should.have.been.calledOnce;
+          onSpy.should.have.been.calledOnce;
+          outSpy.should.have.been.calledOnce;
+          inSpy.should.have.been.calledBefore(onSpy);
+          onSpy.should.have.been.calledBefore(outSpy);
+        });
+
+      });
+
+      describe( 'via path', function () {
+
+        it( 'should see source as _on tag', function () {
+
+          salt = new Salt({
+            _import: '//templateBranch/',
+            _in: inSpy,
+            _out: outSpy,
+            templateBranch: onSpy
+          });
+          salt.go(1, 0);
+
+          inSpy.should.have.been.calledOnce;
+          onSpy.should.have.been.calledOnce;
+          outSpy.should.have.been.calledOnce;
+          inSpy.should.have.been.calledBefore(onSpy);
+          onSpy.should.have.been.calledBefore(outSpy);
+        });
+
+      });
+
+    });
+
+    describe( 'on branch state', function() {
+
+      describe( 'via external', function () {
+
+        it( 'should see source as _on tag', function () {
+
+          salt = new Salt({
+            branch: {
+              _sequence: 1,
+              _import: onSpy,
+              _in: inSpy,
+              _out: outSpy,
+              foo: onSpy
+            }
+          });
+          salt.go('//branch', 0);
+
+          inSpy.should.have.been.calledOnce;
+          onSpy.should.have.been.calledTwice;
+          outSpy.should.have.been.calledOnce;
+          inSpy.should.have.been.calledBefore(onSpy);
+          onSpy.should.have.been.calledBefore(outSpy);
+        });
+
+      });
+
+      describe( 'via path', function () {
+
+        it( 'should see source as _on tag', function () {
+
+          salt = new Salt({
+            branch: {
+              _sequence: 1,
+              _import: '//basePath/',
+              _in: inSpy,
+              _out: outSpy,
+              foo: onSpy,
+              basePath: onSpy
+            }
+          });
+          salt.go('//branch', 0);
+
+          inSpy.should.have.been.calledOnce;
+          onSpy.should.have.been.calledTwice;
+          outSpy.should.have.been.calledOnce;
+          inSpy.should.have.been.calledBefore(onSpy);
+          onSpy.should.have.been.calledBefore(outSpy);
+        });
+
+      });
+
+    });
+
+    describe( 'on leaf state', function() {
+
+      describe( 'via external', function () {
+
+        it( 'should see source as _on tag', function () {
+          salt = new Salt({
+            leaf: {
+              _import: onSpy,
+              _in: inSpy,
+              _out: outSpy
+            }
+          });
+          salt.go('//leaf', 0);
+
+          inSpy.should.have.been.calledOnce;
+          onSpy.should.have.been.calledOnce;
+          outSpy.should.have.been.calledOnce;
+          inSpy.should.have.been.calledBefore(onSpy);
+          onSpy.should.have.been.calledBefore(outSpy);
+        });
+
+      });
+
+      describe( 'via path', function () {
+
+        it( 'should see source as _on tag', function () {
+          salt = new Salt({
+            leaf: {
+              _import: '//basePath/',
+              _in: inSpy,
+              _out: outSpy
+            },
+            basePath: onSpy
+          });
+          salt.go('//leaf', 0);
+
+          inSpy.should.have.been.calledOnce;
+          onSpy.should.have.been.calledOnce;
+          outSpy.should.have.been.calledOnce;
+          inSpy.should.have.been.calledBefore(onSpy);
+          onSpy.should.have.been.calledBefore(outSpy);
+        });
+
+      });
+
+    });
+
+  });
+
+  describe( 'fedtools scenario', function () {
+    var childBase;
+
+    beforeEach(function () {
+      childBase = {
+        _root: 1,
+        _tail: 0,
+        state: onSpy
+      };
+    });
+
+    it( 'should work as expected', function () {
+      salt = new Salt({
+        child: {
+          _import: childBase,
+          state: {
+            _in: inSpy,
+            _out: outSpy
+          }
+        }
+      });
+      salt.go('//child/state');
+
+      inSpy.should.have.been.calledOnce;
+      onSpy.should.have.been.calledOnce;
+      outSpy.should.have.been.calledOnce;
+      inSpy.should.have.been.calledBefore(onSpy);
+      onSpy.should.have.been.calledBefore(outSpy);
+    });
+
+    it('direct', function () {
+
+
+var  baseCommandBranch = {
+
+    // defines local root for this branch
+    _root: true,
+
+    // discard these keys on exit
+    _data: {
+      // default key/values
+      logTime: true,
+      exitCode: 0,
+      isAsync: true
+    },
+
+    // will compile as "//run/command/<command-name>/action/"
+    action: {
+
+      _in: function () {
+      },
+
+      // "_on" will come from the branch copying this template
+
+      _out: function () {
+        var salt = this;
+
+        if (salt.data.isAsync) {
+          // don't exit until directed elsewhere
+          // like the callback, passed to "action"
+          this.wait();
+        }
+      }
+
+    },
+
+    // will compile as "//run/command/<command-name>/result/"
+    result: onSpy
+
+  };
+
+
+
+var master = new Salt({
+
+  //run/
+  run: {
+
+    //run/command/
+    command: {
+
+      _on: function (path) {
+        this.go(path);
+      },
+
+      //run/command/wria2-build/
+      'wria2-build': {
+
+        // use object as a branch template
+        _import: baseCommandBranch,
+
+        //run/command/wria2-build/action/
+        action: function () {},
+
+        result: {
+
+          _in: inSpy
+
+        }
+
+      }
+
+    }
+
+  },
+
+  _out: function () {
+  }
+
+});
+
+master.go('//run/command/wria2-build/action', 0);
+// make sure we're here
+master.state.path.should.equal('//run/command/wria2-build/action/');
+// make sure we are paused
+master.status('paused').should.be.ok;
+
+// make sure we can go here
+master.query('/result').should.equal('//run/command/wria2-build/result/');
+// go there
+master.get('/result');
+
+// make sure we are not paused
+master.status('paused').should.not.be.ok;
+// make sure we're here
+master.state.path.should.equal('//run/command/wria2-build/result/');
+
+// master.state.path.should.equal('..//');
+// onSpy.should.have.been.calledOnce;
+inSpy.should.have.been.calledOnce;
+// inSpy.should.have.been.calledBefore(onSpy);
     });
 
   });
