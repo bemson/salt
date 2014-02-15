@@ -2,7 +2,7 @@
 
 **State And Logic Traversal, for today's infinite-application.**
 
-version 0.5.2
+version 0.5.3
 by Bemi Faison
 
 [![Build Status](https://travis-ci.org/bemson/salt.png?branch=master)](https://travis-ci.org/bemson/salt)
