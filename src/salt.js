@@ -3,7 +3,7 @@
  * http://github.com/bemson/salt/
  *
  * Dependencies:
- * - Panzer v0.3.12 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
+ * - Panzer v0.3.13 / Bemi Faison (c) 2012 / MIT (http://github.com/bemson/Panzer/)
  *
  * Copyright, Bemi Faison
  * Released under the MIT License
