@@ -1649,18 +1649,25 @@
           pkg.tgtTrail = pkg.targets.shift();
         }
 
-        if (isOnTraversal) {
+        // prepend sequence node targets
+        if (isOnTraversal && node.seq) {
+          proxy.go.apply(proxy, node.seq);
+        }
 
-          // prepend sequence node targets
-          if (node.seq) {
-            proxy.go.apply(proxy, node.seq);
+        if (isRedirect) {
+          redConfig = node.reds[phase];
+          redIndex = redConfig[1];
+
+          if (redConfig[0]) {
+            proxy.get.apply(proxy, [redIndex].concat(pkg.args));
+          } else {
+            proxy.go(redIndex);
           }
+        }
 
-          // queue delay before callback
-          if (!isRedirect && delayed) {
-            proxy.wait.apply(proxy, delayed);
-          }
-
+        // queue delay (after redirect or before callback)
+        if (isOnTraversal && delayed) {
+          proxy.wait.apply(proxy, delayed);
         }
 
         if (fnc) {
@@ -1668,23 +1675,7 @@
           // invoke and track phase function
           pkg.calls.push(node.index + '.' + phase);
 
-          if (isRedirect) {
-            redConfig = node.reds[phase];
-            redIndex = redConfig[1];
-
-            if (redConfig[0]) {
-              proxy.get.apply(proxy, [redIndex].concat(pkg.args));
-            } else {
-              proxy.go(redIndex);
-            }
-
-            // queue delay after redirect
-            if (isOnTraversal && delayed) {
-              proxy.wait.apply(proxy, node.delay);
-            }
-
-          } else {
-
+          if (!isRedirect) {
             // include arguments for the "on" function
             pkg.result = fnc.apply(proxy, (pkg.targets.length ? staticUnusedArray : pkg.args));
 
@@ -1693,6 +1684,7 @@
               pkg.result = undefined;
             }
           }
+
         }
       },
 
