@@ -32,6 +32,7 @@
       tokenPrefix = '@',
       defaultPermissions = {world: true, owner: true, sub: true, self: true},
       copyOfDefaultPermissions = merge(defaultPermissions),
+      redirectFlag = 1,
       // regexps
       r_queryIsTokenized = new RegExp('[\\.\\|' + tokenPrefix + ']'),
       r_validAbsolutePath = /^\/\/(?:\w+\/)+/,
@@ -112,6 +113,28 @@
       ],
       criteriaKeysLength = criteriaKeys.length,
       coreTags = {
+        // specify delay when entering on traversal
+        _wait: function (tagName, exists, tags, node) {
+          var
+            tagValue = tags[tagName],
+            tagValueType
+          ;
+
+          node.delay = 0;
+
+          if (exists && tagValue !== false) {
+            if (Array.isArray(tagValue)) {
+              node.delay = tagValue;
+            } else if (tagValue === true) {
+              node.delay = staticUnusedArray;
+            } else if (
+              ((tagValueType = typeof tagValue) === 'string') ||
+              tagValueType === 'number'
+            ) {
+              node.delay = [tagValue];
+            }
+          }
+        },
         // Specifies when a state is the base for rooted queries.
         _root: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           if (idx < 2 || (exists && tags._root)) {
@@ -388,7 +411,7 @@
             if (~tgtIdx && (tagName !== '_on' || tgtIdx !== idx)) {
               phase = traversalCallbackOrder[tagName];
               node.reds[phase] = [useTarget, tgtIdx];
-              node.fncs[phase] = sharedRedirectEventHandler;
+              node.fncs[phase] = redirectFlag;
             }
           }
         },
@@ -1342,20 +1365,6 @@
       return resolvedState;
     }
 
-    function sharedRedirectEventHandler() {
-      var
-        salt = this,
-        pkg = corePkgDef(salt),
-        tgtConfig = pkg.nodes[pkg.tank.currentIndex].reds[pkg.phase],
-        tgtIndex = tgtConfig[1]
-      ;
-      if (tgtConfig[0]) {
-        salt.get.apply(salt, [tgtIndex].concat(pkg.args));
-      } else {
-        salt.go(tgtIndex);
-      }
-    }
-
     // define package statics
     mix(corePkgDef, {
 
@@ -1584,6 +1593,7 @@
         state.alias = currentNode.alias;
         state.root = currentNode.index == currentNode.rootIndex;
         state.groups = currentNode.cGrps.concat();
+        state.delays = !!currentNode.delay;
 
         // set pkg info
         pkg.groups = currentNode.groups;
@@ -1621,8 +1631,15 @@
       onTraverse: function (evtName, phase) {
         var
           pkg = this,
+          proxy = pkg.proxy,
           tank = pkg.tank,
-          node = pkg.nodes[tank.currentIndex]
+          node = pkg.nodes[tank.currentIndex],
+          fnc = node.fncs[phase],
+          isOnTraversal = !phase,
+          isRedirect = fnc === redirectFlag,
+          delayed = isOnTraversal && node.delay,
+          redIndex,
+          redConfig
         ;
 
         pkg.phase = phase;
@@ -1632,19 +1649,49 @@
           pkg.tgtTrail = pkg.targets.shift();
         }
 
-        // prepend sequence node targets
-        if (node.seq && !phase) {
-          pkg.proxy.go.apply(pkg.proxy, node.seq);
+        if (isOnTraversal) {
+
+          // prepend sequence node targets
+          if (node.seq) {
+            proxy.go.apply(proxy, node.seq);
+          }
+
+          // queue delay before callback
+          if (!isRedirect && delayed) {
+            proxy.wait.apply(proxy, delayed);
+          }
+
         }
 
-        // invoke and track phase function
-        if (node.fncs[phase]) {
-          pkg.calls.push(node.index + '.' + phase);
-          // include arguments for the "on" function
-          pkg.result = node.fncs[phase].apply(pkg.proxy, (pkg.targets.length ? [] : pkg.args));
+        if (fnc) {
 
-          if (pkg.paused || pkg.pinned) {
-            pkg.result = undefined;
+          // invoke and track phase function
+          pkg.calls.push(node.index + '.' + phase);
+
+          if (isRedirect) {
+            redConfig = node.reds[phase];
+            redIndex = redConfig[1];
+
+            if (redConfig[0]) {
+              proxy.get.apply(proxy, [redIndex].concat(pkg.args));
+            } else {
+              proxy.go(redIndex);
+            }
+
+            // queue delay after redirect
+            if (isOnTraversal && delayed) {
+              proxy.wait.apply(proxy, node.delay);
+            }
+
+          } else {
+
+            // include arguments for the "on" function
+            pkg.result = fnc.apply(proxy, (pkg.targets.length ? staticUnusedArray : pkg.args));
+
+            // clear result if paused or pinned
+            if (pkg.paused || pkg.pinned) {
+              pkg.result = undefined;
+            }
           }
         }
       },
