@@ -2447,7 +2447,7 @@
                   if (typeof callback === 'function') {
                     pkg.waitFnc = callback;
                     // only pass for function-actions
-                    pkg.waitArgs = (hasArgs && delayNodeIdx === undefined) ? protoSlice.call(args, 2) : [];
+                    pkg.waitArgs = (hasArgs && delayNodeIdx === undefined) ? protoSlice.call(args, 2) : staticUnusedArray;
                   }
                   // traverse towards the current target
                   pkg.go();
