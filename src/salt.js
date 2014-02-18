@@ -1678,14 +1678,15 @@
           if (!isRedirect) {
             // include arguments for the "on" function
             pkg.result = fnc.apply(proxy, (pkg.targets.length ? staticUnusedArray : pkg.args));
-
-            // clear result if paused or pinned
-            if (pkg.paused || pkg.pinned) {
-              pkg.result = undefined;
-            }
           }
 
         }
+
+        // clear result if paused or pinned
+        if (isRedirect || pkg.paused || pkg.pinned) {
+          pkg.result = undefined;
+        }
+
       },
 
       // execute delayed functions
