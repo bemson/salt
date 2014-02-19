@@ -1485,7 +1485,9 @@
         // the number of child salts fired by this salt's program functions
         pkg.pinned = 0;
         // collection of parent salt references
-        pkg.pinning = [];
+        pkg.pinning = {};
+        // count of parent salt references
+        pkg.pinCnt = 0;
         // collection of targeted nodes
         pkg.targets = [];
         // identify the initial phase for this salt, 0 by default
@@ -1749,7 +1751,9 @@
           blocked = pkg.pause || pkg.pinned || pkg.phase,
           hasTargets = pkg.targets.length,
           node = pkg.nodes[tank.currentIndex],
-          tailIdx
+          tailIdx,
+          pinning,
+          pinnedSaltId
         ;
 
         if (!blocked && (hasTargets || node.tail)) {
@@ -1773,6 +1777,7 @@
               // bind parent and this salt
               parentSalt.pinned++;
               pkg.pinning[parentTank.id] = parentSalt;
+              pkg.pinCnt++;
               parentTank.stop();
             }
           } else {
@@ -1799,18 +1804,30 @@
             }
 
             // update pinned salts
-            if (pkg.pinning.length) {
+            if (pkg.pinCnt) {
+              pinning = pkg.pinning;
               // first, reduce pinned count of each pinned salt
-              pkg.pinning.forEach(function (pinnedSalt) {
-                pinnedSalt.pinned--;
-              });
+              for (pinnedSaltId in pinning) {
+                if (pinning.hasOwnProperty(pinnedSaltId)) {
+                  pinning[pinnedSaltId].pinned--;
+                }
+              }
+
+              // then, resume each pinned salt (once this salt is complete)
               tank.post(function () {
-                // then, resume each pinned salt (once this salt is complete)
-                pkg.pinning.splice(0).forEach(function (pinnedSalt) {
-                  if (!(pinnedSalt.pinned || pinnedSalt.pause)) {
-                    pinnedSalt.go();
+                var pinnedSalt, pinnedSaltId;
+
+                pkg.pinning = {};
+                pkg.pinCnt = 0;
+                // first, reduce pinned count of each pinned salt
+                for (pinnedSaltId in pinning) {
+                  if (pinning.hasOwnProperty(pinnedSaltId)) {
+                    pinnedSalt = pinning[pinnedSaltId];
+                    if (!(pinnedSalt.pinned || pinnedSalt.pause)) {
+                      pinnedSalt.go();
+                    }
                   }
-                });
+                }
               });
             }
           }
