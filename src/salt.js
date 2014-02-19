@@ -422,6 +422,28 @@
             }
           }
         },
+        // specify next node when entering on traversal
+        _next: function (tagName, exists, tags, node, parnetNode, pkg) {
+          var
+            tagValue = tags[tagName],
+            targetIndex
+          ;
+
+          node.nxt = -1;
+          node.nxtc = 0;
+
+          if (exists) {
+            if (typeof tagValue === 'string' && tagValue.charAt(0) === '>') {
+              // flag that this will clear existing waypoints
+              node.nxtc = 1;
+              tagValue = tagValue.substr(1);
+            }
+            if (~(targetIndex = pkg.indexOf(tagValue, node))) {
+              // capture index when valid
+              node.nxt = targetIndex;
+            }
+          }
+        },
         _perms: function (tagName, exists, tags, node) {
           delete node.lp;
         }
@@ -1644,6 +1666,7 @@
       onTraverse: function (evtName, phase) {
         var
           pkg = this,
+          pkgArgs = pkg.args,
           proxy = pkg.proxy,
           tank = pkg.tank,
           node = pkg.nodes[tank.currentIndex],
@@ -1652,7 +1675,8 @@
           isRedirect = fnc === redirectFlag,
           delayed = isOnTraversal && node.delay,
           redIndex,
-          redConfig
+          redConfig,
+          nxtIndex
         ;
 
         pkg.phase = phase;
@@ -1672,25 +1696,40 @@
           redIndex = redConfig[1];
 
           if (redConfig[0]) {
-            proxy.get.apply(proxy, [redIndex].concat(pkg.args));
+            proxy.get.apply(proxy, [redIndex].concat(pkgArgs));
           } else {
             proxy.go(redIndex);
           }
         }
 
+        if (isOnTraversal) {
+
+          nxtIndex = node.nxt;
+
+          if (~nxtIndex) {
+            if (node.nxtc) {
+              // queue (and clear) next immediate target
+              proxy.get.apply(proxy, [nxtIndex].concat(pkgArgs));
+            } else {
+              // queue (and clear) next immediate target
+              proxy.go(nxtIndex);
+            }
+          }
+
+          if (delayed) {
         // queue delay (after redirect or before callback)
-        if (isOnTraversal && delayed) {
           proxy.wait.apply(proxy, delayed);
+        }
         }
 
         if (fnc) {
 
           // invoke and track phase function
-          pkg.calls.push(node.index + '.' + phase);
+          pkg.calls[pkg.calls.length] = node.index + '.' + phase;
 
           if (!isRedirect) {
             // include arguments for the "on" function
-            pkg.result = fnc.apply(proxy, (pkg.targets.length ? staticUnusedArray : pkg.args));
+            pkg.result = fnc.apply(proxy, (pkg.targets.length ? staticUnusedArray : pkgArgs));
           }
 
         }
