@@ -108,7 +108,7 @@ Salt works within modern JavaScript environments, including CommonJS (Node.js) a
 Salt depends on the [Panzer](http://github.com/bemson/Panzer) library. Visit the Panzer project page, to learn about it's dependencies and requirements.
 
 Salt also uses the following ECMAScript 5 features:
-  * [Array.forEach](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach)
+  * [Array.filter](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)
   * [Array.map](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/map)
   * [Object.keys](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object/keys)
   * [String.trim](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String/trim)
