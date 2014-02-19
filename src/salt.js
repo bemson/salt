@@ -1300,21 +1300,27 @@
     }
 
     function import_getStateByAbsolutePath( path, program ) {
-      var resolvedState = program;
+      var
+        resolvedState = program,
+        parts = path.slice(2, -1).split('/'),
+        partsLn = parts.length,
+        partIdx = 0,
+        partialPath
+      ;
 
-      if (
-        path.slice(2, -1).split('/').every(function ( partialPath ) {
-          if (
-            resolvedState.hasOwnProperty(partialPath) &&
-            import_isState(partialPath, resolvedState[partialPath])
-          ) {
-            resolvedState = resolvedState[partialPath];
-            return 1;
-          }
-        })
-      ) {
-        return resolvedState;
+      for (; partIdx < partsLn; partIdx++) {
+        partialPath = parts[partIdx];
+        if (
+          resolvedState.hasOwnProperty(partialPath) &&
+          import_isState(partialPath, resolvedState[partialPath])
+        ) {
+          resolvedState = resolvedState[partialPath];
+        } else {
+          return;
+        }
       }
+
+      return resolvedState;
     }
 
     function import_resolveBase( sourceState, program, importedPaths ) {
@@ -2379,36 +2385,42 @@
           // collection of targets to add to targets
           waypoints = [],
           // success status for this call
-          result = 0;
+          result = 0,
+          args,
+          argIdx,
+          argLn,
+          resolvedIndex
+        ;
 
-        // if...
-        if (
-          // allowed or unlocked and ...
-          pkg.is('world', 'sub', 'owner', 'self') &&
-          // any and all node references are valid...
-          protoSlice.call(arguments).every(function (nodeRef) {
-            var
-              // resolve index of this reference
-              idx = pkg.vetIndexOf(nodeRef);
-
-            // add to waypoints
-            waypoints.push(idx);
-            // return true when the resolved index is not -1
-            return ~idx;
-          })
-        ) {
-          // if there are waypoints...
-          if (waypoints.length) {
-            // if the last waypoint matches the first target...
-            while (waypoints[waypoints.length - 1] === pkg.targets[0]) {
-              // remove the last waypoint
-              waypoints.pop();
+        // if allowed or unlocked and ...
+        if (pkg.is('world', 'sub', 'owner', 'self')) {
+          args = protoSlice.call(arguments);
+          argLn = args.length;
+          argIdx = argLn;
+          while (argIdx--) {
+            resolvedIndex = pkg.vetIndexOf(args[argIdx]);
+            if (~resolvedIndex) {
+              waypoints[waypoints.length] = resolvedIndex;
+            } else {
+              break;
             }
-            // prepend (remaining) waypoints to targets
-            pkg.targets = waypoints.concat(pkg.targets);
           }
-          // capture result of move attempt or true when paused
-          result = pkg.go() || wasPaused;
+          if (argLn === waypoints.length) {
+            // if passed waypoints...
+            if (argLn) {
+              // reverse waypoints
+              waypoints.reverse();
+              // if the last waypoint matches the first target...
+              while (waypoints[waypoints.length - 1] === pkg.targets[0]) {
+                // remove the last waypoint
+                waypoints.pop();
+              }
+              // prepend (remaining) waypoints to targets
+              pkg.targets = waypoints.concat(pkg.targets);
+            }
+            // capture result of move attempt or true when paused
+            result = pkg.go() || wasPaused;
+          }
         }
         // return result as boolean
         return !!result;
