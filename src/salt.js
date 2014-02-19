@@ -252,6 +252,11 @@
         _data: function (tagName, exists, tags, node) {
           var
             cfgs = {},
+            dataAry,
+            dataIdx = 0,
+            dataLn,
+            data,
+            typeofData,
             key
           ;
 
@@ -259,11 +264,13 @@
           node.dcfgs = [];
 
           if (exists) {
-            (isArray(tags._data) ? tags._data : [tags._data]).forEach(function (data) {
-              var
-                typeofData = typeof data,
-                key
-              ;
+            dataAry = isArray(tags._data) ? tags._data : [tags._data];
+            dataLn = dataAry.length;
+            for (; dataIdx < dataLn; dataIdx++) {
+
+              data = dataAry[dataIdx];
+              typeofData = typeof data;
+
               if (typeofData === 'string' && data) {
                 cfgs[data] = {
                   use: 0,
@@ -282,7 +289,7 @@
                   }
                 }
               }
-            });
+            }
             for (key in cfgs) {
               if (cfgs.hasOwnProperty(key)) {
                 node.dcfgs.push(cfgs[key]);
