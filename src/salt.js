@@ -1472,9 +1472,7 @@
         // collection of cached values
         pkg.cache = {
           // token query cache
-          indexOf: {},
-          // store cache
-          store: {}
+          indexOf: {}
         };
         // indicates when this salt is in the stack of navigating salts
         pkg.active = 0;
