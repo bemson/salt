@@ -292,7 +292,7 @@
             }
             for (key in cfgs) {
               if (cfgs.hasOwnProperty(key)) {
-                node.dcfgs.push(cfgs[key]);
+                node.dcfgs[node.dcfgs.length] = cfgs[key];
               }
             }
           }
@@ -316,7 +316,7 @@
             // if there is a lastWalk array...
             if (node.lastWalk) {
               // add this node's index to the array
-              node.lastWalk.push(node.index);
+              node.lastWalk[node.lastWalk.length] = node.index;
             }
           }
         },
@@ -1717,9 +1717,9 @@
           }
 
           if (delayed) {
-        // queue delay (after redirect or before callback)
-          proxy.wait.apply(proxy, delayed);
-        }
+            // queue delay (after redirect or before callback)
+            proxy.wait.apply(proxy, delayed);
+          }
         }
 
         if (fnc) {
@@ -2340,7 +2340,7 @@
             nodeRef = arguments[argumentIdx];
             resolvedIndex = pkg.vetIndexOf(nodeRef);
             if (~resolvedIndex) {
-              nodes.push(pkg.nodes[resolvedIndex].path);
+              nodes[nodes.length] = pkg.nodes[resolvedIndex].path;
             } else {
               return false;
             }
