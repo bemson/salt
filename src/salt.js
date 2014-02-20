@@ -1694,6 +1694,8 @@
           isOnTraversal = !phase,
           isRedirect = fnc === redirectFlag,
           delayed = isOnTraversal && node.delay,
+          nexted = 0,
+          targetsLn,
           redIndex,
           redConfig,
           nxtIndex
@@ -1727,6 +1729,7 @@
           nxtIndex = node.nxt;
 
           if (~nxtIndex) {
+            nexted = 1;
             if (node.nxtc) {
               // queue (and clear) next immediate target
               proxy.get.apply(proxy, [nxtIndex].concat(pkgArgs));
@@ -1748,8 +1751,9 @@
           pkg.calls[pkg.calls.length] = node.index + '.' + phase;
 
           if (!isRedirect) {
-            // include arguments for the "on" function
-            pkg.result = fnc.apply(proxy, (pkg.targets.length ? staticUnusedArray : pkgArgs));
+            targetsLn = pkg.targets.length;
+            // include arguments for the destination state's "on" function
+            pkg.result = fnc.apply(proxy, ((!targetsLn || (targetsLn === 1 && nexted)) ? pkgArgs : staticUnusedArray));
           }
 
         }
