@@ -1,5 +1,5 @@
 /*!
- * Salt v0.5.3
+ * Salt v0.5.4
  * http://github.com/bemson/salt/
  *
  * Dependencies:
@@ -560,7 +560,7 @@
       corePostTagKeyCount
     ;
 
-    Salt.version = '0.5.0';
+    Salt.version = '0.5.4';
 
     // define remaining core tags and share tag initializers
     /*

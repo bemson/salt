@@ -2,7 +2,7 @@
   "name": "salt",
   "repo": "bemson/salt",
   "description": "State And Logic Traversal, for today's infinite-application.",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "keywords": [
     "state",
     "logic",
