@@ -4,13 +4,19 @@ describe( '_wait tag', function () {
     salt,
     inSpy,
     onSpy,
-    outSpy
+    outSpy,
+    waitSpy
   ;
 
   beforeEach(function () {
     inSpy = sinon.spy();
     onSpy = sinon.spy();
     outSpy = sinon.spy();
+    waitSpy = sinon.spy(Salt.pkg('core').proxy, 'wait');
+  });
+
+  afterEach(function () {
+    waitSpy.restore();
   });
 
   it( 'should pause navigation', function () {
@@ -22,25 +28,8 @@ describe( '_wait tag', function () {
     salt.state.name.should.equal('_program');
   });
 
-  it( 'should pass paired value as arguments to .wait()', function () {
+  it( 'should normalize given array as .wait() arguments', function () {
     var
-      waitSpy = sinon.spy(Salt.pkg('core').proxy, 'wait'),
-      waitArg = 'abc'
-    ;
-
-    salt = new Salt({
-      _wait: waitArg
-    });
-    salt.go(1);
-
-    waitSpy.should.have.been.calledOnce;
-    waitSpy.firstCall.should.have.been.calledWithExactly(waitArg);
-    waitSpy.restore();
-  });
-
-  it( 'should pass-thru array as .wait() arguments', function () {
-    var
-      waitSpy = sinon.spy(Salt.pkg('core').proxy, 'wait'),
       trackingArg = {},
       waitArgs = ['blah', 5, 'a', trackingArg]
     ;
@@ -50,14 +39,23 @@ describe( '_wait tag', function () {
     });
     salt.go(1);
 
-    waitSpy.firstCall.should.have.been.calledWithExactly('blah', 5, 'a', trackingArg);
+    waitSpy.firstCall.should.have.been.calledWithExactly(-1, 5, 'a', trackingArg);
     salt.go(0);
-    waitSpy.restore();
   });
 
-  it( 'should treat true as an indefinite delay', function () {
-    var waitSpy = sinon.spy(Salt.pkg('core').proxy, 'wait');
+  it( 'should treat number as amount of time to delay', function (done) {
+    salt = new Salt({
+      _wait: 5,
+      foo: done
+    });
+    salt.go(1, '//foo');
 
+    waitSpy.should.have.been.calledOnce;
+    waitSpy.firstCall.should.have.been.calledWithExactly(5);
+    salt.status('paused').should.be.ok;
+  });
+
+  it( 'should treat `true` as an indefinite delay', function () {
     salt = new Salt({
       _wait: true
     });
@@ -65,31 +63,24 @@ describe( '_wait tag', function () {
 
     waitSpy.should.have.been.calledOnce;
     waitSpy.firstCall.args.should.have.length(0);
-    waitSpy.restore();
   });
 
   it( 'should ignore objects', function () {
-    var waitSpy = sinon.spy(Salt.pkg('core').proxy, 'wait');
-
     salt = new Salt({
       _wait: {}
     });
     salt.go(1);
     waitSpy.should.not.have.been.called;
     salt.status('paused').should.not.be.ok;
-    waitSpy.restore();
   });
 
   it( 'should ignore `false`', function () {
-    var waitSpy = sinon.spy(Salt.pkg('core').proxy, 'wait');
-
     salt = new Salt({
       _wait: false
     });
     salt.go(1);
     waitSpy.should.not.have.been.called;
     salt.status('paused').should.not.be.ok;
-    waitSpy.restore();
   });
 
   it( 'should only pause navigation of targeted states', function () {
@@ -110,7 +101,6 @@ describe( '_wait tag', function () {
   });
 
   it( 'should pause navigation before on callback', function () {
-    var waitSpy = sinon.spy(Salt.pkg('core').proxy, 'wait');
     salt = new Salt({
       _wait: true,
       _on: onSpy
@@ -120,12 +110,10 @@ describe( '_wait tag', function () {
     waitSpy.should.have.been.calledOnce;
     onSpy.should.have.been.calledOnce;
     waitSpy.should.have.been.calledBefore(onSpy);
-    waitSpy.restore();
   });
 
   it( 'should work with short-form redirects', function () {
     var
-      waitSpy = sinon.spy(Salt.pkg('core').proxy, 'wait'),
       goSpy = sinon.spy(Salt.pkg('core').proxy, 'go'),
       getSpy = sinon.spy(Salt.pkg('core').proxy, 'get')
     ;

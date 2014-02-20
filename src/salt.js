@@ -113,28 +113,6 @@
       ],
       criteriaKeysLength = criteriaKeys.length,
       coreTags = {
-        // specify delay when entering on traversal
-        _wait: function (tagName, exists, tags, node) {
-          var
-            tagValue = tags[tagName],
-            tagValueType
-          ;
-
-          node.delay = 0;
-
-          if (exists && tagValue !== false) {
-            if (Array.isArray(tagValue)) {
-              node.delay = tagValue;
-            } else if (tagValue === true) {
-              node.delay = staticUnusedArray;
-            } else if (
-              ((tagValueType = typeof tagValue) === 'string') ||
-              tagValueType === 'number'
-            ) {
-              node.delay = [tagValue];
-            }
-          }
-        },
         // Specifies when a state is the base for rooted queries.
         _root: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           if (idx < 2 || (exists && tags._root)) {
@@ -420,6 +398,48 @@
               node.reds[phase] = [useTarget, tgtIdx];
               node.fncs[phase] = redirectFlag;
             }
+          }
+        },
+        // specify delay when entering on traversal
+        _wait: function (tagName, exists, tags, node, parentNode, pkg) {
+          var
+            tagValue = tags[tagName],
+            targetIndex,
+            firstIndexType,
+            waitParamsLn,
+            waitParams = staticUnusedArray
+          ;
+
+          node.delay = 0;
+
+          if (exists && tagValue !== false) {
+            if (Array.isArray(tagValue)) {
+              waitParams = tagValue;
+            } else if (tagValue !== true) {
+              waitParams = [tagValue];
+            }
+
+            // vet wait query, if present
+            waitParamsLn = waitParams.length;
+            firstIndexType = typeof waitParams[0];
+
+            // exit when only arg is not a number
+            if (waitParamsLn === 1 && firstIndexType !== 'number') {
+              return;
+            }
+
+            if (waitParamsLn > 1 && firstIndexType !== 'function') {
+              if (~(targetIndex = pkg.indexOf(waitParams[0]), node)) {
+                // resolve query
+                waitParams[0] = targetIndex;
+              } else {
+                // exit when first arg is not a valid query
+                return;
+              }
+            }
+
+            node.delay = waitParams;
+
           }
         },
         // specify next node when entering on traversal
