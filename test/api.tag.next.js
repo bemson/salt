@@ -105,6 +105,16 @@ describe( '_next tag', function () {
     salt.state.index.should.equal(1);
   });
 
+  it( 'should not prevent destination callbacks from receiving arguments', function () {
+    var arg = {};
+    salt = new Salt({
+      _next: 0,
+      _on: onSpy
+    });
+    salt.get(1, arg);
+    onSpy.should.have.been.calledWithExactly(arg);
+  });
+
   describe( 'prefixed with a ">"', function () {
 
     it( 'should set a new destination state', function () {
