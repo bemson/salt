@@ -115,6 +115,23 @@ describe( '_next tag', function () {
     onSpy.should.have.been.calledWithExactly(arg);
   });
 
+  it( 'should be reflected in `.state.fwds`, per state', function () {
+    salt = new Salt({
+      has: {
+        _next: 0,
+        _wait: true
+      },
+      nohas: {}
+    });
+    salt.state.fwds.should
+      .be.a('boolean')
+      .and.not.be.ok;
+    salt.go('//has');
+    salt.state.fwds.should.be.ok;
+    salt.go('//nohas');
+    salt.state.fwds.should.not.be.ok;
+  });
+
   describe( 'prefixed with a ">"', function () {
 
     it( 'should set a new destination state', function () {
