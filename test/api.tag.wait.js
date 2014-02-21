@@ -65,6 +65,22 @@ describe( '_wait tag', function () {
     waitSpy.firstCall.args.should.have.length(0);
   });
 
+  it( 'should be reflected in `.state.delays`, per state', function () {
+    salt = new Salt({
+      has: {
+        _wait: true
+      },
+      nohas: {}
+    });
+    salt.state.delays.should
+      .be.a('boolean')
+      .and.not.be.ok;
+    salt.go('//has');
+    salt.state.delays.should.be.ok;
+    salt.go('//nohas');
+    salt.state.delays.should.not.be.ok;
+  });
+
   it( 'should ignore objects', function () {
     salt = new Salt({
       _wait: {}
