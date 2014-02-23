@@ -31,7 +31,6 @@
         },
       tokenPrefix = '@',
       defaultPermissions = {world: true, owner: true, sub: true, self: true},
-      copyOfDefaultPermissions = merge(defaultPermissions),
       redirectFlag = 1,
       // regexps
       r_queryIsTokenized = new RegExp('[\\.\\|' + tokenPrefix + ']'),
@@ -1479,23 +1478,10 @@
         var
           pkg = this,
           activeSalt = activeSalts[0],
-          sharedProxyDataMember = {},
-          sharedProxyStateMember = {
-            name: '_null',
-            path: '..//',
-            depth: 0,
-            index: 0,
-            pins: true,
-            alias: 'null',
-            root: true,
-            perms: copyOfDefaultPermissions,
-            groups: sharedProxyStateGroupsMember
-          },
           nodes = pkg.nodes,
           nodeCount = nodes.length,
           i, j,
-          node, parentNode, tagName,
-          pkgId
+          node, parentNode, tagName
         ;
 
         // init sub-instances hashes
@@ -1560,7 +1546,7 @@
         pkg.nodes[0].name = '_null';
         // set name of second node
         pkg.nodes[1].name = '_program';
-        // initialize nodes...
+        // initialize nodes from first to last
         for (i = 0; i < nodeCount; i++) {
           node = nodes[i];
           parentNode = nodes[node.parentIndex];
@@ -1611,7 +1597,8 @@
           perms: merge(defaultPermissions)
         };
 
-        // corePkgDef.onNode.call(pkg, 0, pkg.tank.currentIndex);
+        // init (other) state properties (added to sharedProxyStateMember)
+        corePkgDef.onNode.call(pkg, 0, pkg.tank.currentIndex);
 
         if (activeSalt) {
 
