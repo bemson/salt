@@ -165,19 +165,17 @@
           }
         },
         // Specify cascading permissions when a state is entered and exited
-        _perms: function (tagName, exists, tags, node, parentNode, pkg) {
-          var perms;
-          if (exists) {
-            perms = perms_parse(tags[tagName], parentNode.lp);
-            if (perms) {
-              node.perms = node.lp = perms;
-            }
+        _perms: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+          node.perms = 0;
+          if (exists || idx === 1) {
+            // when present or on first node
+            node.perms = node.lp = (exists) ? perms_parse(tags[tagName], parentNode.lp) : merge(defaultPermissions);
           } else if (parentNode) {
-            node.perms = 0;
+            // pass-thru parent permmissions data
             node.lp = parentNode.lp;
           } else {
-            // initialize perms in the null node
-            pkg.perms = [node.perms = node.lp = defaultPermissions];
+            // place defaults at bottom of stack
+            node.lp = defaultPermissions;
           }
         },
         // Defines the path to update an owning salt - if any.
@@ -1221,7 +1219,7 @@
           // lowercase all options
           lastPerms = {};
           for (key in option) {
-            if (option.hasOwnProperty(key)) {
+            if (option.hasOwnProperty(key) && key.charAt(0) !== '!') {
               lastPerms[key.toLowerCase()] = option[key];
             }
           }
@@ -1524,6 +1522,8 @@
         pkg.calls = [];
         // collection of nodes targeted and reached while traversing
         pkg.trail = [];
+        // permissions stack - begin with default perms
+        pkg.perms = [defaultPermissions];
         // state index to add to trail at end of traversal/resume
         pkg.tgtTrail = -1;
         // collection of declared variable tracking objects
