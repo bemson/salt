@@ -38,6 +38,36 @@ describe( '_tail tag', function () {
     spy.should.not.have.been.called;
   });
 
+  it( 'should be reflected in `.state.tails`', function () {
+    var doesTail = sinon.spy(function () {
+      this.state.tails.should.be.ok;
+    });
+
+    salt = new Salt({
+      has: {
+        _tail: 'tgt',
+        _in: doesTail,
+        _on: doesTail,
+        _out: doesTail,
+        _over: doesTail,
+        tgt: {
+          _tail: 0,
+          _on: doesTail,
+          _out: doesTail
+        }
+      },
+      nohas: {
+        _tail: 'badquery',
+        _on: function () {
+          this.state.tails.should.not.be.ok;
+        }
+      }
+    });
+    salt.go('//has');
+    salt.go('//nohas');
+    doesTail.callCount.should.equal(6);
+  });
+
   it( 'should only apply to the destination state', function () {
     var spy = sinon.spy();
     salt = new Salt({

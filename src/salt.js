@@ -1658,6 +1658,7 @@
         state.groups = currentNode.cGrps.concat();
         state.delays = !!currentNode.delay;
         state.fwds = !!~currentNode.nxt;
+        state.tails = !!~currentNode.tail;
 
         // set pkg info
         pkg.groups = currentNode.groups;
