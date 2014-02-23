@@ -1569,7 +1569,8 @@
           node.reds = [];
 
           // run core tags
-          for (j = 0; j < coreTagKeyCount; j++) {
+          j = coreTagKeyCount;
+          while (j--) {
             tagName = coreTagKeys[j];
             coreTags[tagName](tagName, node.attrs.hasOwnProperty(tagName), node.attrs, node, parentNode, pkg, i);
           }
@@ -1582,9 +1583,13 @@
         }
 
         // run post core tags for each node
-        for (i = 0; i < nodeCount; i++) {
+        i = nodeCount;
+        // order matters less on cleanup
+        while (i--) {
           node = nodes[i];
-          for (j = 0; j < corePostTagKeyCount; j++) {
+          parentNode = nodes[node.parentIndex];
+          j = corePostTagKeyCount;
+          while (j--) {
             tagName = corePostTagKeys[j];
             corePostTags[tagName](tagName, node.attrs.hasOwnProperty(tagName), node.attrs, node, parentNode, pkg, i);
           }
