@@ -378,7 +378,6 @@
           if (exists && (typeofTagValue = typeof (tagValue = tags[tagName])) !== 'function') {
             if (typeofTagValue === 'string' && tagValue.length) {
               if (tagValue.charAt(0) === '>') {
-                tagValue = tagValue.substr(1);
                 useTarget = 1;
               }
               tgtIdx = pkg.indexOf(tagValue, node);
@@ -448,7 +447,6 @@
             if (typeof (tagValue = tags[tagName]) === 'string' && tagValue.charAt(0) === '>') {
               // flag that this will clear existing waypoints
               node.nxtc = 1;
-              tagValue = tagValue.substr(1);
             }
             if (~(targetIndex = pkg.indexOf(tagValue, node))) {
               // capture index when valid
@@ -462,11 +460,6 @@
             query = node.tail,
             targetIndex
           ;
-
-          // dismiss ">" - irrelevant to _tail queries
-          if (typeof query === 'string' && query.charAt(0) === '>') {
-            query = query.substr(1);
-          }
 
           // resolve query
           node.tail = targetIndex = pkg.indexOf(query, node);
@@ -1970,6 +1963,11 @@
 
           /* falls through */
           case 'string':
+
+            // remove redirect flag
+            if (qry.charAt(0) === '>') {
+              qry = qry.substr(1);
+            }
 
             // short circuit special queries
             if (qry === '..//' || qry === '//') {
