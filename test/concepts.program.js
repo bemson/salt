@@ -131,23 +131,38 @@ describe( 'Program', function () {
 
     describe( 'names', function () {
 
-      it( 'should begin with a letter', function () {
+      it( 'should not begin with a number', function () {
         salt = new Salt({
           '2fail': 1,
-          '*fail': 1,
-          ' fail': 1,
-          '@fail': 1,
-          '|fail': 1,
-          '/fail': 1,
-          'success* 2': 1
+          'success2': 1
         });
         salt.query('//2fail').should.not.be.ok;
-        salt.query('//*fail').should.not.be.ok;
-        salt.query('// fail').should.not.be.ok;
+        salt.query('//success2').should.be.ok;
+      });
+
+      it( 'should not begin with the greater-than symbol (">")', function () {
+        salt = new Salt({
+          '>fail': 1,
+          'success>': 1
+        });
+        salt.query('//>fail').should.not.be.ok;
+        salt.query('//success>').should.be.ok;
+      });
+
+      it( 'should not begin with the at-symbol ("@")', function () {
+        salt = new Salt({
+          '@fail': 1,
+          'success@': 1
+        });
         salt.query('//@fail').should.not.be.ok;
-        salt.query('//|fail').should.not.be.ok;
-        salt.query('///fail').should.not.be.ok;
-        salt.query('//success* 2').should.be.ok;
+        salt.query('//success@').should.be.ok;
+      });
+
+      it( 'should begin with a letter', function () {
+        salt = new Salt({
+          'success >2@': 1
+        });
+        salt.query('//success >2@').should.be.ok;
       });
 
       it( 'should not be "toString"', function () {
@@ -159,7 +174,7 @@ describe( 'Program', function () {
         salt.query('//tostring').should.be.ok;
       });
 
-      it( 'should not contain a ".", "/", or "|" character', function () {
+      it( 'should not contain period ("."), forward-slash ("/"), or pipe ("|") characters', function () {
         salt = new Salt({
           'hello world': 1,
           'hello.world': 1,
@@ -167,10 +182,10 @@ describe( 'Program', function () {
           'hello|world': 1
         });
 
-        salt.query('//hello world').should.be.ok;
         salt.query('//hello.world').should.not.be.ok;
         salt.query('//hello/world').should.not.be.ok;
         salt.query('//hello|world').should.not.be.ok;
+        salt.query('//hello world').should.be.ok;
       });
 
       it( 'should allow spaces', function () {
