@@ -319,31 +319,26 @@
             node.fncs[traversalCallbackOrder[tagName]] = tagValue;
           }
         },
-        // Specifies where to direct the salt at the end of a sequence for a given branch
-        _tail: function (tagName, exists, tags, node, parentNode) {
+        _tail: function (tagName, exists, tags, node, parentNode, pkg, idx) {
           var tagValue;
 
-          if (exists) {
+          // start with default
+          node.tail = -1;
 
-            // get paired value
+          // capture paired value, set default, or use parent
+          if (exists) {
             tagValue = tags[tagName];
 
-            // exit if branch should not tail, or tails a non-existing index
-            if (tagValue === false || tagValue < 0) {
-              node.tail = 0;
-              return;
+            if (tagValue === true) {
+              // target self
+              node.tail = idx;
+            } else if (tagValue !== false) {
+              // don't tail when false
+              node.tail = tagValue;
             }
-
-            // (otherwise) define tail query - use tagged index when "true"
-            node.tail = {
-              q: tagValue === true ? node.index : tagValue
-            };
           } else if (parentNode) {
             node.tail = parentNode.tail;
-          } else {
-            node.tail = 0;
           }
-
         },
         // Specifies when a branch should be invisible to external queries
         _conceal: function (tagName, exists, tags, node, parentNode, pkg, idx) {
@@ -443,9 +438,9 @@
           }
         },
         // specify next node when entering on traversal
-        _next: function (tagName, exists, tags, node, parnetNode, pkg) {
+        _next: function (tagName, exists, tags, node, parentNode, pkg) {
           var
-            tagValue = tags[tagName],
+            tagValue,
             targetIndex
           ;
 
@@ -453,7 +448,7 @@
           node.nxtc = 0;
 
           if (exists) {
-            if (typeof tagValue === 'string' && tagValue.charAt(0) === '>') {
+            if (typeof (tagValue = tags[tagName]) === 'string' && tagValue.charAt(0) === '>') {
               // flag that this will clear existing waypoints
               node.nxtc = 1;
               tagValue = tagValue.substr(1);
@@ -463,6 +458,27 @@
               node.nxt = targetIndex;
             }
           }
+        },
+        // resolve and keep valid tail targets
+        _tail: function (tagName, exists, tags, node, parentNode, pkg, idx) {
+          var
+            query = node.tail,
+            targetIndex
+          ;
+
+          // dismiss ">" - irrelevant to _tail queries
+          if (typeof query === 'string' && query.charAt(0) === '>') {
+            query = query.substr(1);
+          }
+
+          // resolve query
+          node.tail = targetIndex = pkg.indexOf(query, node);
+
+          // ensure resolved target is not pointing to self
+          if (targetIndex === idx) {
+            node.tail = -1;
+          }
+
         },
         _perms: function (tagName, exists, tags, node) {
           delete node.lp;
@@ -1596,6 +1612,10 @@
             pkg.pkgs[pkgId].proxy.state = sharedProxyStateMember;
           }
         }
+        // init (other) state properties (added to sharedProxyStateMember)
+        corePkgDef.onNode.call(pkg, 0, 0);
+
+        // corePkgDef.onNode.call(pkg, 0, pkg.tank.currentIndex);
 
         if (activeSalt) {
 
@@ -1819,18 +1839,17 @@
           blocked = pkg.pause || pkg.pinned || pkg.phase,
           hasTargets = pkg.targets.length,
           node = pkg.nodes[tank.currentIndex],
-          tailIdx,
           pinning,
           pinnedSaltId
         ;
 
-        if (!blocked && (hasTargets || node.tail)) {
+        if (!blocked && (hasTargets || ~node.tail)) {
           if (hasTargets) {
             // direct tank to the next state
             tank.go(pkg.targets[0]);
-          } else if (~(tailIdx = pkg.indexOf(node.tail.q)) && tailIdx !== node.index) { // ensure query doesn't match current node
-            // instruct salt to the given tail query
-            pkg.proxy.go(tailIdx);
+          } else {
+            // instruct salt to the given tail index
+            pkg.proxy.go(node.tail);
           }
         } else {
           if (blocked) {
