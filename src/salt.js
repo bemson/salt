@@ -1604,16 +1604,12 @@
           }
         }
 
-        for (pkgId in pkg.pkgs) {
-          if (pkg.pkgs.hasOwnProperty(pkgId)) {
-            // reference data object in all proxy objects
-            pkg.pkgs[pkgId].proxy.data = sharedProxyDataMember;
-            // reference data object in all proxy objects
-            pkg.pkgs[pkgId].proxy.state = sharedProxyStateMember;
-          }
-        }
-        // init (other) state properties (added to sharedProxyStateMember)
-        corePkgDef.onNode.call(pkg, 0, 0);
+        // reference data object in all proxy objects
+        pkg.proxy.data = {};
+        // reference state object in all proxy objects
+        pkg.proxy.state = {
+          perms: merge(defaultPermissions)
+        };
 
         // corePkgDef.onNode.call(pkg, 0, pkg.tank.currentIndex);
 
