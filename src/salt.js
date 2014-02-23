@@ -33,7 +33,7 @@
       defaultPermissions = {world: true, owner: true, sub: true, self: true},
       redirectFlag = 1,
       // regexps
-      r_queryIsTokenized = new RegExp('[\\.\\|' + tokenPrefix + ']'),
+      r_queryIsTokenized = new RegExp('\\.|\\||^' + tokenPrefix + '|\\|' + tokenPrefix),
       r_validAbsolutePath = /^\/\/(?:\w+\/)+/,
       r_trimSlashes = /^\/+|\/+$/g,
       r_hasNonAlphanumericCharacter = /\W/,
