@@ -157,12 +157,12 @@
                 (groupName = groupName.trim().toLowerCase()) &&
                 !defaultPermissions.hasOwnProperty(groupName)
               ) {
-                groups[groupName.toLowerCase()] = true;
+                groups[groupName] = true;
               }
             }
             node.groups = groups;
-            node.cGrps = Object.keys(groups);
           }
+          node.cGrps = Object.keys(node.groups);
         },
         // Specify cascading permissions when a state is entered and exited
         _perms: function (tagName, exists, tags, node, parentNode, pkg, idx) {
