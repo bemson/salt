@@ -1,6 +1,6 @@
 {
   "name": "salt",
-  "version": "0.5.4b",
+  "version": "0.5.5",
   "description": "State And Logic Traversal, for today's infinite-application.",
   "main": "src/salt.js",
   "dependencies" : {
