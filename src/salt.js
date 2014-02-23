@@ -1438,7 +1438,7 @@
       attrKey: /^_/,
 
       // pattern for identifying invalid state names
-      badKey: /^\d|^\W|[^a-zA-Z\d\-_\+=\(\)\*\&\^\%\$\#\!\~\`\{\}\"\'\:\;\?\, ]+|^toString$/,
+      badKey: /^[^a-zA-Z]|\||\/|\.|^toString$/,
 
       // tree preprocessor
       prepTree: function (orig) {
