@@ -13,7 +13,7 @@ describe( 'Salt#callbacks()', function () {
   it( 'should return a curried call to `.get()`', function () {
     var
       salt = new Salt(),
-      spyTarget = sinon.spy(salt, 'get'),
+      spyTarget = sinon.spy(Salt.pkg('core').proxy, 'get'),
       callback = salt.callbacks()
     ;
     callback.should.be.a('function');
@@ -38,7 +38,7 @@ describe( 'Salt#callbacks()', function () {
   it( 'should use `.go()` when the "waypoints" flag is truthy', function () {
     var
       salt = new Salt(),
-      spyGo = sinon.spy(salt, 'go'),
+      spyGo = sinon.spy(Salt.pkg('core').proxy, 'go'),
       callback = salt.callbacks(0, true)
     ;
     callback();
@@ -54,7 +54,7 @@ describe( 'Salt#callbacks()', function () {
           callback = salt.callbacks(0, 0, true);
         }
       }),
-      spyTarget = sinon.spy(salt, 'get'),
+      spyTarget = sinon.spy(Salt.pkg('core').proxy, 'get'),
       callback
     ;
     salt.state.perms.world.should.be.ok;
@@ -73,7 +73,7 @@ describe( 'Salt#callbacks()', function () {
       salt = new Salt({
         _perms: '!world'
       }),
-      spyTarget = sinon.spy(salt, 'get'),
+      spyTarget = sinon.spy(Salt.pkg('core').proxy, 'get'),
       callback = salt.callbacks(0, false, true)
     ;
     salt.state.perms.world.should.be.ok;

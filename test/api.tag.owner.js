@@ -249,6 +249,7 @@ describe( '_owner tag', function () {
   });
 
   it( 'should apply a query with `.get()`, passing the owned salt, it\'s then status, and then state as arguments', function () {
+    var targetSpy = sinon.spy(Salt.pkg('core').proxy, 'get');
     owner = new Salt({
       _on: function () {
         owned = new Salt({
@@ -257,7 +258,6 @@ describe( '_owner tag', function () {
         owned.owner().should.equal(this);
       }
     });
-    var targetSpy = sinon.spy(owner, 'get');
     owner.go(1).should.be.ok;
     owned.go(1).should.be.ok;
     targetSpy.should.have.been.called;
@@ -266,7 +266,7 @@ describe( '_owner tag', function () {
     targetSpy.getCall(0).args[1].should.be.an.instanceOf(Salt);
     targetSpy.getCall(0).args[2].should.be.an('object');
     targetSpy.getCall(0).args[3].should.be.an('object');
-    owner.get.restore();
+    targetSpy.restore();
   });
 
   it( 'should not double ping the owner when there is a delay', function (done) {
