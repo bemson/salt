@@ -199,6 +199,7 @@ describe( 'Permission', function () {
       salt.state.perms.world.should.be.ok;
       salt.go(1);
       salt.state.perms.world.should.be.ok;
+      salt.state.perms.should.not.haveOwnProperty('!world');
     });
 
     it( 'should sequentially process an array', function () {
