@@ -30,6 +30,7 @@
           return obj instanceof Array;
         },
       tokenPrefix = '@',
+      queryDestinationFlag = '>',
       defaultPermissions = {world: true, owner: true, sub: true, self: true},
       redirectFlag = 1,
       // regexps
@@ -377,7 +378,7 @@
           ;
           if (exists && (typeofTagValue = typeof (tagValue = tags[tagName])) !== 'function') {
             if (typeofTagValue === 'string' && tagValue.length) {
-              if (tagValue.charAt(0) === '>') {
+              if (tagValue.charAt(0) === queryDestinationFlag) {
                 useTarget = 1;
               }
               tgtIdx = pkg.indexOf(tagValue, node);
@@ -444,7 +445,7 @@
           node.nxtc = 0;
 
           if (exists) {
-            if (typeof (tagValue = tags[tagName]) === 'string' && tagValue.charAt(0) === '>') {
+            if (typeof (tagValue = tags[tagName]) === 'string' && tagValue.charAt(0) === queryDestinationFlag) {
               // flag that this will clear existing waypoints
               node.nxtc = 1;
             }
@@ -1965,7 +1966,7 @@
           case 'string':
 
             // remove redirect flag
-            if (qry.charAt(0) === '>') {
+            if (qry.charAt(0) === queryDestinationFlag) {
               qry = qry.substr(1);
             }
 
