@@ -1,5 +1,7 @@
 # Salt
 
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/bemson/salt?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 **State And Logic Traversal, for today's infinite-application.**
 
 version 0.5.5
