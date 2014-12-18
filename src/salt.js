@@ -1,5 +1,5 @@
 /*!
- * Salt v0.5.5
+ * Salt
  * http://github.com/bemson/salt/
  *
  * Dependencies:
