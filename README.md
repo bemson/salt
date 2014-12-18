@@ -1,11 +1,11 @@
 # Salt
 
-**State And Logic Traversal, for today's infinite-application.**
+State And Logic Traversal, for today's infinite-application.
 
 by Bemi Faison
 
-[![Build Status](https://travis-ci.org/bemson/salt.png?branch=master)](https://travis-ci.org/bemson/salt)
-
+[![Build Status](https://travis-ci.org/bemson/salt.svg?branch=master)](https://travis-ci.org/bemson/salt)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/bemson/salt?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 ## Description
 
 Salt is a state-based JavaScript library that offers unparalleled code organization and unprecedented flow control. No matter how you write code, the [event loop](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/EventLoop#Event_loop) sees it as a sequence of functions, invoked over time. Salt provides a simple pattern to describe those sequences, along with an API to control timing. The result is an async-agnostic flow of your functionality, _in_ code, bridging the gap between specification and implementation.
