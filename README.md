@@ -157,7 +157,7 @@ require(['salt'], function (Salt) {
 
 ## Testing
 
-Salt has over 350 unit tests to inspire and guide your usage. They were written with [Mocha](http://visionmedia.github.io/mocha), using [Chai](http://chaijs.com/) and [Sinon](http://sinonjs.org) (via the [Sinon-chai](http://chaijs.com/plugins/sinon-chai) plugin).
+Salt has over 350 unit tests to inspire and guide your usage. They were written with [Mocha](http://mochajs.org/), using [Chai](http://chaijs.com/) and [Sinon](http://sinonjs.org) (via the [Sinon-chai](http://chaijs.com/plugins/sinon-chai) plugin).
 
   * To browse test results, visit [Salt on Travis-CI](https://travis-ci.org/bemson/salt).
   * To run tests in Node, invoke `npm test`
